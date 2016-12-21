@@ -42,17 +42,12 @@ echo
 
 echo annotation 1 col to n col
 date
-time Rscript -e '''library(data.table); outdir=Sys.getenv(c("OUTDIR")); dt=fread(file.path(outdir, "annotated.bed")); dt = unique(dt); names(dt)=c("chrom", "chrom_start", "chrom_end", "rsid", "annotation"); dt$r2=1; dt2=dcast(dt, chrom + chrom_start + chrom_end + rsid~annotation, value.var="r2"); fwrite(dt2, file.path(outdir, "annotation_matrix.bed"), sep="\t", col.names=FALSE)'''
+time Rscript -e '''library(data.table); outdir=Sys.getenv(c("OUTDIR")); dt=fread(file.path(outdir, "annotated.bed")); dt = unique(dt); names(dt)=c("chrom", "chrom_start", "chrom_end", "rsid", "annotation"); #dt$r2=1; dt2=dcast(dt, chrom + chrom_start + chrom_end + rsid~annotation, value.var="r2", fill=0); #fwrite(dt2, file.path(outdir, "annotation_matrix.bed"), sep="\t", col.names=FALSE); dt3=dcast(dt, rsid~annotation, value.var="r2", fill=0); fwrite(dt3, file.path(outdir, "annotation_matrix_rsid.tsv"), sep="\t", col.names=FALSE)'''
 echo
 
-echo bgzip
+echo build index
 date
-time bgzip -f $OUTDIR/annotation_matrix.bed
-echo
-
-echo tabix
-date
-time tabix out_chr22_eenhancer_1col.bed/annotation_matrix.bed.gz
+/gpfs/tgml/apps/build_index -sr="^rs" -r="^rs" -fs="\t" -f=1 $OUTDIR/annotation_matrix_rsid.tsv >$OUTDIR/annotation_matrix_rsid.tsv.idx
 echo
 
 echo
