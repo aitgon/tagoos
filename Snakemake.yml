@@ -1,0 +1,85 @@
+HOME = os.getenv('HOME')
+GENOME1K_DATA_DIR = os.getenv('GENOME1K_DATA_DIR')
+TAG_RSID = os.getenv('TAG_RSID')
+ANNOTATION_BED = os.getenv('ANNOTATION_BED')
+
+OUTDIR=os.getenv('OUTDIR')
+
+SIGN = ['pos', 'neg']
+CHROMS=[21, 22]
+
+import rpy2
+from snakemake.utils import R
+
+rule final:
+    input:
+        index2annot_r2_label_tsv = expand(os.path.join(OUTDIR, "{sign}_index2annot_r2_label.tsv"), sign = SIGN)
+    output:
+        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "%s/index2annot_r2_label.tsv")
+    shell:
+        """sort -u {input} >{output}"""
+
+rule label_pos:
+    input: 
+        index2annot_r2_tsv = os.path.join(OUTDIR, "pos_index2annot_r2.tsv")
+    output:
+        index2annot_r2_label_tsv = os.path.join(OUTDIR, "pos_index2annot_r2_label.tsv")
+    shell:
+        """Rscript -e 'library(data.table); dt = fread("{input.index2annot_r2_tsv}", sep="\t"); dt$label = 1; write.table(dt, file="{output.index2annot_r2_label_tsv}", sep="\t", row.names=FALSE, col.names=FALSE)'"""
+
+rule label_neg:
+    input: 
+        index2annot_r2_tsv = os.path.join(OUTDIR, "neg_index2annot_r2.tsv")
+    output:
+        index2annot_r2_label_tsv = os.path.join(OUTDIR, "neg_index2annot_r2_label.tsv")
+    shell:
+        """Rscript -e 'library(data.table); dt = fread("{input.index2annot_r2_tsv}", sep="\t"); dt$label = 1; write.table(dt, file="{output.index2annot_r2_label_tsv}", sep="\t", row.names=FALSE, col.names=FALSE)'"""
+
+rule merge_neg:
+    input: expand(os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2annot_r2.tsv"), chr=CHROMS, sign=['neg'])
+    output:
+        index2annot_r2_tsv = os.path.join(OUTDIR, "neg_index2annot_r2.tsv")
+    shell:
+        """sort -u {input} >{output}"""
+
+rule merge_pos:
+    input: expand(os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2annot_r2.tsv"), chr=CHROMS, sign=['pos'])
+    output:
+        index2annot_r2_tsv = os.path.join(OUTDIR, "pos_index2annot_r2.tsv")
+    shell:
+        """sort -u {input} >{output}"""
+
+#rule merge:
+#    input: 
+#        expand(os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2annot_r2.tsv"), chr=CHROMS, sign=['pos', 'neg'])
+#    output:
+#        index2annot_r2_tsv = os.path.join(OUTDIR, "{sign}_index2annot_r2.tsv")
+#    shell: """find %s/{sign}/. -type f -name "index2annot_r2.tsv" |while read F; do cat $F; done >{output.index2annot_r2_tsv}"""%OUTDIR
+
+rule annotatecorr:
+    input:
+        index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2tag2corr_r2.tsv"),
+        annotated_tsv = os.path.join(OUTDIR, "{chr}/annotated.tsv"),
+        script = "script/annotate_corr.R"
+    output:
+        index2annot_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2annot_r2.tsv")
+    shell: """Rscript {input.script} {input.index2tag2corr_r2_tsv} {input.annotated_tsv} {output.index2annot_r2_tsv}"""
+
+rule index2tag2corr:
+    input:
+        ld = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_ld.ld"),
+        index_rsid = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_index.prune.in"),
+        tag_rsid = TAG_RSID,
+        script = "script/index2tag2corr.R"
+    output:
+        index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2tag2corr_r2.tsv")
+    shell: """Rscript {input.script} {input.ld} {input.index_rsid} {input.tag_rsid} {output.index2tag2corr_r2_tsv}"""
+
+rule intersect_chrom:
+    input:
+        snp_bed = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}.peak.bed"),
+        annot_bed = ANNOTATION_BED
+    output:
+        annotated_tsv = os.path.join(OUTDIR, "{chr}/annotated.tsv")
+    shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_bed} -wb |awk '{{print $4"\t"$8}}' >{output.annotated_tsv}"""
+
