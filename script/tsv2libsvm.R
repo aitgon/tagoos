@@ -1,5 +1,17 @@
-index2annot_r2_tsv=Sys.getenv(c("INDEX2ANNOT_R2_TSV"))
-outdir=Sys.getenv(c("OUTDIR"))
+#!/usr/bin/env Rscript
+args = commandArgs(trailingOnly=TRUE)
+
+# test if there is at least one argument: if not, return an error
+if (length(args)!=2) {
+  stop("Two arguments are required", call.=FALSE)
+} else {
+index2annot_r2_tsv=args[1]
+outdir = args[2]
+}
+
+
+#index2annot_r2_tsv=Sys.getenv(c("INDEX2ANNOT_R2_TSV"))
+#outdir=Sys.getenv(c("OUTDIR"))
 
 library(data.table)
 library(stringr)
