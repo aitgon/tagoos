@@ -11,13 +11,28 @@ OUTDIR=os.getenv('OUTDIR')
 SIGN = ['pos', 'neg']
 #CHROM = [21, 22]
 CHROM=os.getenv('CHROM').split()
+from os.path import basename
+ANNOTATION_BED_FN = basename(ANNOTATION_BED)
+
+rule create_model:
+    input:
+        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+        variable = os.path.join(OUTDIR, "variable.txt"),
+        script = "script/create_model.py"
+    output:
+        model_pkl = os.path.join(OUTDIR, "model.pkl"),
+        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+        feature_importance_png = os.path.join(OUTDIR, "feature_importance.png"),
+    shell:
+        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.libsvm} {input.variable} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""%HOME
 
 rule to_libsvm:
     input:
         pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
         script = "script/tsv2libsvm.R"
     output:
-        libsvm = os.path.join(OUTDIR, "annotation.libsvm")
+        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+        variable = os.path.join(OUTDIR, "variable.txt"),
     shell:
         """Rscript {input.script} {input.pos_neg_index2annot_r2_label} """ + OUTDIR
 
@@ -46,14 +61,14 @@ rule label_neg:
         """Rscript -e 'library(data.table); dt = fread("{input.index2annot_r2_tsv}", sep="\\t"); dt$label = -1; write.table(dt, file="{output.index2annot_r2_label_tsv}", sep="\\t", row.names=FALSE, col.names=FALSE, quote=FALSE)'"""
 
 rule merge_neg:
-    input: expand(os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2annot_r2.tsv"), chr=CHROM, sign=['neg'])
+    input: expand(os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "{sign}/{chr}/index2annot_r2.tsv"), chr=CHROM, sign=['neg'])
     output:
         index2annot_r2_tsv = os.path.join(OUTDIR, "neg_index2annot_r2.tsv")
     shell:
         """sort -u {input} >{output}"""
 
 rule merge_pos:
-    input: expand(os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2annot_r2.tsv"), chr=CHROM, sign=['pos'])
+    input: expand(os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "{sign}/{chr}/index2annot_r2.tsv"), chr=CHROM, sign=['pos'])
     output:
         index2annot_r2_tsv = os.path.join(OUTDIR, "pos_index2annot_r2.tsv")
     shell:
@@ -61,11 +76,11 @@ rule merge_pos:
 
 rule annotatecorr:
     input:
-        index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2tag2corr_r2.tsv"),
-        annotated_tsv = os.path.join(OUTDIR, "{chr}/annotated.tsv"),
+        index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "{sign}/{chr}/index2tag2corr_r2.tsv"),
+        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOTATION_BED_FN),
         script = "script/annotate_corr.R"
     output:
-        index2annot_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/{sign}/{chr}/index2annot_r2.tsv")
+        index2annot_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "{sign}/{chr}/index2annot_r2.tsv")
     shell: """Rscript {input.script} {input.index2tag2corr_r2_tsv} {input.annotated_tsv} {output.index2annot_r2_tsv}"""
 
 rule index2tag2corr_pos:
@@ -75,7 +90,7 @@ rule index2tag2corr_pos:
         tag_rsid = TAG_RSID_POS,
         script = "script/index2tag2corr.R"
     output:
-        index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/pos/{chr}/index2tag2corr_r2.tsv")
+        index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "pos/{chr}/index2tag2corr_r2.tsv")
     shell: """Rscript {input.script} {input.ld} {input.index_rsid} {input.tag_rsid} {output.index2tag2corr_r2_tsv}"""
 
 rule index2tag2corr_neg:
@@ -85,7 +100,7 @@ rule index2tag2corr_neg:
         tag_rsid = TAG_RSID_NEG,
         script = "script/index2tag2corr.R"
     output:
-        index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4/out_eur/neg/{chr}/index2tag2corr_r2.tsv")
+        index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "neg/{chr}/index2tag2corr_r2.tsv")
     shell: """Rscript {input.script} {input.ld} {input.index_rsid} {input.tag_rsid} {output.index2tag2corr_r2_tsv}"""
 
 rule intersect_chrom:
@@ -93,6 +108,6 @@ rule intersect_chrom:
         snp_bed = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}.peak.bed"),
         annot_bed = ANNOTATION_BED
     output:
-        annotated_tsv = os.path.join(OUTDIR, "{chr}/annotated.tsv")
+        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOTATION_BED_FN)
     shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_bed} -wb |awk '{{print $4"\t"$8}}' >{output.annotated_tsv}"""
 
