@@ -44,8 +44,9 @@ rule cv_y_probas:
         script = "script/cv_proba.py"
     output:
         cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
+    threads: len(CHROM) if len(CHROM) <= 15 else 15
     shell:
-        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.libsvm} {input.rsid2chrom} {output.cv_proba_pkl}"""%HOME
+        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {threads} {input.libsvm} {input.rsid2chrom} {output.cv_proba_pkl}"""%HOME
 
 rule rsid2chrom:
     input:
@@ -53,7 +54,7 @@ rule rsid2chrom:
     output:
         rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
     shell:
-        """/gpfs/tgml/apps/get_record %s/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx %s/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {input.instance} |awk '{{print $4"\t"$1}}'>%s/rsid2chrom.tsv"""%(HOME, HOME, OUTDIR)
+        """/gpfs/tgml/apps/get_record %s/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx %s/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {input.instance} |awk '{{print $4"\t"$1}}'>{output.rsid2chrom}"""%(HOME, HOME)
 
 
 rule create_model:

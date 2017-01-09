@@ -34,10 +34,8 @@ export TAG_RSID_POS=$HOME/data/2015_svmgwas/data/variant/GRASP/GRASP108.rsid
 export TAG_RSID_NEG=$HOME/data/2015_svmgwas/data/variant/1000genomes/1kg100000.rsid
 export CHROM=$(seq 1 22)
 export GENOME1K_DATA_DIR=$HOME/data/2015_svmgwas/data/variant/1000genomes
-#export ANNOTATION_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/youngh3k27ac_1col.bed
 export ANNOTATION_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/annotation_1col.bed 
 time snakemake -s Snakemake.yml -p -j 15 -c "qsub -X -V -d $PWD -q tagc -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -pn
-python script/cv_proba.py out_1kg10000/annotation.libsvm out_1kg10000/instance.txt out_1kg10000/variable.txt out_1kg10000/rsid2chrom.tsv out_1kg10000
 # 144 min
 ~~~
 
@@ -49,7 +47,6 @@ export TAG_RSID_POS=$HOME/data/2015_svmgwas/data/variant/GRASP/GRASP108.rsid
 export TAG_RSID_NEG=$HOME/data/2015_svmgwas/data/variant/1000genomes/1kg10000.rsid
 export CHROM=$(seq 1 22)
 export GENOME1K_DATA_DIR=$HOME/data/2015_svmgwas/data/variant/1000genomes
-#export ANNOTATION_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/youngh3k27ac_1col.bed
 export ANNOTATION_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/annotation_1col.bed 
 time snakemake -s Snakemake.yml -p -j 15 -c "qsub -X -V -d $PWD -q tagc -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -pn
 # 17 m
