@@ -14,6 +14,48 @@ CHROM=os.getenv('CHROM').split()
 from os.path import basename
 ANNOTATION_BED_FN = basename(ANNOTATION_BED)
 
+rule all:
+    input:
+        roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
+        precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
+
+rule precision_recall_plot:
+    input:
+        cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
+        script = "script/precision_recall_plot.py"
+    output:
+        precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
+    shell:
+        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.cv_proba_pkl} {output.precision_recall_plot}"""%HOME
+
+rule roc_plot:
+    input:
+        cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
+        script = "script/roc_plot.py"
+    output:
+        roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
+    shell:
+        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.cv_proba_pkl} {output.roc_plot}"""%HOME
+
+rule cv_y_probas:
+    input:
+        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+        rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
+        script = "script/cv_proba.py"
+    output:
+        cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
+    shell:
+        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.libsvm} {input.rsid2chrom} {output.cv_proba_pkl}"""%HOME
+
+rule rsid2chrom:
+    input:
+        instance = os.path.join(OUTDIR, "instance.txt"),
+    output:
+        rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
+    shell:
+        """/gpfs/tgml/apps/get_record %s/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx %s/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {input.instance} |awk '{{print $4"\t"$1}}'>%s/rsid2chrom.tsv"""%(HOME, HOME, OUTDIR)
+
+
 rule create_model:
     input:
         libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
