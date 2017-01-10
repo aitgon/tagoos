@@ -1,4 +1,5 @@
 HOME = os.getenv('HOME')
+SCRIPTDIR = os.getenv('SCRIPTDIR')
 GENOME1K_DATA_DIR = os.getenv('GENOME1K_DATA_DIR')
 TAG_RSID_POS = os.getenv('TAG_RSID_POS')
 TAG_RSID_NEG = os.getenv('TAG_RSID_NEG')
@@ -23,7 +24,7 @@ rule all:
 rule precision_recall_plot:
     input:
         cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
-        script = "script/precision_recall_plot.py"
+        script = os.path.join(SCRIPTDIR, "precision_recall_plot.py")
     output:
         precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
     shell:
@@ -32,7 +33,7 @@ rule precision_recall_plot:
 rule roc_plot:
     input:
         cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
-        script = "script/roc_plot.py"
+        script = os.path.join(SCRIPTDIR, "roc_plot.py")
     output:
         roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
     shell:
@@ -42,7 +43,7 @@ rule cv_y_probas:
     input:
         libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
         rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
-        script = "script/cv_proba.py"
+        script = os.path.join(SCRIPTDIR, "cv_proba.py")
     output:
         cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
     threads: len(CHROM) if len(CHROM) <= 15 else 15
@@ -62,7 +63,7 @@ rule create_model:
     input:
         libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
         variable = os.path.join(OUTDIR, "variable.txt"),
-        script = "script/create_model.py"
+        script = os.path.join(SCRIPTDIR, "create_model.py")
     output:
         model_pkl = os.path.join(OUTDIR, "model.pkl"),
         feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
@@ -73,7 +74,7 @@ rule create_model:
 rule to_libsvm:
     input:
         pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
-        script = "script/tsv2libsvm.R"
+        script = os.path.join(SCRIPTDIR, "tsv2libsvm.R")
     output:
         libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
         variable = os.path.join(OUTDIR, "variable.txt"),
@@ -123,7 +124,7 @@ rule annotatecorr:
     input:
         index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "{sign}/{chr}/index2tag2corr_r2.tsv"),
         annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOTATION_BED_FN),
-        script = "script/annotate_corr.R"
+        script = os.path.join(SCRIPTDIR, "annotate_corr.R")
     output:
         index2annot_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "{sign}/{chr}/index2annot_r2.tsv")
     shell: """Rscript {input.script} {input.index2tag2corr_r2_tsv} {input.annotated_tsv} {output.index2annot_r2_tsv}"""
@@ -133,7 +134,7 @@ rule index2tag2corr_pos:
         ld = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_ld.ld"),
         index_rsid = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_index.prune.in"),
         tag_rsid = TAG_RSID_POS,
-        script = "script/index2tag2corr.R"
+        script = os.path.join(SCRIPTDIR, "index2tag2corr.R")
     output:
         index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "pos/{chr}/index2tag2corr_r2.tsv")
     shell: """Rscript {input.script} {input.ld} {input.index_rsid} {input.tag_rsid} {output.index2tag2corr_r2_tsv}"""
@@ -143,7 +144,7 @@ rule index2tag2corr_neg:
         ld = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_ld.ld"),
         index_rsid = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_index.prune.in"),
         tag_rsid = TAG_RSID_NEG,
-        script = "script/index2tag2corr.R"
+        script = os.path.join(SCRIPTDIR, "index2tag2corr.R")
     output:
         index2tag2corr_r2_tsv = os.path.join(HOME, "data/2015_svmgwas/repositories/svmgwas-appli4", OUTDIR, "neg/{chr}/index2tag2corr_r2.tsv")
     shell: """Rscript {input.script} {input.ld} {input.index_rsid} {input.tag_rsid} {output.index2tag2corr_r2_tsv}"""
