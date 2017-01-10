@@ -30,35 +30,7 @@ import xgboost
 train_libsvm_temp_path = tempfile.NamedTemporaryFile().name
 test_libsvm_temp_path = tempfile.NamedTemporaryFile().name
 
-outdir_path = "."
-
-
-
-#def main_bak(argv):
-#    # I/O paths
-#    libsvm_path = sys.argv[1] #pandas.read_csv("annotation.libsvm", sep="\t", header=None)
-#    instance_path = os.path.join(dirname(libsvm_path), "instance.txt")
-#    variable_path = os.path.join(dirname(libsvm_path), "variable.txt")
-#    #instance = sys.argv[2] #pandas.read_csv("instance.txt", sep="\t", header=None)
-#    #variable = sys.argv[3] #pandas.read_csv("variable.txt", sep="\t", header=None)
-#    rsid2chrom_path = sys.argv[2] #pandas.read_csv("rsid2chrom.tsv", sep="\t", header=None, index_col=0)
-#    #
-#    cv_proba_pkl_path = sys.argv[3] #cv_proba_path.pkl"
-#    outdir_path = dirname(cv_proba_pkl_path)
-#    #
-#    # load data
-#    libsvm = pandas.read_csv(libsvm_path, sep="\t", header=None)
-#    instance = pandas.read_csv(instance_path, sep="\t", header=None)
-#    variable = pandas.read_csv(variable_path, sep="\t", header=None)
-#    rsid2chrom = pandas.read_csv(rsid2chrom_path, sep="\t", header=None, index_col=0)
-#    #
-#    # loop over chromosomes
-#    chrom_list = sorted(rsid2chrom[1].unique())
-#    for chr in chrom_list:
-#    # write cv_probas to pkl
-#    pickle.dump(cv_probas, open(cv_proba_pkl_path, "wb"))
-
-def worker(chr, cv_probas, libsvm, rsid2chrom, instance):
+def worker(chr, cv_probas, libsvm, rsid2chrom, instance, outdir_path):
     print(chr)
     chr_int = int(chr[3:])
     cv_probas[chr_int] = {}
@@ -83,16 +55,18 @@ def worker(chr, cv_probas, libsvm, rsid2chrom, instance):
     train_libsvm.to_csv(train_libsvm_path, index=None, header=None)
     train_instance.to_csv(train_instance_path, index=None, header=None)
     xdm_train = xgboost.DMatrix(train_libsvm_path)
+    xdm_test = xgboost.DMatrix(test_libsvm_path)
     model = xgboost.train({'silent': True}, xdm_train)
-    y_proba = model.predict(xgboost.DMatrix(test_libsvm_path))
+    y_test_proba = model.predict(xdm_test)
+    y_test_label = xdm_test.get_label().tolist()
+    y_test_label=[int(label) for label in y_test_label] # to integer
     #
-    y_test_proba=pandas.DataFrame({'label': test_instance[0].tolist(), 'proba': y_proba}, index=test_instance[0])
+    y_test_proba = pandas.DataFrame({'label': y_test_label, 'proba': y_test_proba}, index=test_instance[0])
+    y_test_proba.sort_index(inplace=True)
     y_test_proba.sort_values(by=['proba', 'label'], axis=0, ascending=[False, False], inplace=True)
-    y_test_proba.to_csv(os.path.join(cv_path, 'y_test_proba.tsv'), sep="\t", index=False, index_label="variant")
+    y_test_proba.to_csv(os.path.join(cv_path, 'y_test_proba.tsv'), sep="\t", index=True, index_label="variant")
     #
-    #cv_probas[chr_int]['test_libsvm_path'] = test_libsvm_path
-    #cv_probas[chr_int]['y_proba'] = y_proba
-    return chr_int, {'test_libsvm_path' : test_libsvm_path, 'y_proba' : y_proba}
+    return chr_int, {'test_libsvm_path' : test_libsvm_path, 'y_test_proba' : os.path.join(cv_path, 'y_test_proba.tsv')}
 
 from functools import partial
 from itertools import repeat
@@ -104,8 +78,6 @@ def main(argv):
     libsvm_path = sys.argv[2] #pandas.read_csv("annotation.libsvm", sep="\t", header=None)
     instance_path = os.path.join(dirname(libsvm_path), "instance.txt")
     variable_path = os.path.join(dirname(libsvm_path), "variable.txt")
-    #instance = sys.argv[2] #pandas.read_csv("instance.txt", sep="\t", header=None)
-    #variable = sys.argv[3] #pandas.read_csv("variable.txt", sep="\t", header=None)
     rsid2chrom_path = sys.argv[3] #pandas.read_csv("rsid2chrom.tsv", sep="\t", header=None, index_col=0)
     cv_proba_pkl_path = sys.argv[4] #cv_proba_path.pkl"
     outdir_path = dirname(cv_proba_pkl_path)
@@ -125,14 +97,14 @@ def main(argv):
     #pool = multiprocessing.Pool(number_processes)
     #results = pool.map_async(work, tasks)
     #for chr in chrom_list:
+    #    worker(chr, cv_probas=cv_probas, libsvm=libsvm, rsid2chrom=rsid2chrom, instance=instance, outdir_path=outdir_path)
     #    #chr_int = int(chr[3:])
     #    chr_int, y_proba,test_libsvm_path = worker(chr, cv_probas, libsvm, rsid2chrom, instance)
     #    cv_probas[chr_int]['test_libsvm_path'] = test_libsvm_path
     #    cv_probas[chr_int]['y_proba'] = y_proba
     with Pool(nproc) as pool:
         a_args = chrom_list
-        #worker(chr, cv_probas, libsvm, rsid2chrom, instance)
-        cv_probas = dict(pool.map(partial(worker, cv_probas=cv_probas, libsvm=libsvm, rsid2chrom=rsid2chrom, instance=instance), a_args))
+        cv_probas = dict(pool.map(partial(worker, cv_probas=cv_probas, libsvm=libsvm, rsid2chrom=rsid2chrom, instance=instance, outdir_path=outdir_path), a_args))
     # write cv_probas to pkl
     #print(cv_probas)
     pickle.dump(cv_probas, open(cv_proba_pkl_path, "wb"))

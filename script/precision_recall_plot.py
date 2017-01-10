@@ -1,6 +1,6 @@
 #dat_bak = pandas.read_hdf(dat_path, 'key') # reads data
 #cv_splitted_data = cv_split_data(dat, outdir_path) # splits data in dic with chrom keys
-#cv_probas = cv_proba(cv_splitted_data, outdir_path) # writes dict with cv_probas[chrom]['y_proba'] = y_proba
+#cv_probas = cv_proba(cv_splitted_data, outdir_path) # writes dict with cv_probas[chrom]['y_test_proba'] = y_test_proba
 #roc_plot(cv_probas, roc_path, auc_path) # plots roc
 #precision_recall_plot(cv_probas, precision_recall_path, auprc_path) # plots precision recall   
 
@@ -30,11 +30,16 @@ def precision_recall_plot(cv_probas, precision_recall_path, auprc_path):
     fig, ax = pyplot.subplots()
     cv_rocs = {}
     for chrom in sorted(cv_probas.keys()):
-        test_libsvm_path = cv_probas[chrom]['test_libsvm_path']
-        xgd = xgboost.DMatrix(test_libsvm_path)
-        label = xgd.get_label()
-        precision, recall, thresholds = precision_recall_curve(label, cv_probas[chrom]['y_proba'], pos_label=1)
-        auprc = average_precision_score(label, cv_probas[chrom]['y_proba'])
+        #test_libsvm_path = cv_probas[chrom]['test_libsvm_path']
+        #xgd = xgboost.DMatrix(test_libsvm_path)
+        #label = xgd.get_label()
+        y_test_proba_path = cv_probas[chrom]['y_test_proba']
+        y_test_proba_df = pandas.read_csv(y_test_proba_path, sep="\t", header=0)
+        y_test_label = y_test_proba_df.label.tolist()
+        y_test_proba = y_test_proba_df.proba.tolist()
+        #
+        precision, recall, thresholds = precision_recall_curve(y_test_label, y_test_proba, pos_label=1)
+        auprc = average_precision_score(y_test_label, y_test_proba)
         recalls.append(recall)
         auprcs.append(auprc)
         precision2 = (numpy.interp(base_recall[::-1], recall[::-1], precision[::-1]))[::-1]

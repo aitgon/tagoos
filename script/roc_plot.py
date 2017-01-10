@@ -30,11 +30,15 @@ def roc_plot(cv_probas, roc_path, auc_path):
     fig, ax = pyplot.subplots()
     cv_rocs = {}
     for chrom in sorted(cv_probas.keys()):
-        print(chrom)
-        test_libsvm_path = cv_probas[chrom]['test_libsvm_path']
-        xgd = xgboost.DMatrix(test_libsvm_path)
-        label = xgd.get_label()
-        fpr, tpr, thresholds = roc_curve(label, cv_probas[chrom]['y_proba'], pos_label=1)
+        #test_libsvm_path = cv_probas[chrom]['test_libsvm_path']
+        #xgd = xgboost.DMatrix(test_libsvm_path)
+        #label = xgd.get_label()
+        y_test_proba_path = cv_probas[chrom]['y_test_proba']
+        y_test_proba_df = pandas.read_csv(y_test_proba_path, sep="\t", header=0)
+        y_test_label = y_test_proba_df.label.tolist()
+        y_test_proba = y_test_proba_df.proba.tolist()
+        #
+        fpr, tpr, thresholds = roc_curve(y_test_label, y_test_proba, pos_label=1)
         roc_auc = auc(fpr, tpr)
         fprs.append(fpr)
         tpr2 = numpy.interp(base_fpr, fpr, tpr)
