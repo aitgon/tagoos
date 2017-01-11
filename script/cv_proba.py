@@ -66,7 +66,10 @@ def worker(chr, cv_probas, libsvm, rsid2chrom, instance, outdir_path):
     y_test_proba.sort_values(by=['proba', 'label'], axis=0, ascending=[False, False], inplace=True)
     y_test_proba.to_csv(os.path.join(cv_path, 'y_test_proba.tsv'), sep="\t", index=True, index_label="variant")
     #
-    return chr_int, {'test_libsvm_path' : test_libsvm_path, 'y_test_proba' : os.path.join(cv_path, 'y_test_proba.tsv')}
+    if y_test_proba.loc[y_test_proba.label==1].shape[0] >= 1:
+        return chr_int, {'test_libsvm_path' : test_libsvm_path, 'y_test_proba' : os.path.join(cv_path, 'y_test_proba.tsv')}
+    else:
+        return chr_int, None
 
 from functools import partial
 from itertools import repeat
@@ -97,11 +100,8 @@ def main(argv):
     #pool = multiprocessing.Pool(number_processes)
     #results = pool.map_async(work, tasks)
     #for chr in chrom_list:
-    #    worker(chr, cv_probas=cv_probas, libsvm=libsvm, rsid2chrom=rsid2chrom, instance=instance, outdir_path=outdir_path)
-    #    #chr_int = int(chr[3:])
-    #    chr_int, y_proba,test_libsvm_path = worker(chr, cv_probas, libsvm, rsid2chrom, instance)
-    #    cv_probas[chr_int]['test_libsvm_path'] = test_libsvm_path
-    #    cv_probas[chr_int]['y_proba'] = y_proba
+    #    chr_int, y_proba = worker(chr, cv_probas, libsvm, rsid2chrom, instance, outdir_path)
+    #    cv_probas[chr_int] = y_proba
     with Pool(nproc) as pool:
         a_args = chrom_list
         cv_probas = dict(pool.map(partial(worker, cv_probas=cv_probas, libsvm=libsvm, rsid2chrom=rsid2chrom, instance=instance, outdir_path=outdir_path), a_args))

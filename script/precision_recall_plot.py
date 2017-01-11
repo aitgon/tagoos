@@ -30,22 +30,20 @@ def precision_recall_plot(cv_probas, precision_recall_path, auprc_path):
     fig, ax = pyplot.subplots()
     cv_rocs = {}
     for chrom in sorted(cv_probas.keys()):
-        #test_libsvm_path = cv_probas[chrom]['test_libsvm_path']
-        #xgd = xgboost.DMatrix(test_libsvm_path)
-        #label = xgd.get_label()
-        y_test_proba_path = cv_probas[chrom]['y_test_proba']
-        y_test_proba_df = pandas.read_csv(y_test_proba_path, sep="\t", header=0)
-        y_test_label = y_test_proba_df.label.tolist()
-        y_test_proba = y_test_proba_df.proba.tolist()
-        #
-        precision, recall, thresholds = precision_recall_curve(y_test_label, y_test_proba, pos_label=1)
-        auprc = average_precision_score(y_test_label, y_test_proba)
-        recalls.append(recall)
-        auprcs.append(auprc)
-        precision2 = (numpy.interp(base_recall[::-1], recall[::-1], precision[::-1]))[::-1]
-        precisions.append(precision)
-        precision2s.append(precision2)
-        ax.plot(recall, precision, 'b', alpha=0.05)
+        if not cv_probas[chrom] is None:
+            y_test_proba_path = cv_probas[chrom]['y_test_proba']
+            y_test_proba_df = pandas.read_csv(y_test_proba_path, sep="\t", header=0)
+            y_test_label = y_test_proba_df.label.tolist()
+            y_test_proba = y_test_proba_df.proba.tolist()
+            #
+            precision, recall, thresholds = precision_recall_curve(y_test_label, y_test_proba, pos_label=1)
+            auprc = average_precision_score(y_test_label, y_test_proba)
+            recalls.append(recall)
+            auprcs.append(auprc)
+            precision2 = (numpy.interp(base_recall[::-1], recall[::-1], precision[::-1]))[::-1]
+            precisions.append(precision)
+            precision2s.append(precision2)
+            ax.plot(recall, precision, 'b', alpha=0.05)
     precision2s = numpy.array(precision2s)
     mean_precision2s = precision2s.mean(axis=0)
     auprc_mean = "%.2f" % numpy.array(auprcs).mean()

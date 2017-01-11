@@ -30,23 +30,21 @@ def roc_plot(cv_probas, roc_path, auc_path):
     fig, ax = pyplot.subplots()
     cv_rocs = {}
     for chrom in sorted(cv_probas.keys()):
-        #test_libsvm_path = cv_probas[chrom]['test_libsvm_path']
-        #xgd = xgboost.DMatrix(test_libsvm_path)
-        #label = xgd.get_label()
-        y_test_proba_path = cv_probas[chrom]['y_test_proba']
-        y_test_proba_df = pandas.read_csv(y_test_proba_path, sep="\t", header=0)
-        y_test_label = y_test_proba_df.label.tolist()
-        y_test_proba = y_test_proba_df.proba.tolist()
-        #
-        fpr, tpr, thresholds = roc_curve(y_test_label, y_test_proba, pos_label=1)
-        roc_auc = auc(fpr, tpr)
-        fprs.append(fpr)
-        tpr2 = numpy.interp(base_fpr, fpr, tpr)
-        tprs.append(tpr)
-        tpr2s.append(tpr2)
-        aucs.append(roc_auc)
-        cv_rocs[chrom] = {'fpr': fpr, 'tpr': tpr, 'thresholds': thresholds}
-        ax.plot(fpr, tpr, 'b', alpha=0.05)
+        if not cv_probas[chrom] is None:
+            y_test_proba_path = cv_probas[chrom]['y_test_proba']
+            y_test_proba_df = pandas.read_csv(y_test_proba_path, sep="\t", header=0)
+            y_test_label = y_test_proba_df.label.tolist()
+            y_test_proba = y_test_proba_df.proba.tolist()
+            #
+            fpr, tpr, thresholds = roc_curve(y_test_label, y_test_proba, pos_label=1)
+            roc_auc = auc(fpr, tpr)
+            fprs.append(fpr)
+            tpr2 = numpy.interp(base_fpr, fpr, tpr)
+            tprs.append(tpr)
+            tpr2s.append(tpr2)
+            aucs.append(roc_auc)
+            cv_rocs[chrom] = {'fpr': fpr, 'tpr': tpr, 'thresholds': thresholds}
+            ax.plot(fpr, tpr, 'b', alpha=0.05)
     tpr2s = numpy.array(tpr2s)
     mean_tprs = tpr2s.mean(axis=0)
     auc_mean = "%.2f" % numpy.array(aucs).mean()

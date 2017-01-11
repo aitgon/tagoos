@@ -21,29 +21,33 @@ names(dt) = c('instance', 'value', 'variable', 'label')
 dt = dt[!is.na(as.numeric(as.character(dt$value))),]
 #dt$value = as.numeric(as.character(dt$value))
 
+# variable index
 dt$value=round(dt$value, 2)
 dt$variable.ix = as.numeric(as.factor(dt$variable))
-dt$instance.ix = as.numeric(as.factor(dt$instance))
-
-# variable index
 variable2ix=unique(dt[, c("variable", "variable.ix"), with=F])
-variable2ix <- variable2ix[order(variable2ix$variable.ix, decreasing=F),]
 dt = dt[, c(-3)]
+variable2ix <- variable2ix[order(variable2ix$variable.ix, decreasing=F),]
 
 # libsvm
 dt$variable.ix_value = paste0(dt$variable.ix, ":", dt$value)
-dt = aggregate(variable.ix_value ~ instance + instance.ix + label, data=dt, FUN=function(x) paste(x, collapse=" "))
+dt = aggregate(variable.ix_value ~ instance + label, data=dt, FUN=function(x) paste(x, collapse=" "))
 
 # remove negative that also have postive
 dt <- dt[order(dt$label, decreasing=TRUE),]
-dt = dt[!duplicated(dt[, c("instance", "instance.ix")]),]
+dt = dt[!duplicated(dt[, c("instance")]),]
+
+# variable index
+#dt$instance.ix = as.numeric(as.factor(dt$instance))
+instance = dt$instance
+dt = dt[, c(-1)]
+
 
 # instance index
-instance2ix=dt[, c("instance", "instance.ix")]
-instance2ix <- instance2ix[order(instance2ix$instance.ix, decreasing=F),]
-dt = dt[, c(-1, -2)]
+#instance2ix=dt[, c("instance", "instance.ix")]
+#instance2ix <- instance2ix[order(instance2ix$instance.ix, decreasing=F),]
+#dt = dt[, c(-1, -2)]
 
 write.table(variable2ix$variable, file=file.path(outdir, "variable.txt"), col.names=F, row.names=F, quote=F, sep="\t")
-write.table(instance2ix$instance, file=file.path(outdir, "instance.txt"), col.names=F, row.names=F, quote=F, sep="\t")
+write.table(instance, file=file.path(outdir, "instance.txt"), col.names=F, row.names=F, quote=F, sep="\t")
 write.table(dt, file=file.path(outdir, "annotation.libsvm"), col.names=F, row.names=F, quote=F)
 
