@@ -28,6 +28,14 @@ variable2ix <- variable2ix[order(variable2ix$variable.ix, decreasing=F),]
 dt$variable.ix_value = paste0(dt$variable.ix, ":", dt$value)
 dt = aggregate(variable.ix_value ~ instance + label, data=dt, FUN=function(x) paste(x, collapse=" "))
 
+# add last variable ix to all rows if missing
+nrow_variable2ix=nrow(variable2ix)
+for (i in 1:nrow(dt)) {
+    if (!(nrow_variable2ix %in% dt[1,"variable.ix_value"])){
+        dt[i,"variable.ix_value"] = paste0(dt[i,"variable.ix_value"], " ", nrow_variable2ix, ":0")
+    }
+}
+
 # remove negative that also have postive
 dt <- dt[order(dt$label, decreasing=TRUE),]
 dt = dt[!duplicated(dt[, c("instance")]),]

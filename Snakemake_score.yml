@@ -43,12 +43,12 @@ rule rsidannot:
     input:
         rsid_path = RSID_PATH,
         chrom_peak_bed = os.path.join(GENOME1K_DATA_DIR, "chr{chrom}/chr{chrom}.peak.bed"),
-        annotation = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chrom}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
+        annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chrom}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
     output:
         rsid_peak_bed = os.path.join(OUTDIR, "chrom/{chrom}/rsid_peak_bed"),
         rsidannot_tsv = os.path.join(OUTDIR, "chrom/{chrom}/rsidannot_tsv"),
     shell: """{HOME}/data/2015_svmgwas/data/hcomp/get_record  {input.chrom_peak_bed}.idx {input.chrom_peak_bed} -f {input.rsid_path} >{output.rsid_peak_bed};
 sort -u -k1,1 -k2,2n {output.rsid_peak_bed} -o {output.rsid_peak_bed};
-intersectBed -sorted -a {output.rsid_peak_bed} -b {input.annotation} -wb |cut -f4,8 >{output.rsidannot_tsv};
+intersectBed -sorted -a {output.rsid_peak_bed} -b {input.annot_bed} -wb |cut -f4,8 >{output.rsidannot_tsv};
 """
 

@@ -57,6 +57,7 @@ def worker(chr, cv_probas, libsvm, rsid2chrom, instance, outdir_path):
     xdm_train = xgboost.DMatrix(train_libsvm_path)
     xdm_test = xgboost.DMatrix(test_libsvm_path)
     model = xgboost.train({'silent': True}, xdm_train)
+    #import pdb; pdb.set_trace()
     y_test_proba = model.predict(xdm_test)
     y_test_label = xdm_test.get_label().tolist()
     y_test_label=[int(label) for label in y_test_label] # to integer
@@ -99,12 +100,12 @@ def main(argv):
     #number_processes = 3
     #pool = multiprocessing.Pool(number_processes)
     #results = pool.map_async(work, tasks)
-    #for chr in chrom_list:
-    #    chr_int, y_proba = worker(chr, cv_probas, libsvm, rsid2chrom, instance, outdir_path)
-    #    cv_probas[chr_int] = y_proba
-    with Pool(nproc) as pool:
-        a_args = chrom_list
-        cv_probas = dict(pool.map(partial(worker, cv_probas=cv_probas, libsvm=libsvm, rsid2chrom=rsid2chrom, instance=instance, outdir_path=outdir_path), a_args))
+    for chr in chrom_list:
+        chr_int, y_proba = worker(chr, cv_probas, libsvm, rsid2chrom, instance, outdir_path)
+        cv_probas[chr_int] = y_proba
+    #with Pool(nproc) as pool:
+    #    a_args = chrom_list
+    #    cv_probas = dict(pool.map(partial(worker, cv_probas=cv_probas, libsvm=libsvm, rsid2chrom=rsid2chrom, instance=instance, outdir_path=outdir_path), a_args))
     # write cv_probas to pkl
     #print(cv_probas)
     pickle.dump(cv_probas, open(cv_proba_pkl_path, "wb"))

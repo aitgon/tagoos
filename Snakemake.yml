@@ -1,3 +1,4 @@
+ANNOT_LABEL = os.getenv('ANNOT_LABEL')
 ANNOTATION_BED = os.getenv('ANNOTATION_BED')
 CHROM=os.getenv('CHROM').split()
 GENOME1K_DATA_DIR = os.getenv('GENOME1K_DATA_DIR')
@@ -161,8 +162,9 @@ rule index2tag2corr_neg:
 rule intersect_chrom:
     input:
         snp_bed = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}.peak.bed"),
-        annot_bed = ANNOTATION_BED
+        annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
     output:
         annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOTATION_BED_FN)
     shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_bed} -wb |awk '{{print $4"\t"$8}}' >{output.annotated_tsv}"""
+
 
