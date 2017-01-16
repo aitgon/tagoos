@@ -23,7 +23,7 @@ def main(argv):
     feature_importance_png = sys.argv[5]
     #
     variable = pandas.read_csv(fin_variable, header=None)
-    variable.sort_values(by=[0], inplace=True)
+    #variable.sort_values(by=[0], inplace=True)
     variable = ['label'] + variable[0].tolist()
     # Model ----------------------------
     xgdmat = xgboost.DMatrix(fin_libsvm, feature_names=variable)

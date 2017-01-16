@@ -10,8 +10,6 @@ annotation_tsv = args[2]
 index2annot_r2_tsv=args[3]
 }
 
-
-
 library(data.table)
 #annotdir=Sys.getenv(c("ANNOTDIR"))
 #outdir=Sys.getenv(c("OUTDIR"))

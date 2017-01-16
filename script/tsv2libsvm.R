@@ -9,9 +9,6 @@ index2annot_r2_tsv=args[1]
 outdir = args[2]
 }
 
-#index2annot_r2_tsv=Sys.getenv(c("INDEX2ANNOT_R2_TSV"))
-#outdir=Sys.getenv(c("OUTDIR"))
-
 library(data.table)
 library(stringr)
 
@@ -19,7 +16,6 @@ dt = unique(fread(index2annot_r2_tsv, sep="\t"));
 names(dt) = c('instance', 'value', 'variable', 'label')
 
 dt = dt[!is.na(as.numeric(as.character(dt$value))),]
-#dt$value = as.numeric(as.character(dt$value))
 
 # variable index
 dt$value=round(dt$value, 2)
@@ -37,15 +33,8 @@ dt <- dt[order(dt$label, decreasing=TRUE),]
 dt = dt[!duplicated(dt[, c("instance")]),]
 
 # variable index
-#dt$instance.ix = as.numeric(as.factor(dt$instance))
 instance = dt$instance
 dt = dt[, c(-1)]
-
-
-# instance index
-#instance2ix=dt[, c("instance", "instance.ix")]
-#instance2ix <- instance2ix[order(instance2ix$instance.ix, decreasing=F),]
-#dt = dt[, c(-1, -2)]
 
 write.table(variable2ix$variable, file=file.path(outdir, "variable.txt"), col.names=F, row.names=F, quote=F, sep="\t")
 write.table(instance, file=file.path(outdir, "instance.txt"), col.names=F, row.names=F, quote=F, sep="\t")
