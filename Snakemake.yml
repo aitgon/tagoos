@@ -1,5 +1,6 @@
 ANNOT_LABEL = os.getenv('ANNOT_LABEL')
-ANNOTATION_BED = os.getenv('ANNOTATION_BED')
+INDEX_LABEL = os.getenv('INDEX_LABEL')
+#ANNOTATION_BED = ANNOT_LABEL
 CHROM=os.getenv('CHROM').split()
 GENOME1K_DATA_DIR = os.getenv('GENOME1K_DATA_DIR')
 HOME = os.getenv('HOME')
@@ -12,10 +13,11 @@ TAG_SIGN=[[os.getenv('TAG_RSID'), os.getenv('SIGN')]]
 
 SIGN = ['pos', 'neg']
 from os.path import basename
-ANNOTATION_BED_FN = basename(ANNOTATION_BED)
+#ANNOTATION_BED_FN = basename(ANNOTATION_BED)
 
 rule all:
     input:
+        libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
         roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
         precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
         model_pkl = os.path.join(OUTDIR, "model.pkl"),
@@ -81,6 +83,15 @@ rule create_model:
     shell:
         """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.libsvm} {input.variable} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""%HOME
 
+rule libsvm_pos_neg_count:
+    input:
+        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+    output:
+        libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
+    shell:
+        """grep -P "^1 " {input.libsvm} |wc -l >{output.libsvm_pos_neg_count};
+            grep -P "^-1 " {input.libsvm} |wc -l >>{output.libsvm_pos_neg_count};"""
+
 rule to_libsvm:
     input:
         pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
@@ -133,7 +144,7 @@ rule merge_pos:
 rule annotatecorr:
     input:
         index2tag2corr_r2_tsv = os.path.join(OUTDIR, "{sign}/{chr}/index2tag2corr_r2.tsv"),
-        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOTATION_BED_FN),
+        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOT_LABEL),
         script = os.path.join(SCRIPTDIR, "annotate_corr.R")
     output:
         index2annot_r2_tsv = os.path.join(OUTDIR, "{sign}/{chr}/index2annot_r2.tsv")
@@ -142,7 +153,7 @@ rule annotatecorr:
 rule index2tag2corr_pos:
     input:
         ld = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_ld.ld"),
-        index_rsid = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_index.prune.in"),
+        index_rsid = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
         tag_rsid = TAG_RSID_POS,
         script = os.path.join(SCRIPTDIR, "index2tag2corr.R")
     output:
@@ -152,7 +163,7 @@ rule index2tag2corr_pos:
 rule index2tag2corr_neg:
     input:
         ld = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_ld.ld"),
-        index_rsid = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_index.prune.in"),
+        index_rsid = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
         tag_rsid = TAG_RSID_NEG,
         script = os.path.join(SCRIPTDIR, "index2tag2corr.R")
     output:
@@ -164,7 +175,7 @@ rule intersect_chrom:
         snp_bed = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}.peak.bed"),
         annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
     output:
-        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOTATION_BED_FN)
+        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOT_LABEL)
     shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_bed} -wb |awk '{{print $4"\t"$8}}' >{output.annotated_tsv}"""
 
 
