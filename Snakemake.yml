@@ -15,6 +15,32 @@ SIGN = ['pos', 'neg']
 from os.path import basename
 #ANNOTATION_BED_FN = basename(ANNOTATION_BED)
 
+rule feature_bed_chrom_all:
+    input:
+        selected_chrom_annot_bed = expand(os.path.join(OUTDIR, "feature/{chr}/feature.bed"), chr=CHROM),
+    output:
+        selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed")
+    shell:
+        """sort -k1,1 -k2,2n {input.selected_chrom_annot_bed} -o  {output.selected_annot_bed}"""
+
+rule feature_bed_chrom:
+    input:
+        feature_txt = os.path.join(OUTDIR, "feature/feature.txt"),
+        annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
+        annot_bed_idx = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed.idx"%(ANNOT_LABEL, ANNOT_LABEL)),
+    output:
+        selected_annot_bed =os.path.join(OUTDIR, "feature/{chr}/feature.bed"),
+    shell:
+        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.annot_bed_idx} {input.annot_bed} -f {input.feature_txt} >{output.selected_annot_bed}"""
+
+rule extract_feature2tex:
+    input:
+        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+    output:
+        feature_txt = os.path.join(OUTDIR, "feature/feature.txt"),
+    shell:
+        """cut -f1 {input.feature_importance_tsv} |head -n 30 >{output.feature_txt}"""
+
 rule all:
     input:
         libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
@@ -22,6 +48,81 @@ rule all:
         precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
         model_pkl = os.path.join(OUTDIR, "model.pkl"),
         heatmap_png = os.path.join(OUTDIR, "heatmap.png"),
+        corr_bed_pos = os.path.join(OUTDIR, "pos", "corr_pos.bed"),
+        corr_bed_neg = os.path.join(OUTDIR, "neg", "corr_neg.bed"),
+        tag_bed_pos = os.path.join(OUTDIR, "pos", "tag_pos.bed"),
+        tag_bed_neg = os.path.join(OUTDIR, "neg", "tag_neg.bed"),
+        index_bed_pos = os.path.join(OUTDIR, "pos", "index_pos.bed"),
+        index_bed_neg = os.path.join(OUTDIR, "neg", "index_neg.bed"),
+
+rule merge_corr_bed_pos:
+    input:
+        corr_bed = expand(os.path.join(OUTDIR, "pos/{chr}/corr.bed"), chr=CHROM)
+    output:
+        corr_bed_pos = os.path.join(OUTDIR, "pos", "corr_pos.bed"),
+    shell: """sort -u -k1,1 -k2,2n {input.corr_bed} -o {output.corr_bed_pos}"""
+
+rule merge_corr_bed_neg:
+    input:
+        corr_bed = expand(os.path.join(OUTDIR, "neg/{chr}/corr.bed"), chr=CHROM)
+    output:
+        corr_bed_neg = os.path.join(OUTDIR, "neg", "corr_neg.bed"),
+    shell: """sort -u -k1,1 -k2,2n {input.corr_bed} -o {output.corr_bed_neg}"""
+
+rule corr_bed:
+    input:
+        index2tag2corr_r2_tsv = os.path.join(OUTDIR, "{sign}/{chr}/index2tag2corr_r2.tsv")
+    output:
+        corr_rsid = os.path.join(OUTDIR, "{sign}/{chr}/corr.rsid"),
+        corr_bed = os.path.join(OUTDIR, "{sign}/{chr}/corr.bed"),
+    shell: """cut -f3 {input.index2tag2corr_r2_tsv} |sort -u >{output.corr_rsid};
+                {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.corr_rsid} >{output.corr_bed}"""
+
+rule merge_tag_bed_pos:
+    input:
+        tag_bed = expand(os.path.join(OUTDIR, "pos/{chr}/tag.bed"), chr=CHROM)
+    output:
+        tag_bed_pos = os.path.join(OUTDIR, "pos", "tag_pos.bed"),
+    shell: """sort -u -k1,1 -k2,2n {input.tag_bed} -o {output.tag_bed_pos}"""
+
+rule merge_tag_bed_neg:
+    input:
+        tag_bed = expand(os.path.join(OUTDIR, "neg/{chr}/tag.bed"), chr=CHROM)
+    output:
+        tag_bed_neg = os.path.join(OUTDIR, "neg", "tag_neg.bed"),
+    shell: """sort -u -k1,1 -k2,2n {input.tag_bed} -o {output.tag_bed_neg}"""
+
+rule tag_bed:
+    input:
+        index2tag2corr_r2_tsv = os.path.join(OUTDIR, "{sign}/{chr}/index2tag2corr_r2.tsv")
+    output:
+        tag_rsid = os.path.join(OUTDIR, "{sign}/{chr}/tag.rsid"),
+        tag_bed = os.path.join(OUTDIR, "{sign}/{chr}/tag.bed"),
+    shell: """cut -f2 {input.index2tag2corr_r2_tsv} |sort -u >{output.tag_rsid};
+                {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.tag_rsid} >{output.tag_bed}"""
+
+rule merge_index_bed_pos:
+    input:
+        index_bed = expand(os.path.join(OUTDIR, "pos/{chr}/index.bed"), chr=CHROM),
+    output:
+        index_bed_pos = os.path.join(OUTDIR, "pos", "index_pos.bed"),
+    shell: """sort -u -k1,1 -k2,2n {input.index_bed} -o {output.index_bed_pos}"""
+
+rule merge_index_bed_neg:
+    input:
+        index_bed = expand(os.path.join(OUTDIR, "neg/{chr}/index.bed"), chr=CHROM),
+    output:
+        index_bed_neg = os.path.join(OUTDIR, "neg", "index_neg.bed"),
+    shell: """sort -u -k1,1 -k2,2n {input.index_bed} -o {output.index_bed_neg}"""
+
+rule index_bed:
+    input:
+        index2tag2corr_r2_tsv = os.path.join(OUTDIR, "{sign}/{chr}/index2tag2corr_r2.tsv")
+    output:
+        index_rsid = os.path.join(OUTDIR, "{sign}/{chr}/index.rsid"),
+        index_bed = os.path.join(OUTDIR, "{sign}/{chr}/index.bed"),
+    shell: """cut -f1 {input.index2tag2corr_r2_tsv} |sort -u >{output.index_rsid};
+                {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.index_rsid} >{output.index_bed}"""
 
 rule precision_recall_plot:
     input:
@@ -58,7 +159,7 @@ rule rsid2chrom:
     output:
         rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
     shell:
-        """%s/data/2015_svmgwas/data/hcomp/get_record %s/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx %s/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {input.instance} |awk '{{print $4"\t"$1}}'>{output.rsid2chrom}"""%(HOME, HOME, HOME)
+        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {input.instance} |awk '{{print $4"\t"$1}}'>{output.rsid2chrom}"""
 
 rule heatmap:
     input:
@@ -69,7 +170,6 @@ rule heatmap:
         heatmap_png = os.path.join(OUTDIR, "heatmap.png"),
     shell:
         """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.pos_neg_index2annot_r2_label} {input.model_pkl} {output.heatmap_png}"""%HOME
-
 
 rule create_model:
     input:
@@ -135,7 +235,7 @@ rule merge_neg:
         """sort -u {input} >{output}"""
 
 rule merge_pos:
-    input: expand(os.path.join(OUTDIR, "{sign}/{chr}/index2annot_r2.tsv"), chr=CHROM, sign=['pos'])
+    input: expand(os.path.join(OUTDIR, "{sign}/{chr}/index2annot_r2.tsv"), chr=CHROM, sign=SIGN)
     output:
         index2annot_r2_tsv = os.path.join(OUTDIR, "pos/pos_index2annot_r2.tsv")
     shell:
