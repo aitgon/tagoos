@@ -15,6 +15,21 @@ SIGN = ['pos', 'neg']
 from os.path import basename
 #ANNOTATION_BED_FN = basename(ANNOTATION_BED)
 
+rule all:
+    input:
+        libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
+        roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
+        precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
+        model_pkl = os.path.join(OUTDIR, "model.pkl"),
+        heatmap_png = os.path.join(OUTDIR, "heatmap.png"),
+        corr_bed_pos = os.path.join(OUTDIR, "pos", "corr_pos.bed"),
+        corr_bed_neg = os.path.join(OUTDIR, "neg", "corr_neg.bed"),
+        tag_bed_pos = os.path.join(OUTDIR, "pos", "tag_pos.bed"),
+        tag_bed_neg = os.path.join(OUTDIR, "neg", "tag_neg.bed"),
+        index_bed_pos = os.path.join(OUTDIR, "pos", "index_pos.bed"),
+        index_bed_neg = os.path.join(OUTDIR, "neg", "index_neg.bed"),
+        selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed")
+
 rule feature_bed_chrom_all:
     input:
         selected_chrom_annot_bed = expand(os.path.join(OUTDIR, "feature/{chr}/feature.bed"), chr=CHROM),
@@ -40,20 +55,6 @@ rule extract_feature2tex:
         feature_txt = os.path.join(OUTDIR, "feature/feature.txt"),
     shell:
         """cut -f1 {input.feature_importance_tsv} |head -n 30 >{output.feature_txt}"""
-
-rule all:
-    input:
-        libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
-        roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
-        precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
-        model_pkl = os.path.join(OUTDIR, "model.pkl"),
-        heatmap_png = os.path.join(OUTDIR, "heatmap.png"),
-        corr_bed_pos = os.path.join(OUTDIR, "pos", "corr_pos.bed"),
-        corr_bed_neg = os.path.join(OUTDIR, "neg", "corr_neg.bed"),
-        tag_bed_pos = os.path.join(OUTDIR, "pos", "tag_pos.bed"),
-        tag_bed_neg = os.path.join(OUTDIR, "neg", "tag_neg.bed"),
-        index_bed_pos = os.path.join(OUTDIR, "pos", "index_pos.bed"),
-        index_bed_neg = os.path.join(OUTDIR, "neg", "index_neg.bed"),
 
 rule merge_corr_bed_pos:
     input:
@@ -228,14 +229,14 @@ rule label_neg:
         """Rscript -e 'library(data.table); dt = fread("{input.index2annot_r2_tsv}", sep="\\t"); dt$label = -1; write.table(dt, file="{output.index2annot_r2_label_tsv}", sep="\\t", row.names=FALSE, col.names=FALSE, quote=FALSE)'"""
 
 rule merge_neg:
-    input: expand(os.path.join(OUTDIR, "{sign}/{chr}/index2annot_r2.tsv"), chr=CHROM, sign=['neg'])
+    input: expand(os.path.join(OUTDIR, "neg/{chr}/index2annot_r2.tsv"), chr=CHROM)
     output:
         index2annot_r2_tsv = os.path.join(OUTDIR, "neg/neg_index2annot_r2.tsv")
     shell:
         """sort -u {input} >{output}"""
 
 rule merge_pos:
-    input: expand(os.path.join(OUTDIR, "{sign}/{chr}/index2annot_r2.tsv"), chr=CHROM, sign=SIGN)
+    input: expand(os.path.join(OUTDIR, "pos/{chr}/index2annot_r2.tsv"), chr=CHROM)
     output:
         index2annot_r2_tsv = os.path.join(OUTDIR, "pos/pos_index2annot_r2.tsv")
     shell:
