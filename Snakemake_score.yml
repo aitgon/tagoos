@@ -12,6 +12,25 @@ CHROM=os.getenv('CHROM').split()
 from os.path import basename, dirname
 
 
+rule rsid2gene2score:
+    input:
+        rsid2gene_tsv = os.path.join(OUTDIR, "rsid2gene.tsv"),
+        score_tsv = os.path.join(OUTDIR, "score.tsv"),
+    output:
+        rsid2score2gene_tsv = os.path.join(OUTDIR, "rsid2score2gene.tsv"),
+    shell:
+        """Rscript -e 'library(data.table); dt = fread("{input.rsid2gene_tsv}", sep="\\t", header=F); dt2 = fread("{input.score_tsv}", sep="\\t"); m=merge(dt2, dt, by.x="V1", by.y="V1"); m = m[order(-rank(V2.x), V1, V2.y)]; m=unique(m); options(scipen=999); write.table(m, "{output.rsid2score2gene_tsv}", sep="\\t", row.names=F, col.names=F, quote=F);'"""
+
+
+rule rsid2gene:
+    input:
+        score_bed = os.path.join(OUTDIR, "score.bed"),
+    output:
+        rsid2gene_tsv = os.path.join(OUTDIR, "rsid2gene.tsv"),
+    shell:
+        """closestBed -a {input.score_bed} -b /cobelix/gonzalez/data/2015_svmgwas/data/var/knownGene_hg19.bed -u |cut -f4,8 |sort -u >rsid2gene.tsv"""
+
+
 rule merge:
     input:
         score_tsv = expand(os.path.join(OUTDIR, "chrom/{chr}/score.tsv"), chr=CHROM),
