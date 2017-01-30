@@ -21,7 +21,6 @@ rule all:
         roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
         precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
         model_pkl = os.path.join(OUTDIR, "model.pkl"),
-        heatmap_png = os.path.join(OUTDIR, "heatmap.png"),
         corr_bed_pos = os.path.join(OUTDIR, "pos", "corr_pos.bed"),
         corr_bed_neg = os.path.join(OUTDIR, "neg", "corr_neg.bed"),
         tag_bed_pos = os.path.join(OUTDIR, "pos", "tag_pos.bed"),
