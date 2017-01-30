@@ -28,7 +28,8 @@ rule all:
         tag_bed_neg = os.path.join(OUTDIR, "neg", "tag_neg.bed"),
         index_bed_pos = os.path.join(OUTDIR, "pos", "index_pos.bed"),
         index_bed_neg = os.path.join(OUTDIR, "neg", "index_neg.bed"),
-        selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed")
+        selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed"),
+        heatmap_classes_pdf = os.path.join(OUTDIR, "heatmap_classes.pdf"),
 
 rule feature_bed_chrom_all:
     input:
@@ -47,6 +48,25 @@ rule feature_bed_chrom:
         selected_annot_bed =os.path.join(OUTDIR, "feature/{chr}/feature.bed"),
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.annot_bed_idx} {input.annot_bed} -f {input.feature_txt} >{output.selected_annot_bed}"""
+
+rule heatmapR:
+    input:
+        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
+        feature_all_txt = os.path.join(OUTDIR, "feature/feature_all.txt"),
+        script = os.path.join(SCRIPTDIR, "heatmap.R"),
+    output:
+        heatmap_detailed_pdf = os.path.join(OUTDIR, "heatmap_detailed.pdf"),
+        heatmap_classes_pdf = os.path.join(OUTDIR, "heatmap_classes.pdf"),
+    shell:
+        """Rscript {input.script} {input.pos_neg_index2annot_r2_label} {input.feature_all_txt} {output.heatmap_detailed_pdf} {output.heatmap_classes_pdf}"""
+
+rule extract_feature_all:
+    input:
+        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+    output:
+        feature_all_txt = os.path.join(OUTDIR, "feature/feature_all.txt"),
+    shell:
+        """cut -f1 {input.feature_importance_tsv} >{output.feature_all_txt}"""
 
 rule extract_feature2tex:
     input:
@@ -162,15 +182,15 @@ rule rsid2chrom:
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {input.instance} |awk '{{print $4"\t"$1}}'>{output.rsid2chrom}"""
 
-rule heatmap:
-    input:
-        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
-        model_pkl = os.path.join(OUTDIR, "model.pkl"),
-        script = os.path.join(SCRIPTDIR, "heatmap.py")
-    output:
-        heatmap_png = os.path.join(OUTDIR, "heatmap.png"),
-    shell:
-        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.pos_neg_index2annot_r2_label} {input.model_pkl} {output.heatmap_png}"""%HOME
+#rule heatmap:
+#    input:
+#        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
+#        model_pkl = os.path.join(OUTDIR, "model.pkl"),
+#        script = os.path.join(SCRIPTDIR, "heatmap.py")
+#    output:
+#        heatmap_png = os.path.join(OUTDIR, "heatmap.png"),
+#    shell:
+#        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.pos_neg_index2annot_r2_label} {input.model_pkl} {output.heatmap_png}"""%HOME
 
 rule create_model:
     input:
