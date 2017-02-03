@@ -1,0 +1,89 @@
+ANNOT_LABEL = os.getenv('ANNOT_LABEL')
+GENOME1K_DATA_DIR = os.getenv('GENOME1K_DATA_DIR')
+HOME = os.getenv('HOME')
+MODEL_PKL = os.getenv('MODEL_PKL')
+OUTDIR = os.getenv('OUTDIR')
+RSID_PATH = os.getenv('RSID_PATH')
+SCRIPTDIR = os.getenv('SCRIPTDIR')
+VARIABLE = os.getenv('VARIABLE')
+
+CHROM=os.getenv('CHROM').split()
+
+from os.path import basename, dirname
+
+
+rule rsid2gene2score:
+    input:
+        rsid2gene_tsv = os.path.join(OUTDIR, "rsid2gene.tsv"),
+        score_tsv = os.path.join(OUTDIR, "score.tsv"),
+    output:
+        rsid2score2gene_tsv = os.path.join(OUTDIR, "rsid2score2gene.tsv"),
+    shell:
+        """Rscript -e 'library(data.table); dt = fread("{input.rsid2gene_tsv}", sep="\\t", header=F); dt2 = fread("{input.score_tsv}", sep="\\t"); m=merge(dt2, dt, by.x="V1", by.y="V1"); m = m[order(-rank(V2.x), V1, V2.y)]; m=unique(m); options(scipen=999); write.table(m, "{output.rsid2score2gene_tsv}", sep="\\t", row.names=F, col.names=F, quote=F);'"""
+
+
+rule rsid2gene:
+    input:
+        score_bed = os.path.join(OUTDIR, "score.bed"),
+    output:
+        rsid2gene_tsv = os.path.join(OUTDIR, "rsid2gene.tsv"),
+    shell:
+        """closestBed -a {input.score_bed} -b /cobelix/gonzalez/data/2015_svmgwas/data/var/knownGene_hg19.bed -u |cut -f4,8 |sort -u >rsid2gene.tsv"""
+
+
+rule merge:
+    input:
+        score_tsv = expand(os.path.join(OUTDIR, "chrom/{chr}/score.tsv"), chr=CHROM),
+        score_rsid = expand(os.path.join(OUTDIR, "chrom/{chr}/score.rsid"), chr=CHROM),
+        score_bed = expand(os.path.join(OUTDIR, "chrom/{chr}/score.bed"), chr=CHROM),
+        score_values_bedgraph = expand(os.path.join(OUTDIR, "chrom/{chr}/score_values.bedgraph"), chr=CHROM),
+    output:
+        score_tsv = os.path.join(OUTDIR, "score.tsv"),
+        score_bed = os.path.join(OUTDIR, "score.bed"),
+        score_values_bedgraph = os.path.join(OUTDIR, "score_values.bedgraph"),
+    shell:
+        """export LC_ALL=C; sort -k2,2nr -k1,1 {input.score_tsv} -o {output.score_tsv};
+            sort -k1,1 -k2,2n {input.score_bed} -o {output.score_bed};
+            sort -k1,1 -k2,2n {input.score_values_bedgraph} -o {output.score_values_bedgraph};"""
+
+rule scorebed:
+    input:
+        score_bed = os.path.join(OUTDIR, "chrom/{chr}/score.bed"),
+        score_tsv = os.path.join(OUTDIR, "chrom/{chr}/score.tsv"),
+    output:
+        score_values_bedgraph = os.path.join(OUTDIR, "chrom/{chr}/score_values.bedgraph"),
+    shell:
+        """Rscript -e 'library(data.table); rs = fread("{input.score_bed}", sep="\\t"); score = fread("{input.score_tsv}", sep="\\t"); rs2score=merge(rs, score, by.x="V4", by.y="V1"); rs2score=rs2score[,c("V1", "V2.x", "V3", "V2.y")]; write.table(rs2score, file="{output.score_values_bedgraph}", sep="\\t", row.names=FALSE, col.names=FALSE, quote=FALSE)';"""
+
+rule rsidbed:
+    input:
+        libsvm = os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"),
+        model_pkl = MODEL_PKL,
+        script = os.path.join(SCRIPTDIR, "score.py"),
+    output:
+        score_tsv = os.path.join(OUTDIR, "chrom/{chr}/score.tsv"),
+        score_rsid = os.path.join(OUTDIR, "chrom/{chr}/score.rsid"),
+        score_bed = os.path.join(OUTDIR, "chrom/{chr}/score.bed"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.libsvm} {input.model_pkl} {output.score_tsv};
+        cut -f 1 {output.score_tsv} >{output.score_rsid};
+        {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.score_rsid} >{output.score_bed};"""
+
+rule to_libsvm:
+    input:
+        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "intersect_%s/{chr}/annotated.tsv"%ANNOT_LABEL),
+        variable = VARIABLE,
+        script = os.path.join(SCRIPTDIR, "tsv2libsvm_score.R"),
+    output:
+        libsvm = os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"),
+    shell:
+        """Rscript {input.script} {input.annotated_tsv} {input.variable} {output.libsvm}"""
+
+rule intersect_chrom:
+    input:
+        snp_bed = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}.peak.bed"),
+        annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
+    output:
+        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "intersect_%s/{chr}/annotated.tsv"%ANNOT_LABEL),
+    shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_bed} -wb |awk '{{print $4"\t"$8}}' >{output.annotated_tsv}"""
+
