@@ -71,7 +71,7 @@ rule rsidbed:
 
 rule to_libsvm:
     input:
-        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOT_LABEL),
+        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "intersect_%s/{chr}/annotated.tsv"%ANNOT_LABEL),
         variable = VARIABLE,
         script = os.path.join(SCRIPTDIR, "tsv2libsvm_score.R"),
     output:
@@ -81,9 +81,9 @@ rule to_libsvm:
 
 rule intersect_chrom:
     input:
-        snp_bed = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}.peak.bed"),
+        snp_bed = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}.peak.bed"),
         annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
     output:
-        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOT_LABEL)
+        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "intersect_%s/{chr}/annotated.tsv"%ANNOT_LABEL),
     shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_bed} -wb |awk '{{print $4"\t"$8}}' >{output.annotated_tsv}"""
 

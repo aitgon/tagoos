@@ -5,6 +5,7 @@ CHROM=os.getenv('CHROM').split()
 GENOME1K_DATA_DIR = os.getenv('GENOME1K_DATA_DIR')
 HOME = os.getenv('HOME')
 OUTDIR = os.getenv('OUTDIR')
+POSDIR = os.getenv('POSDIR')
 NEGDIR = os.getenv('NEGDIR')
 SCRIPTDIR = os.getenv('SCRIPTDIR')
 SIGN = os.getenv('SIGN')
@@ -22,11 +23,11 @@ rule all:
         roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
         precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
         model_pkl = os.path.join(OUTDIR, "model.pkl"),
-        corr_bed_pos = os.path.join(OUTDIR, "pos", "corr_pos.bed"),
+        corr_bed_pos = os.path.join(POSDIR, "corr_pos.bed"),
         corr_bed_neg = os.path.join(NEGDIR, "corr_neg.bed"),
-        tag_bed_pos = os.path.join(OUTDIR, "pos", "tag_pos.bed"),
+        tag_bed_pos = os.path.join(POSDIR, "tag_pos.bed"),
         tag_bed_neg = os.path.join(NEGDIR, "tag_neg.bed"),
-        index_bed_pos = os.path.join(OUTDIR, "pos", "index_pos.bed"),
+        index_bed_pos = os.path.join(POSDIR, "index_pos.bed"),
         index_bed_neg = os.path.join(NEGDIR, "index_neg.bed"),
         selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed"),
         heatmap_classes_pdf = os.path.join(OUTDIR, "heatmap_classes.pdf"),
@@ -58,7 +59,9 @@ rule heatmapR:
         heatmap_detailed_pdf = os.path.join(OUTDIR, "heatmap_detailed.pdf"),
         heatmap_classes_pdf = os.path.join(OUTDIR, "heatmap_classes.pdf"),
     shell:
-        """Rscript {input.script} {input.pos_neg_index2annot_r2_label} {input.feature_all_txt} {output.heatmap_detailed_pdf} {output.heatmap_classes_pdf}"""
+        """Rscript {input.script} {input.pos_neg_index2annot_r2_label} {input.feature_all_txt} {output.heatmap_detailed_pdf} {output.heatmap_classes_pdf};
+            convert {output.heatmap_classes_pdf} {output.heatmap_classes_pdf}.jpg;
+            convert {output.heatmap_detailed_pdf} {output.heatmap_detailed_pdf}.jpg"""
 
 rule extract_feature_all:
     input:
@@ -78,9 +81,9 @@ rule extract_feature2tex:
 
 rule merge_corr_bed_pos:
     input:
-        corr_bed = expand(os.path.join(OUTDIR, "pos/{chr}/corr.bed"), chr=CHROM)
+        corr_bed = expand(os.path.join(POSDIR, "{chr}/corr.bed"), chr=CHROM)
     output:
-        corr_bed_pos = os.path.join(OUTDIR, "pos", "corr_pos.bed"),
+        corr_bed_pos = os.path.join(POSDIR, "corr_pos.bed"),
     shell: """sort -u -k1,1 -k2,2n {input.corr_bed} -o {output.corr_bed_pos}"""
 
 rule merge_corr_bed_neg:
@@ -92,16 +95,16 @@ rule merge_corr_bed_neg:
 
 rule merge_tag_bed_pos:
     input:
-        tag_bed = expand(os.path.join(OUTDIR, "pos/{chr}/tag.bed"), chr=CHROM)
+        tag_bed = expand(os.path.join(POSDIR, "{chr}/tag.bed"), chr=CHROM)
     output:
-        tag_bed_pos = os.path.join(OUTDIR, "pos", "tag_pos.bed"),
+        tag_bed_pos = os.path.join(POSDIR, "tag_pos.bed"),
     shell: """sort -u -k1,1 -k2,2n {input.tag_bed} -o {output.tag_bed_pos}"""
 
 rule merge_tag_bed_neg:
     input:
         tag_bed = expand(os.path.join(NEGDIR, "{chr}/tag.bed"), chr=CHROM)
     output:
-        tag_bed_neg = os.path.join(OUTDIR, "neg", "tag_neg.bed"),
+        tag_bed_neg = os.path.join(NEGDIR, "tag_neg.bed"),
     shell: """sort -u -k1,1 -k2,2n {input.tag_bed} -o {output.tag_bed_neg}"""
 
 rule corr_bed_pos:
@@ -109,7 +112,7 @@ rule corr_bed_pos:
         index2tag2corr_r2_tsv = os.path.join(OUTDIR, "pos/{chr}/index2tag2corr_r2.tsv")
     output:
         corr_rsid = os.path.join(OUTDIR, "pos/{chr}/corr.rsid"),
-        corr_bed = os.path.join(OUTDIR, "pos/{chr}/corr.bed"),
+        corr_bed = os.path.join(POSDIR, "{chr}/corr.bed"),
     shell: """cut -f3 {input.index2tag2corr_r2_tsv} |sort -u >{output.corr_rsid};
                 {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.corr_rsid} >{output.corr_bed}"""
 
@@ -126,8 +129,8 @@ rule tag_bed_pos:
     input:
         index2tag2corr_r2_tsv = os.path.join(OUTDIR, "pos/{chr}/index2tag2corr_r2.tsv")
     output:
-        tag_rsid = os.path.join(OUTDIR, "pos/{chr}/tag.rsid"),
-        tag_bed = os.path.join(OUTDIR, "pos/{chr}/tag.bed"),
+        tag_rsid = os.path.join(POSDIR, "{chr}/tag.rsid"),
+        tag_bed = os.path.join(POSDIR, "{chr}/tag.bed"),
     shell: """cut -f2 {input.index2tag2corr_r2_tsv} |sort -u >{output.tag_rsid};
                 {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.tag_rsid} >{output.tag_bed}"""
 
@@ -144,7 +147,7 @@ rule merge_index_bed_pos:
     input:
         index_bed = expand(os.path.join(OUTDIR, "pos/{chr}/index.bed"), chr=CHROM),
     output:
-        index_bed_pos = os.path.join(OUTDIR, "pos", "index_pos.bed"),
+        index_bed_pos = os.path.join(POSDIR, "index_pos.bed"),
     shell: """sort -u -k1,1 -k2,2n {input.index_bed} -o {output.index_bed_pos}"""
 
 rule merge_index_bed_neg:
@@ -243,7 +246,7 @@ rule to_libsvm:
 
 rule sort_unique:
     input:
-        pos_index2annot_r2_label_tsv = os.path.join(OUTDIR, "pos/pos_index2annot_r2_label.tsv"),
+        pos_index2annot_r2_label_tsv = os.path.join(POSDIR, "pos_index2annot_r2_label.tsv"),
         neg_index2annot_r2_label_tsv = os.path.join(NEGDIR, "neg_index2annot_r2_label.tsv"),
     output:
         pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv")
@@ -252,22 +255,22 @@ rule sort_unique:
 
 rule label_pos:
     input: 
-        index2annot_r2_tsv = os.path.join(OUTDIR, "pos/pos_index2annot_r2.tsv")
+        index2annot_r2_tsv = os.path.join(POSDIR, "pos_index2annot_r2.tsv")
     output:
-        pos_index2annot_r2_label_tsv = os.path.join(OUTDIR, "pos/pos_index2annot_r2_label.tsv")
+        pos_index2annot_r2_label_tsv = os.path.join(POSDIR, "pos_index2annot_r2_label.tsv")
     shell:
         """Rscript -e 'library(data.table); dt = fread("{input.index2annot_r2_tsv}", sep="\\t"); dt$label = 1; write.table(dt, file="{output.index2annot_r2_label_tsv}", sep="\\t", row.names=FALSE, col.names=FALSE, quote=FALSE)'"""
 
 rule merge_pos:
-    input: expand(os.path.join(OUTDIR, "pos/{chr}/index2annot_r2.tsv"), chr=CHROM)
+    input: expand(os.path.join(POSDIR, "{chr}/index2annot_r2.tsv"), chr=CHROM)
     output:
-        index2annot_r2_tsv = os.path.join(OUTDIR, "pos/pos_index2annot_r2.tsv")
+        index2annot_r2_tsv = os.path.join(POSDIR, "pos_index2annot_r2.tsv")
     shell:
         """sort -u {input} >{output}"""
 
 rule annotatecorr_pos:
     input:
-        index2tag2corr_r2_tsv = os.path.join(OUTDIR, "pos/{chr}/index2tag2corr_r2.tsv"),
+        index2tag2corr_r2_tsv = os.path.join(POSDIR, "{chr}/index2tag2corr_r2.tsv"),
         annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOT_LABEL),
         script = os.path.join(SCRIPTDIR, "annotate_corr.R")
     output:
@@ -276,8 +279,8 @@ rule annotatecorr_pos:
 
 rule index2tag2corr_pos:
     input:
-        ld = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_ld.ld"),
-        index_rsid = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
+        ld = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}_ld.ld"),
+        index_rsid = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
         tag_rsid = TAG_RSID_POS,
         script = os.path.join(SCRIPTDIR, "index2tag2corr.R")
     output:
@@ -290,7 +293,7 @@ rule label_neg:
     output:
         neg_index2annot_r2_label_tsv = os.path.join(NEGDIR, "neg_index2annot_r2_label.tsv")
     shell:
-        """Rscript -e 'library(data.table); dt = fread("{input.index2annot_r2_tsv}", sep="\\t"); dt$label = -1; write.table(dt, file="{output.index2annot_r2_label_tsv}", sep="\\t", row.names=FALSE, col.names=FALSE, quote=FALSE)'"""
+        """Rscript -e 'library(data.table); dt = fread("{input.index2annot_r2_tsv}", sep="\\t"); dt$label = -1; write.table(dt, file="{output.neg_index2annot_r2_label_tsv}", sep="\\t", row.names=FALSE, col.names=FALSE, quote=FALSE)'"""
 
 rule merge_neg:
     input: expand(os.path.join(NEGDIR, "{chr}/index2annot_r2.tsv"), chr=CHROM)
@@ -310,8 +313,8 @@ rule annotatecorr_neg:
 
 rule index2tag2corr_neg:
     input:
-        ld = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_ld.ld"),
-        index_rsid = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
+        ld = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}_ld.ld"),
+        index_rsid = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
         tag_rsid = TAG_RSID_NEG,
         script = os.path.join(SCRIPTDIR, "index2tag2corr.R")
     output:
@@ -320,7 +323,7 @@ rule index2tag2corr_neg:
 
 rule intersect_chrom:
     input:
-        snp_bed = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/chr{chr}.peak.bed"),
+        snp_bed = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}.peak.bed"),
         annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
     output:
         annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOT_LABEL)

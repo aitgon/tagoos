@@ -56,9 +56,12 @@ def worker(chr, cv_probas, libsvm, rsid2chrom, instance, outdir_path):
     train_instance.to_csv(train_instance_path, index=None, header=None)
     xdm_train = xgboost.DMatrix(train_libsvm_path)
     xdm_test = xgboost.DMatrix(test_libsvm_path)
-    model = xgboost.train({'silent': True}, xdm_train)
-    #import pdb; pdb.set_trace()
+    #################
+    scale_pos_weight = (xdm_train.get_label()==-1).sum()/(xdm_train.get_label()==1).sum()
+    pars = {'silent': True, 'scale_pos_weight': scale_pos_weight, 'max_delta_step' : 1}
+    model = xgboost.train(pars, xdm_train)
     y_test_proba = model.predict(xdm_test)
+    #################
     y_test_label = xdm_test.get_label().tolist()
     y_test_label=[int(label) for label in y_test_label] # to integer
     #
@@ -94,18 +97,17 @@ def main(argv):
     #
     # loop over chromosomes
     chrom_list = sorted(rsid2chrom[1].unique())
-    #manager = Manager() # create only 1 mgr
-    #d = manager.dict() # create only 1 dict
     cv_probas = {}
-    #number_processes = 3
-    #pool = multiprocessing.Pool(number_processes)
-    #results = pool.map_async(work, tasks)
-    for chr in chrom_list:
-        chr_int, y_proba = worker(chr, cv_probas, libsvm, rsid2chrom, instance, outdir_path)
-        cv_probas[chr_int] = y_proba
-    #with Pool(nproc) as pool:
-    #    a_args = chrom_list
-    #    cv_probas = dict(pool.map(partial(worker, cv_probas=cv_probas, libsvm=libsvm, rsid2chrom=rsid2chrom, instance=instance, outdir_path=outdir_path), a_args))
+    #################### MULTIPROC CHROM CROSS-VALIDATION: uncomment for multiproc
+    with Pool(nproc) as pool:
+        a_args = chrom_list
+        cv_probas = dict(pool.map(partial(worker, cv_probas=cv_probas, libsvm=libsvm, rsid2chrom=rsid2chrom, instance=instance, outdir_path=outdir_path), a_args))
+    #################### END MULTIPROC CHROM CROSS-VALIDATION
+    #################### FOR LOOP OF CHROM CROSS-VALIDATION: uncomment for monoproc
+    #for chr in chrom_list:
+    #    chr_int, y_proba = worker(chr, cv_probas, libsvm, rsid2chrom, instance, outdir_path)
+    #    cv_probas[chr_int] = y_proba
+    #################### END OF FOR LOOP
     # write cv_probas to pkl
     #print(cv_probas)
     pickle.dump(cv_probas, open(cv_proba_pkl_path, "wb"))
