@@ -2,33 +2,41 @@
 args = commandArgs(trailingOnly=TRUE)
 
 # test if there is at least one argument: if not, return an error
-if (length(args)!=2) {
+if (length(args)!=3) {
   stop("Two arguments are required", call.=FALSE)
 } else {
-index2annot_r2_tsv=args[1]
-outdir = args[2]
+rsidannot_tsv=args[1]
+variable_path=args[2]
+annotation_libsvm = args[3]
 }
 
 library(data.table)
-library(stringr)
 
-dt = unique(fread(index2annot_r2_tsv, sep="\t"));
-names(dt) = c('instance', 'value', 'variable', 'label')
+dt = unique(fread(rsidannot_tsv, sep="\t", header=F))
+variable2ix = fread(variable_path, header=F)
+outdir = dirname(annotation_libsvm)
 
-dt = dt[!is.na(as.numeric(as.character(dt$value))),]
+if (ncol(dt) == 2) { # scores
+    colnames(dt) = c("instance", "variable")
+    dt$label=-1
+    dt$value=1 
+} else if (ncol(dt) == 4) { # 4 cols
+    colnames(dt) = c('instance', 'value', 'variable', 'label')
+    dt = dt[!is.na(as.numeric(as.character(dt$value))),]
+} else {
+    stop("Neither 2 or 4 cols. File not known")
+}
 
-# variable index
-dt$value=round(dt$value, 2)
-dt$variable.ix = as.numeric(as.factor(dt$variable))
-variable2ix=unique(dt[, c("variable", "variable.ix"), with=F])
-dt = dt[, c(-3)]
-variable2ix <- variable2ix[order(variable2ix$variable.ix, decreasing=F),]
+# Variable
+colnames(variable2ix) = c("variable")
+variable2ix$variable.ix = rownames(variable2ix)
 
 # libsvm
+dt=merge(dt, variable2ix, by="variable")
 dt$variable.ix_value = paste0(dt$variable.ix, ":", dt$value)
 dt = aggregate(variable.ix_value ~ instance + label, data=dt, FUN=function(x) paste(x, collapse=" "))
 
-# add last variable ix to all rows if missing
+# add last variable ix to all rows if missing
 nrow_variable2ix=nrow(variable2ix)
 for (i in 1:nrow(dt)) {
     if (!(nrow_variable2ix %in% dt[1,"variable.ix_value"])){
@@ -44,7 +52,7 @@ dt = dt[!duplicated(dt[, c("instance")]),]
 instance = dt$instance
 dt = dt[, c(-1)]
 
-write.table(variable2ix$variable, file=file.path(outdir, "variable.txt"), col.names=F, row.names=F, quote=F, sep="\t")
+#write.table(variable2ix$variable, file=file.path(outdir, "variable.txt"), col.names=F, row.names=F, quote=F, sep="\t")
 write.table(instance, file=file.path(outdir, "instance.txt"), col.names=F, row.names=F, quote=F, sep="\t")
-write.table(dt, file=file.path(outdir, "annotation.libsvm"), col.names=F, row.names=F, quote=F)
+write.table(dt, file=annotation_libsvm, col.names=F, row.names=F, quote=F)
 

@@ -83,10 +83,11 @@ def main(argv):
     # I/O paths
     nproc = int(sys.argv[1]) # number of parallel procs
     libsvm_path = sys.argv[2] #pandas.read_csv("annotation.libsvm", sep="\t", header=None)
+    variable_path = sys.argv[3] #pandas.read_csv("annotation.libsvm", sep="\t", header=None)
     instance_path = os.path.join(dirname(libsvm_path), "instance.txt")
-    variable_path = os.path.join(dirname(libsvm_path), "variable.txt")
-    rsid2chrom_path = sys.argv[3] #pandas.read_csv("rsid2chrom.tsv", sep="\t", header=None, index_col=0)
-    cv_proba_pkl_path = sys.argv[4] #cv_proba_path.pkl"
+    #variable_path = os.path.join(dirname(libsvm_path), "variable.txt")
+    rsid2chrom_path = sys.argv[4] #pandas.read_csv("rsid2chrom.tsv", sep="\t", header=None, index_col=0)
+    cv_proba_pkl_path = sys.argv[5] #cv_proba_path.pkl"
     outdir_path = dirname(cv_proba_pkl_path)
     #
     # load data

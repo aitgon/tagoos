@@ -23,7 +23,9 @@ if (dim(ldlocus)[1] > 0) {
     names(annotation) = c("rsid", "annotation")
 
     index2annot_r2 = unique(merge(ldlocus, annotation, all=FALSE, by.x=c('corr'), by.y=c('rsid'), allow.cartesian=TRUE))
+    index2annot_r2 = index2annot_r2[order(index, -rank(index2corr_r2), annotation)] # sort R2 1>0
     index2annot_r2 = index2annot_r2[, c("index", "index2corr_r2", "annotation"), with=FALSE]
+    index2annot_r2 = index2annot_r2[!duplicated(index2annot_r2[,c("index", "annotation")]),] # remove duplicated, keep first
     write.table(index2annot_r2, index2annot_r2_tsv, quote=FALSE, sep="\t", row.names=FALSE, col.names=FALSE)
     #save(index2annot_r2, file=file.path(outdir, "index2annot_r2.Rda"))
 } else {

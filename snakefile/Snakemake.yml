@@ -1,8 +1,8 @@
 ANNOT_LABEL = os.getenv('ANNOT_LABEL')
+ANNOT_1COL_BED=os.getenv('ANNOT_1COL_BED')
 INDEX_LABEL = os.getenv('INDEX_LABEL')
-#ANNOTATION_BED = ANNOT_LABEL
-CHROM=os.getenv('CHROM').split()
-GENOME1K_DATA_DIR = os.getenv('GENOME1K_DATA_DIR')
+CHROM=sorted(os.getenv('CHROM').split())
+GENOME1K_DIR = os.getenv('GENOME1K_DIR')
 HOME = os.getenv('HOME')
 OUTDIR = os.getenv('OUTDIR')
 POSDIR = os.getenv('POSDIR')
@@ -15,12 +15,22 @@ TAG_SIGN=[[os.getenv('TAG_RSID'), os.getenv('SIGN')]]
 
 SIGN = ['pos', 'neg']
 from os.path import basename
-#ANNOTATION_BED_FN = basename(ANNOTATION_BED)
+
+from os.path import dirname
+ANNOT_1COL_DIR = dirname(ANNOT_1COL_BED)
+
+rule public:
+    input:
+        libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
+        roc_plot = os.path.join(OUTDIR, "public/roc_plot.png"),
+        heatmap_classes_pdf = os.path.join(OUTDIR, "public/heatmap_classes.pdf"),
+        feature_importance_png = os.path.join(OUTDIR, "public/feature_importance.png"),
+        feature_importance_tsv = os.path.join(OUTDIR, "public/feature_importance.tsv"),
 
 rule all:
     input:
         libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
-        roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
+        roc_plot = os.path.join(OUTDIR, "public/roc_plot.png"),
         precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
         model_pkl = os.path.join(OUTDIR, "model.pkl"),
         corr_bed_pos = os.path.join(POSDIR, "corr_pos.bed"),
@@ -30,7 +40,58 @@ rule all:
         index_bed_pos = os.path.join(POSDIR, "index_pos.bed"),
         index_bed_neg = os.path.join(NEGDIR, "index_neg.bed"),
         selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed"),
-        heatmap_classes_pdf = os.path.join(OUTDIR, "heatmap_classes.pdf"),
+        heatmap_classes_pdf = os.path.join(OUTDIR, "public/heatmap_classes.pdf"),
+
+rule precision_recall_plot:
+    input:
+        y_test_proba_tsv_list = expand(os.path.join(OUTDIR, "CV/{chr}/y_test_proba.tsv"), chr=CHROM),
+        script = os.path.join(SCRIPTDIR, "precision_recall_plot.py"),
+    output:
+        precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.y_test_proba_tsv_list} {output.precision_recall_plot}"""
+
+rule roc_plot:
+    input:
+        y_test_proba_tsv_list = expand(os.path.join(OUTDIR, "CV/{chr}/y_test_proba.tsv"), chr=CHROM),
+        script = os.path.join(SCRIPTDIR, "roc_plot.py"),
+    output:
+        roc_plot = os.path.join(OUTDIR, "public/roc_plot.png"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.y_test_proba_tsv_list} {output.roc_plot}"""
+
+rule y_test_proba:
+    input:
+        test_libsvm = os.path.join(OUTDIR, "CV/{chr}/test.libsvm"),
+        train_libsvm = os.path.join(OUTDIR, "CV/{chr}/train.libsvm"),
+        test_instance = os.path.join(OUTDIR, "CV/{chr}/test_instance.txt"),
+        script = os.path.join(SCRIPTDIR, "y_test_proba.py"),
+    output:
+        y_test_proba_tsv = os.path.join(OUTDIR, "CV/{chr}/y_test_proba.tsv"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.test_libsvm} {input.test_instance} {input.train_libsvm} {output.y_test_proba_tsv}"""
+
+rule cv_libsvm:
+    input:
+        rsid_chrom_libsvm = os.path.join(OUTDIR, "CV/rsid_chrom.libsvm"),
+    output:
+        test_libsvm = os.path.join(OUTDIR, "CV/{chr}/test.libsvm"),
+        train_libsvm = os.path.join(OUTDIR, "CV/{chr}/train.libsvm"),
+        test_instance = os.path.join(OUTDIR, "CV/{chr}/test_instance.txt"),
+        train_instance = os.path.join(OUTDIR, "CV/{chr}/train_instance.txt"),
+    params:
+        chr = "chr{chr}"
+    shell:
+        """awk -F "\t" '{{if($2=="{params.chr}"){{ print $1 >"{output.test_instance}"; print $3 >"{output.test_libsvm}" }} else {{print $1>"{output.train_instance}"; print $3 >"{output.train_libsvm}" }} }}' {input.rsid_chrom_libsvm}"""
+
+rule rsid_chrom_libsvm:
+    input:
+        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+        rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
+    output:
+        rsid_chrom_libsvm = os.path.join(OUTDIR, "CV/rsid_chrom.libsvm"),
+    shell:
+        """paste -d "\t" {input.rsid2chrom} {input.libsvm} > {output.rsid_chrom_libsvm}"""
 
 rule feature_bed_chrom_all:
     input:
@@ -50,22 +111,32 @@ rule feature_bed_chrom:
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.annot_bed_idx} {input.annot_bed} -f {input.feature_txt} >{output.selected_annot_bed}"""
 
-rule heatmapR:
+rule heatmap:
     input:
         pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
         feature_all_txt = os.path.join(OUTDIR, "feature/feature_all.txt"),
         script = os.path.join(SCRIPTDIR, "heatmap.R"),
     output:
         heatmap_detailed_pdf = os.path.join(OUTDIR, "heatmap_detailed.pdf"),
-        heatmap_classes_pdf = os.path.join(OUTDIR, "heatmap_classes.pdf"),
+        heatmap_classes_pdf = os.path.join(OUTDIR, "public/heatmap_classes.pdf"),
     shell:
         """Rscript {input.script} {input.pos_neg_index2annot_r2_label} {input.feature_all_txt} {output.heatmap_detailed_pdf} {output.heatmap_classes_pdf};
             convert {output.heatmap_classes_pdf} {output.heatmap_classes_pdf}.jpg;
             convert {output.heatmap_detailed_pdf} {output.heatmap_detailed_pdf}.jpg"""
 
+rule merge_index2annot_r2_label_tsv:
+    input:
+        index2annot_r2_label_tsv_pos = expand(os.path.join(POSDIR, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
+        index2annot_r2_label_tsv_neg = expand(os.path.join(NEGDIR, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
+    output:
+        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
+    threads: 8
+    shell:
+        """LC_ALL=C sort -u --parallel {threads} -k1,1 -k4,4nr -k3,3 {input.index2annot_r2_label_tsv_pos} {input.index2annot_r2_label_tsv_neg} |awk -F"\t" '!seen[$1, $3]++' > {output.pos_neg_index2annot_r2_label}"""
+
 rule extract_feature_all:
     input:
-        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+        feature_importance_tsv = os.path.join(OUTDIR, "public/feature_importance.tsv"),
     output:
         feature_all_txt = os.path.join(OUTDIR, "feature/feature_all.txt"),
     shell:
@@ -73,7 +144,7 @@ rule extract_feature_all:
 
 rule extract_feature2tex:
     input:
-        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+        feature_importance_tsv = os.path.join(OUTDIR, "public/feature_importance.tsv"),
     output:
         feature_txt = os.path.join(OUTDIR, "feature/feature.txt"),
     shell:
@@ -109,11 +180,11 @@ rule merge_tag_bed_neg:
 
 rule corr_bed_pos:
     input:
-        index2tag2corr_r2_tsv = os.path.join(OUTDIR, "pos/{chr}/index2tag2corr_r2.tsv")
+        index2tag2corr_r2_tsv = os.path.join(POSDIR, "{chr}/index2tag2corr_r2.tsv")
     output:
         corr_rsid = os.path.join(OUTDIR, "pos/{chr}/corr.rsid"),
         corr_bed = os.path.join(POSDIR, "{chr}/corr.bed"),
-    shell: """cut -f3 {input.index2tag2corr_r2_tsv} |sort -u >{output.corr_rsid};
+    shell: """cut -f3 {input.index2tag2corr_r2_tsv} |sort -u -o {output.corr_rsid};
                 {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.corr_rsid} >{output.corr_bed}"""
 
 rule corr_bed_neg:
@@ -122,16 +193,16 @@ rule corr_bed_neg:
     output:
         corr_rsid = os.path.join(NEGDIR, "{chr}/corr.rsid"),
         corr_bed = os.path.join(NEGDIR, "{chr}/corr.bed"),
-    shell: """cut -f3 {input.index2tag2corr_r2_tsv} |sort -u >{output.corr_rsid};
+    shell: """cut -f3 {input.index2tag2corr_r2_tsv} |sort -u -o {output.corr_rsid};
                 {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.corr_rsid} >{output.corr_bed}"""
 
 rule tag_bed_pos:
     input:
-        index2tag2corr_r2_tsv = os.path.join(OUTDIR, "pos/{chr}/index2tag2corr_r2.tsv")
+        index2tag2corr_r2_tsv = os.path.join(POSDIR, "{chr}/index2tag2corr_r2.tsv")
     output:
         tag_rsid = os.path.join(POSDIR, "{chr}/tag.rsid"),
         tag_bed = os.path.join(POSDIR, "{chr}/tag.bed"),
-    shell: """cut -f2 {input.index2tag2corr_r2_tsv} |sort -u >{output.tag_rsid};
+    shell: """cut -f2 {input.index2tag2corr_r2_tsv} |sort -u -o {output.tag_rsid};
                 {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.tag_rsid} >{output.tag_bed}"""
 
 rule tag_bed_neg:
@@ -140,7 +211,7 @@ rule tag_bed_neg:
     output:
         tag_rsid = os.path.join(NEGDIR, "{chr}/tag.rsid"),
         tag_bed = os.path.join(NEGDIR, "{chr}/tag.bed"),
-    shell: """cut -f2 {input.index2tag2corr_r2_tsv} |sort -u >{output.tag_rsid};
+    shell: """cut -f2 {input.index2tag2corr_r2_tsv} |sort -u -o {output.tag_rsid};
                 {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.tag_rsid} >{output.tag_bed}"""
 
 rule merge_index_bed_pos:
@@ -159,50 +230,33 @@ rule merge_index_bed_neg:
 
 rule index_bed_pos:
     input:
-        index2tag2corr_r2_tsv = os.path.join(OUTDIR, "pos/{chr}/index2tag2corr_r2.tsv")
+        index2tag2corr_r2_tsv = os.path.join(POSDIR, "{chr}/index2tag2corr_r2.tsv")
     output:
         index_rsid = os.path.join(OUTDIR, "pos/{chr}/index.rsid"),
         index_bed = os.path.join(OUTDIR, "pos/{chr}/index.bed"),
-    shell: """cut -f1 {input.index2tag2corr_r2_tsv} |sort -u >{output.index_rsid};
+    shell: """cut -f1 {input.index2tag2corr_r2_tsv} |sort -u -o {output.index_rsid};
                 {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.index_rsid} >{output.index_bed}"""
 
 rule index_bed_neg:
     input:
         index2tag2corr_r2_tsv = os.path.join(NEGDIR, "{chr}/index2tag2corr_r2.tsv")
     output:
-        index_rsid = os.path.join(NEGDIR, "{{chr}/index.rsid"),
+        index_rsid = os.path.join(NEGDIR, "{chr}/index.rsid"),
         index_bed = os.path.join(NEGDIR, "{chr}/index.bed"),
-    shell: """cut -f1 {input.index2tag2corr_r2_tsv} |sort -u >{output.index_rsid};
+    shell: """cut -f1 {input.index2tag2corr_r2_tsv} |sort -u -o {output.index_rsid};
                 {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.index_rsid} >{output.index_bed}"""
-
-rule precision_recall_plot:
-    input:
-        cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
-        script = os.path.join(SCRIPTDIR, "precision_recall_plot.py"),
-    output:
-        precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
-    shell:
-        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.cv_proba_pkl} {output.precision_recall_plot}"""%HOME
-
-rule roc_plot:
-    input:
-        cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
-        script = os.path.join(SCRIPTDIR, "roc_plot.py")
-    output:
-        roc_plot = os.path.join(OUTDIR, "roc_plot.png"),
-    shell:
-        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.cv_proba_pkl} {output.roc_plot}"""%HOME
 
 rule cv_y_probas:
     input:
         libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+        variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
         rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
         script = os.path.join(SCRIPTDIR, "cv_proba.py")
     output:
         cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
     threads: len(CHROM) if len(CHROM) <= 15 else 15
     shell:
-        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {threads} {input.libsvm} {input.rsid2chrom} {output.cv_proba_pkl}"""%HOME
+        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {threads} {input.libsvm} {input.variable_txt} {input.rsid2chrom} {output.cv_proba_pkl}"""
 
 rule rsid2chrom:
     input:
@@ -215,14 +269,14 @@ rule rsid2chrom:
 rule create_model:
     input:
         libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
-        variable = os.path.join(OUTDIR, "variable.txt"),
+        variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
         script = os.path.join(SCRIPTDIR, "create_model.py")
     output:
         model_pkl = os.path.join(OUTDIR, "model.pkl"),
-        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
-        feature_importance_png = os.path.join(OUTDIR, "feature_importance.png"),
+        feature_importance_tsv = os.path.join(OUTDIR, "public/feature_importance.tsv"),
+        feature_importance_png = os.path.join(OUTDIR, "public/feature_importance.png"),
     shell:
-        """%s/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.libsvm} {input.variable} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""%HOME
+        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.libsvm} {input.variable_txt} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""
 
 rule libsvm_pos_neg_count:
     input:
@@ -233,58 +287,93 @@ rule libsvm_pos_neg_count:
         """grep -P "^1 " {input.libsvm} |wc -l >{output.libsvm_pos_neg_count};
             grep -P "^-1 " {input.libsvm} |wc -l >>{output.libsvm_pos_neg_count};"""
 
-rule to_libsvm:
+rule merge_libsvm:
     input:
-        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
-        script = os.path.join(SCRIPTDIR, "tsv2libsvm.R")
+        instance_txt_pos = expand(os.path.join(POSDIR, "{chr}/instance.txt"), chr=CHROM),
+        annotation_libsvm_pos = expand(os.path.join(POSDIR, "{chr}/annotation.libsvm"), chr=CHROM),
+        instance_txt_neg = expand(os.path.join(OUTDIR, "chrom/{chr}/instance.txt"), chr=CHROM),
+        annotation_libsvm_neg = expand(os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"), chr=CHROM),
     output:
         libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
-        variable = os.path.join(OUTDIR, "variable.txt"),
         instance = os.path.join(OUTDIR, "instance.txt"),
     shell:
-        """Rscript {input.script} {input.pos_neg_index2annot_r2_label} ."""
+        """cat {input.instance_txt_pos} {input.instance_txt_neg} >{output.instance};
+            cat {input.annotation_libsvm_pos} {input.annotation_libsvm_neg} >{output.libsvm};"""
 
-rule sort_unique:
-    input:
-        pos_index2annot_r2_label_tsv = os.path.join(POSDIR, "pos_index2annot_r2_label.tsv"),
-        neg_index2annot_r2_label_tsv = os.path.join(NEGDIR, "neg_index2annot_r2_label.tsv"),
-    output:
-        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv")
-    shell:
-        """sort -u {input} >{output}"""
-
-rule label_pos:
+rule grep_pasted_instance_libsvm_neg:
     input: 
-        index2annot_r2_tsv = os.path.join(POSDIR, "pos_index2annot_r2.tsv")
+        instance_pos = os.path.join(POSDIR, "{chr}/instance.txt"),
+        pasted_instance_libsvm = os.path.join(NEGDIR, "{chr}/pasted_instance.libsvm"),
     output:
-        pos_index2annot_r2_label_tsv = os.path.join(POSDIR, "pos_index2annot_r2_label.tsv")
+        instance_txt = os.path.join(OUTDIR, "chrom/{chr}/instance.txt"),
+        annotation_libsvm = os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"),
+    shell:
+        """grep -v -f {input.instance_pos} {input.pasted_instance_libsvm} |awk -F "\t" '{{ print $1 >"{output.instance_txt}"; print $2 >"{output.annotation_libsvm}" }}'"""
+
+rule pasted_instance_libsvm:
+    input: 
+        libsvm = os.path.join(NEGDIR, "{chr}/annotation.libsvm"),
+        instance = os.path.join(NEGDIR, "{chr}/instance.txt"),
+    output:
+        pasted_instance_libsvm = os.path.join(NEGDIR, "{chr}/pasted_instance.libsvm"),
+    shell:
+        """paste {input.instance} {input.libsvm} > {output.pasted_instance_libsvm}"""
+
+rule chrom_to_libsvm_neg:
+    input: 
+        index2annot_r2_label_tsv = os.path.join(NEGDIR, "{chr}/index2annot_r2_label.tsv"),
+        variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
+        script = os.path.join(SCRIPTDIR, "tsv2libsvm.R"),
+    output:
+        libsvm = os.path.join(NEGDIR, "{chr}/annotation.libsvm"),
+        instance = os.path.join(NEGDIR, "{chr}/instance.txt"),
+    shell:
+        """Rscript {input.script} {input.index2annot_r2_label_tsv} {input.variable_txt} {output.libsvm}"""
+
+rule chrom_to_libsvm_pos:
+    input: 
+        index2annot_r2_label_tsv = os.path.join(POSDIR, "{chr}/index2annot_r2_label.tsv"),
+        variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
+        script = os.path.join(SCRIPTDIR, "tsv2libsvm.R"),
+    output:
+        libsvm = os.path.join(POSDIR, "{chr}/annotation.libsvm"),
+        instance = os.path.join(POSDIR, "{chr}/instance.txt"),
+    shell:
+        """Rscript {input.script} {input.index2annot_r2_label_tsv} {input.variable_txt} {output.libsvm}"""
+
+rule index2annot_r2_label_tsv_neg:
+    input: 
+        index2annot_r2_tsv = os.path.join(NEGDIR, "{chr}/index2annot_r2.tsv")
+    output:
+        index2annot_r2_label_tsv = os.path.join(NEGDIR, "{chr}/index2annot_r2_label.tsv")
+    shell:
+        """Rscript -e 'library(data.table); dt = fread("{input.index2annot_r2_tsv}", sep="\\t"); dt$label = -1; write.table(dt, file="{output.index2annot_r2_label_tsv}", sep="\\t", row.names=FALSE, col.names=FALSE, quote=FALSE)'"""
+
+rule index2annot_r2_label_tsv_pos:
+    input: 
+        index2annot_r2_tsv = os.path.join(POSDIR, "{chr}/index2annot_r2.tsv")
+    output:
+        index2annot_r2_label_tsv = os.path.join(POSDIR, "{chr}/index2annot_r2_label.tsv")
     shell:
         """Rscript -e 'library(data.table); dt = fread("{input.index2annot_r2_tsv}", sep="\\t"); dt$label = 1; write.table(dt, file="{output.index2annot_r2_label_tsv}", sep="\\t", row.names=FALSE, col.names=FALSE, quote=FALSE)'"""
 
-rule merge_pos:
-    input: expand(os.path.join(POSDIR, "{chr}/index2annot_r2.tsv"), chr=CHROM)
-    output:
-        index2annot_r2_tsv = os.path.join(POSDIR, "pos_index2annot_r2.tsv")
-    shell:
-        """sort -u {input} >{output}"""
-
-rule annotatecorr_pos:
+rule index2annot_r2_tsv_pos:
     input:
         index2tag2corr_r2_tsv = os.path.join(POSDIR, "{chr}/index2tag2corr_r2.tsv"),
-        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOT_LABEL),
+        annotated_tsv = os.path.join(GENOME1K_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL),
         script = os.path.join(SCRIPTDIR, "annotate_corr.R")
     output:
-        index2annot_r2_tsv = os.path.join(OUTDIR, "pos/{chr}/index2annot_r2.tsv")
+        index2annot_r2_tsv = os.path.join(POSDIR, "{chr}/index2annot_r2.tsv")
     shell: """Rscript {input.script} {input.index2tag2corr_r2_tsv} {input.annotated_tsv} {output.index2annot_r2_tsv}"""
 
-rule index2tag2corr_pos:
+rule index2tag2corr_r2_tsv_pos:
     input:
-        ld = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}_ld.ld"),
-        index_rsid = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
+        ld = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_ld.ld"),
+        index_rsid = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
         tag_rsid = TAG_RSID_POS,
         script = os.path.join(SCRIPTDIR, "index2tag2corr.R")
     output:
-        index2tag2corr_r2_tsv = os.path.join(OUTDIR, "pos/{chr}/index2tag2corr_r2.tsv")
+        index2tag2corr_r2_tsv = os.path.join(POSDIR, "{chr}/index2tag2corr_r2.tsv")
     shell: """Rscript {input.script} {input.ld} {input.index_rsid} {input.tag_rsid} {output.index2tag2corr_r2_tsv}"""
 
 rule label_neg:
@@ -300,33 +389,24 @@ rule merge_neg:
     output:
         index2annot_r2_tsv = os.path.join(NEGDIR, "neg_index2annot_r2.tsv")
     shell:
-        """sort -u {input} >{output}"""
+        """sort -u {input} -o {output}"""
 
-rule annotatecorr_neg:
+rule index2annot_r2_tsv_neg:
     input:
         index2tag2corr_r2_tsv = os.path.join(NEGDIR, "{chr}/index2tag2corr_r2.tsv"),
-        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOT_LABEL),
+        annotated_tsv = os.path.join(GENOME1K_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL),
         script = os.path.join(SCRIPTDIR, "annotate_corr.R")
     output:
         index2annot_r2_tsv = os.path.join(NEGDIR, "{chr}/index2annot_r2.tsv")
     shell: """Rscript {input.script} {input.index2tag2corr_r2_tsv} {input.annotated_tsv} {output.index2annot_r2_tsv}"""
 
-rule index2tag2corr_neg:
+rule index2tag2corr_r2_tsv_neg:
     input:
-        ld = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}_ld.ld"),
-        index_rsid = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
+        ld = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_ld.ld"),
+        index_rsid = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
         tag_rsid = TAG_RSID_NEG,
         script = os.path.join(SCRIPTDIR, "index2tag2corr.R")
     output:
         index2tag2corr_r2_tsv = os.path.join(NEGDIR, "{chr}/index2tag2corr_r2.tsv")
     shell: """Rscript {input.script} {input.ld} {input.index_rsid} {input.tag_rsid} {output.index2tag2corr_r2_tsv}"""
-
-rule intersect_chrom:
-    input:
-        snp_bed = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}.peak.bed"),
-        annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
-    output:
-        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "chr{chr}/intersect_%s/annotated.tsv"%ANNOT_LABEL)
-    shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_bed} -wb |awk '{{print $4"\t"$8}}' >{output.annotated_tsv}"""
-
 

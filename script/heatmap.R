@@ -27,10 +27,12 @@ dt2= dt2[ !duplicated(dt2[, c("rsid", "feature", "label"), with=F]), ]
 
 dc=dcast(dt2, rsid+label ~feature, value.var="r2", fill=0)
 
+browser()
 # keep max 10000 in neg
-keep.neg=20000
-if (length(which(dc$label==-1)) > keep.neg) {
-keep.idx = which(dc$label==1)
+keep.neg=100
+keep.pos=100
+#if ((length(which(dc$label==-1)) > keep.neg) | (length(which(dc$label==1)) > keep.pos)) {
+keep.idx = sample(which(dc$label==1), keep.pos)
 keep.idx = c(keep.idx, sample(which(dc$label==-1), keep.neg))
 dc = dc[keep.idx,]
 }

@@ -1,0 +1,98 @@
+CHROM=os.getenv('CHROM').split()
+GENOME1K_DIR=os.getenv('GENOME1K_DIR')
+ANNOT_LABEL=os.getenv('ANNOT_LABEL')
+SNP_DIR = os.getenv('SNP_DIR')
+HOME = os.getenv('HOME')
+SCRIPTDIR = os.getenv('SCRIPTDIR')
+
+rule all:
+    input:
+        chrom_plink_bed = expand("%s/chrom/{chr}/chr{chr}_plink.bed"%GENOME1K_DIR, chr=CHROM),
+        peak_bed = expand("%s/chrom/{chr}/chr{chr}.bed"%GENOME1K_DIR, chr=CHROM),
+        prune_in = expand("%s/chrom/{chr}/chr{chr}_index.prune.in"%GENOME1K_DIR, chr=CHROM),
+        prune_in2 = expand("%s/chrom/{chr}/chr{chr}_index2.prune.in"%GENOME1K_DIR, chr=CHROM),
+        prune_in3 = expand("%s/chrom/{chr}/chr{chr}_index3.prune.in"%GENOME1K_DIR, chr=CHROM),
+        plink_ld = expand("%s/chrom/{chr}/chr{chr}_ld.ld"%GENOME1K_DIR, chr=CHROM),
+
+rule ldproc:
+    input:
+        plink_ld_raw = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_ld_raw.ld",
+    output:
+        plink_ld = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_ld.ld",
+    shell:
+        """awk '{{print $1"\t"$2"\t"$3"\t"$4"\t"$5"\t"$6"\t"$7}}' {input.plink_ld_raw} > {output.plink_ld}"""
+
+rule ld:
+    input:
+        plink_bed = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink.bed",
+        chrom_rsid = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}.rsid",
+    params:
+        plink_bed_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink",
+        plink_ld_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_ld_raw",
+    output:
+        plink_ld_raw = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_ld_raw.ld",
+    shell:
+        """plink --bfile {params.plink_bed_prefix} --ld-snp-list {input.chrom_rsid} --ld-window-kb 1000 --ld-window 1000000 --ld-window-r2 0.5 --r2 --out {params.plink_ld_prefix};"""
+
+rule rsid:
+    input:
+        chrom_plink_bim = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink.bim",
+    output:
+        chrom_rsid = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}.rsid",
+    shell:
+        """awk '{{print $2}}' {input.chrom_plink_bim} >{output.chrom_rsid}"""
+
+rule index:
+    input:
+        plink_bed = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink.bed",
+    params:
+        plink_bed_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink",
+        plink_index_prune_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_index",
+    output:
+        prune_in = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_index.prune.in",
+    shell:
+        """plink --bfile {params.plink_bed_prefix} --indep 50 5 2 --out {params.plink_index_prune_prefix}"""
+
+rule index2:
+    input:
+        plink_bed = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink.bed",
+    params:
+        plink_bed_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink",
+        plink_index_prune_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_index2",
+    output:
+        prune_in = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_index2.prune.in",
+    shell:
+        """plink --bfile {params.plink_bed_prefix} --indep 50 5 100 --out {params.plink_index_prune_prefix}"""
+
+rule index3:
+    input:
+        plink_bed = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink.bed",
+    params:
+        plink_bed_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink",
+        plink_index_prune_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_index3",
+    output:
+        prune_in = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_index3.prune.in",
+    shell:
+        """plink --bfile {params.plink_bed_prefix} --indep 5 1 100 --out {params.plink_index_prune_prefix}"""
+
+rule peak_bed:
+    input:
+        chrom_plink_bim = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink.bim"
+    output:
+        peak_bed = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}.bed"
+    shell:
+        """awk 'BEGIN{{OFS="\t"}}{{print "chr"$1,$4-1,$4,$2}}' {input.chrom_plink_bim} |awk -F"\t" '$1 ~ /^chr[[:digit:]]+$/ && $2 ~ /^[[:digit:]]+$/ && $3 ~ /^[[:digit:]]+$/' |sort -k1,1 -k2,2n >{output.peak_bed}"""
+
+rule chrom_plink_bed:
+    input:
+        plink_bed = "{GENOME1K_DIR}/eur.bed"
+    params:
+        chr = "{chr}",
+        bfile_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink",
+        plink_bed_prefix = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink",
+    output:
+        chrom_plink_bed = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink.bed",
+        chrom_plink_bim = "{GENOME1K_DIR}/chrom/{chr}/chr{chr}_plink.bim",
+    shell:
+        """plink --bfile {GENOME1K_DIR}/eur --chr {params.chr} --make-bed --out {params.plink_bed_prefix}"""
+

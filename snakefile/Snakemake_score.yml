@@ -1,3 +1,4 @@
+ANNOT_1COL_BED = os.getenv('ANNOT_1COL_BED')
 ANNOT_LABEL = os.getenv('ANNOT_LABEL')
 GENOME1K_DATA_DIR = os.getenv('GENOME1K_DATA_DIR')
 HOME = os.getenv('HOME')
@@ -10,7 +11,7 @@ VARIABLE = os.getenv('VARIABLE')
 CHROM=os.getenv('CHROM').split()
 
 from os.path import basename, dirname
-
+ANNOT_1COL_DIR = dirname(ANNOT_1COL_BED)
 
 rule rsid2gene2score:
     input:
@@ -69,21 +70,25 @@ rule rsidbed:
         cut -f 1 {output.score_tsv} >{output.score_rsid};
         {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.score_rsid} >{output.score_bed};"""
 
+rule tmp:
+    input:
+        libsvm = expand(os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"), chr=CHROM)
+
 rule to_libsvm:
     input:
         annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "intersect_%s/{chr}/annotated.tsv"%ANNOT_LABEL),
-        variable = VARIABLE,
-        script = os.path.join(SCRIPTDIR, "tsv2libsvm_score.R"),
+        variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
+        script = os.path.join(SCRIPTDIR, "tsv2libsvm.R"),
     output:
         libsvm = os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"),
     shell:
-        """Rscript {input.script} {input.annotated_tsv} {input.variable} {output.libsvm}"""
+        """Rscript {input.script} {input.annotated_tsv} {input.variable_txt} {output.libsvm}"""
 
-rule intersect_chrom:
-    input:
-        snp_bed = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}.peak.bed"),
-        annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
-    output:
-        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "intersect_%s/{chr}/annotated.tsv"%ANNOT_LABEL),
-    shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_bed} -wb |awk '{{print $4"\t"$8}}' >{output.annotated_tsv}"""
+#rule intersect_chrom:
+#    input:
+#        snp_bed = os.path.join(GENOME1K_DATA_DIR, "{chr}/chr{chr}.peak.bed"),
+#        annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
+#    output:
+#        annotated_tsv = os.path.join(GENOME1K_DATA_DIR, "intersect_%s/{chr}/annotated.tsv"%ANNOT_LABEL),
+#    shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_bed} -wb |awk '{{print $4"\t"$8}}' >{output.annotated_tsv}"""
 

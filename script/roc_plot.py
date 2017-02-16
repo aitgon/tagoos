@@ -21,7 +21,7 @@ import sys
 import tempfile
 import xgboost
 
-def roc_plot(cv_probas, roc_path, auc_path):
+def roc_plot(y_test_proba_path_list, roc_path, auc_path):
     fprs = []
     tprs = []
     tpr2s = []
@@ -29,22 +29,23 @@ def roc_plot(cv_probas, roc_path, auc_path):
     base_fpr = numpy.linspace(0, 1, 101)
     fig, ax = pyplot.subplots()
     cv_rocs = {}
-    for chrom in sorted(cv_probas.keys()):
-        if not cv_probas[chrom] is None:
-            y_test_proba_path = cv_probas[chrom]['y_test_proba']
-            y_test_proba_df = pandas.read_csv(y_test_proba_path, sep="\t", header=0)
-            y_test_label = y_test_proba_df.label.tolist()
-            y_test_proba = y_test_proba_df.proba.tolist()
-            #
-            fpr, tpr, thresholds = roc_curve(y_test_label, y_test_proba, pos_label=1)
-            roc_auc = auc(fpr, tpr)
-            fprs.append(fpr)
-            tpr2 = numpy.interp(base_fpr, fpr, tpr)
-            tprs.append(tpr)
-            tpr2s.append(tpr2)
-            aucs.append(roc_auc)
-            cv_rocs[chrom] = {'fpr': fpr, 'tpr': tpr, 'thresholds': thresholds}
-            ax.plot(fpr, tpr, 'b', alpha=0.05)
+    #for chrom in sorted(cv_probas.keys()):
+    for i,y_test_proba_path in enumerate(y_test_proba_path_list):
+        #if not cv_probas[chrom] is None:
+        #y_test_proba_path = cv_probas[chrom]['y_test_proba']
+        y_test_proba_df = pandas.read_csv(y_test_proba_path, sep="\t", header=0)
+        y_test_label = y_test_proba_df.label.tolist()
+        y_test_proba = y_test_proba_df.proba.tolist()
+        #
+        fpr, tpr, thresholds = roc_curve(y_test_label, y_test_proba, pos_label=1)
+        roc_auc = auc(fpr, tpr)
+        fprs.append(fpr)
+        tpr2 = numpy.interp(base_fpr, fpr, tpr)
+        tprs.append(tpr)
+        tpr2s.append(tpr2)
+        aucs.append(roc_auc)
+        cv_rocs[i] = {'fpr': fpr, 'tpr': tpr, 'thresholds': thresholds}
+        ax.plot(fpr, tpr, 'b', alpha=0.05)
     tpr2s = numpy.array(tpr2s)
     mean_tprs = tpr2s.mean(axis=0)
     auc_mean = "%.2f" % numpy.array(aucs).mean()
@@ -60,11 +61,13 @@ def roc_plot(cv_probas, roc_path, auc_path):
     fig.savefig(roc_path)
 
 def main(argv):
-    cv_proba_pkl_path = sys.argv[1]
-    roc_path = sys.argv[2] #"roc.png"
+    y_test_proba_path_list = sys.argv[1:-1]
+    roc_path = sys.argv[-1]
+    #cv_proba_pkl_path = sys.argv[1]
+    #roc_path = sys.argv[2] #"roc.png"
     auc_path = os.path.join(os.path.dirname(roc_path), 'auc.txt') #"auc.txt"
-    cv_probas = pickle.load(open(cv_proba_pkl_path, 'rb'))
-    roc_plot(cv_probas, roc_path, auc_path)
+    #cv_probas = pickle.load(open(cv_proba_pkl_path, 'rb'))
+    roc_plot(y_test_proba_path_list, roc_path, auc_path)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
