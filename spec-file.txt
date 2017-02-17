@@ -5,3 +5,5 @@ johanneskoester::snakemake=3.4.2=py35_1
 matplotlib=1.5.3=np111py35_0
 numpy=1.11.2=py35_0
 pandas=0.19.0=np111py35_0
+sphinx=1.5.1=py35_0
+

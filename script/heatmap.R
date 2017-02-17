@@ -29,8 +29,8 @@ dc=dcast(dt2, rsid+label ~feature, value.var="r2", fill=0)
 
 browser()
 # keep max 10000 in neg
-keep.neg=100
-keep.pos=100
+keep.neg=10000
+keep.pos=10000
 #if ((length(which(dc$label==-1)) > keep.neg) | (length(which(dc$label==1)) > keep.pos)) {
 keep.idx = sample(which(dc$label==1), keep.pos)
 keep.idx = c(keep.idx, sample(which(dc$label==-1), keep.neg))

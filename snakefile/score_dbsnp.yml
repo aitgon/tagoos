@@ -6,11 +6,15 @@ MODEL_PKL = os.getenv('MODEL_PKL')
 OUTDIR = os.getenv('OUTDIR')
 SCRIPTDIR = os.getenv('SCRIPTDIR')
 
+from os.path import dirname
+# public dir is in the dir with the model
+MODEL_PKL_DIR = os.path.join(dirname(MODEL_PKL), "public")
+
 rule all:
     input:
         score_tsv = expand(os.path.join(OUTDIR, "chrom/{chr}/score.tsv"), chr=CHROM)
     output:
-        score_tsv_merged = os.path.join(OUTDIR, "score.tsv")
+        score_tsv_merged = os.path.join(MODEL_PKL_DIR, "dbsnp_score.tsv")
     threads: 8
     shell:
         """LC_ALL=C sort -u --parallel {threads} {input.score_tsv} -o {output.score_tsv_merged}"""
@@ -24,5 +28,4 @@ rule chrom_score_tsv:
         score_tsv = os.path.join(OUTDIR, "chrom/{chr}/score.tsv"),
     shell:
         """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.libsvm} {input.model_pkl} {output.score_tsv};"""
-
 
