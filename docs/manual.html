@@ -134,7 +134,7 @@ export GENOME1K_DIR=$HOME/data/2015_svmgwas/data/variant/1000genomes/eur
 export ANNOTATION_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}_1col.bed 
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
 export NBCHROM=`python -c &quot;import os; print(len(os.getenv(&#39;CHROM&#39;).split()))&quot;`
-time snakemake -s snakefile/Snakemake.yml -p -j $NBCHROM -c &quot;qsub -X -V -d $OUTDIR -q tagc -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log&quot; -d $OUTDIR -pn</code></pre>
+time snakemake -s ${TAGOOS}/snakefile/Snakemake.yml -p -j $NBCHROM -c &quot;qsub -X -V -d $OUTDIR -q tagc -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log&quot; -d $OUTDIR -pn</code></pre>
 <p>After creating the model, we can score all the DBSNP variants using the following commands. Again the important parameters are set before the hash character</p>
 <pre><code>export RSID_LABEL=dbsnp
 export POS_LABEL=GRASP108
@@ -152,7 +152,7 @@ export OUTDIR=$PWD/out/${POS_LABEL}/score_${RSID_LABEL}_${POS_LABEL}_${NEG_LABEL
 #export CHROM=$($HOME/data/2015_svmgwas/data/hcomp/get_record  $HOME/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx $HOME/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f $RSID_PATH |cut -f1 |tr -d &quot;chr&quot; |sort -u -k1n)
 export CHROM=$(seq 1 22)
 export NBCHROM=`python -c &quot;import os; print(len(os.getenv(&#39;CHROM&#39;).split()))&quot;`
-time snakemake -s snakefile/score_dbsnp.yml -j ${NBCHROM} -c &quot;qsub -X -V -d $OUTDIR -q tagc -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log&quot; -d $OUTDIR -pn</code></pre>
+time snakemake -s ${TAGOOS}/snakefile/score_dbsnp.yml -j ${NBCHROM} -c &quot;qsub -X -V -d $OUTDIR -q tagc -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log&quot; -d $OUTDIR -pn</code></pre>
 <h1 id="other-phenotypes"><a href="#TOC">Other phenotypes</a></h1>
 <p>We have shown the detailed parameters for the GRASP variants. A few other phenotypes are working well with the following parameters.</p>
 <h2 id="height"><a href="#TOC">Height</a></h2>

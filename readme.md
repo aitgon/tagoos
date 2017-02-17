@@ -15,6 +15,12 @@ conda install --yes --name $NAME --file spec-file.txt
 pip install -r requirements.txt
 ~~~
 
+Finally create a tagoos environment variable to the tagoos folder. In the bashrc, add
+
+~~~
+export TAGOOS=$HOME/Software/repositories/tagoos
+~~~
+
 # Build the documentation
 
 Run this command and open __$PWD/docs/manual.html__ in a browser
