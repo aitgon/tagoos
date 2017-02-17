@@ -5,6 +5,7 @@ CHROM=sorted(os.getenv('CHROM').split())
 GENOME1K_DIR = os.getenv('GENOME1K_DIR')
 HOME = os.getenv('HOME')
 OUTDIR = os.getenv('OUTDIR')
+PYTHONBIN = os.getenv('PYTHONBIN')
 POSDIR = os.getenv('POSDIR')
 NEGDIR = os.getenv('NEGDIR')
 SCRIPTDIR = os.getenv('SCRIPTDIR')
@@ -49,7 +50,7 @@ rule precision_recall_plot:
     output:
         precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
     shell:
-        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.y_test_proba_tsv_list} {output.precision_recall_plot}"""
+        """{PYTHONBIN} {input.script} {input.y_test_proba_tsv_list} {output.precision_recall_plot}"""
 
 rule roc_plot:
     input:
@@ -58,7 +59,7 @@ rule roc_plot:
     output:
         roc_plot = os.path.join(OUTDIR, "public/roc_plot.png"),
     shell:
-        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.y_test_proba_tsv_list} {output.roc_plot}"""
+        """{PYTHONBIN} {input.script} {input.y_test_proba_tsv_list} {output.roc_plot}"""
 
 rule y_test_proba:
     input:
@@ -69,7 +70,7 @@ rule y_test_proba:
     output:
         y_test_proba_tsv = os.path.join(OUTDIR, "CV/{chr}/y_test_proba.tsv"),
     shell:
-        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.test_libsvm} {input.test_instance} {input.train_libsvm} {output.y_test_proba_tsv}"""
+        """{PYTHONBIN} {input.script} {input.test_libsvm} {input.test_instance} {input.train_libsvm} {output.y_test_proba_tsv}"""
 
 rule cv_libsvm:
     input:
@@ -246,18 +247,6 @@ rule index_bed_neg:
     shell: """cut -f1 {input.index2tag2corr_r2_tsv} |sort -u -o {output.index_rsid};
                 {HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {output.index_rsid} >{output.index_bed}"""
 
-rule cv_y_probas:
-    input:
-        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
-        variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
-        rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
-        script = os.path.join(SCRIPTDIR, "cv_proba.py")
-    output:
-        cv_proba_pkl = os.path.join(OUTDIR, "cv_proba_path.pkl"),
-    threads: len(CHROM) if len(CHROM) <= 15 else 15
-    shell:
-        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {threads} {input.libsvm} {input.variable_txt} {input.rsid2chrom} {output.cv_proba_pkl}"""
-
 rule rsid2chrom:
     input:
         instance = os.path.join(OUTDIR, "instance.txt"),
@@ -276,7 +265,7 @@ rule create_model:
         feature_importance_tsv = os.path.join(OUTDIR, "public/feature_importance.tsv"),
         feature_importance_png = os.path.join(OUTDIR, "public/feature_importance.png"),
     shell:
-        """{HOME}/Software/miniconda3/envs/svmgwasappli3/bin/python {input.script} {input.libsvm} {input.variable_txt} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""
+        """{PYTHONBIN} {input.script} {input.libsvm} {input.variable_txt} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""
 
 rule libsvm_pos_neg_count:
     input:
