@@ -4,17 +4,19 @@ DBSNP_DIR = os.getenv('DBSNP_DIR')
 HOME = os.getenv('HOME')
 MODEL_PKL = os.getenv('MODEL_PKL')
 OUTDIR = os.getenv('OUTDIR')
-SCRIPTDIR = os.getenv('SCRIPTDIR')
+SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
 
 from os.path import dirname
 # public dir is in the dir with the model
-MODEL_PKL_DIR = os.path.join(dirname(MODEL_PKL), "public")
+MODEL_PKL_DIR = os.path.join(dirname(MODEL_PKL))
+MODEL_PKL_DIR_BASENAME = os.path.basename(MODEL_PKL_DIR)
+PUBLIC_DIR = os.path.join(MODEL_PKL_DIR, "../%s_public")%MODEL_PKL_DIR_BASENAME
 
 rule all:
     input:
         score_tsv = expand(os.path.join(OUTDIR, "chrom/{chr}/score.tsv"), chr=CHROM)
     output:
-        score_tsv_merged = os.path.join(MODEL_PKL_DIR, "dbsnp_score.tsv")
+        score_tsv_merged = os.path.join(PUBLIC_DIR, "dbsnp_score.tsv")
     threads: 8
     shell:
         """LC_ALL=C sort -u --parallel {threads} {input.score_tsv} -o {output.score_tsv_merged}"""

@@ -5,10 +5,11 @@ CHROM=sorted(os.getenv('CHROM').split())
 GENOME1K_DIR = os.getenv('GENOME1K_DIR')
 HOME = os.getenv('HOME')
 OUTDIR = os.getenv('OUTDIR')
+OUTDIR_BASENAME = os.path.basename(OUTDIR)
 PYTHONBIN = os.getenv('PYTHONBIN')
 POSDIR = os.getenv('POSDIR')
 NEGDIR = os.getenv('NEGDIR')
-SCRIPTDIR = os.getenv('SCRIPTDIR')
+SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
 SIGN = os.getenv('SIGN')
 TAG_RSID_NEG = os.getenv('TAG_RSID_NEG')
 TAG_RSID_POS = os.getenv('TAG_RSID_POS')
@@ -23,15 +24,14 @@ ANNOT_1COL_DIR = dirname(ANNOT_1COL_BED)
 rule public:
     input:
         libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
-        roc_plot = os.path.join(OUTDIR, "public/roc_plot.png"),
-        heatmap_classes_pdf = os.path.join(OUTDIR, "public/heatmap_classes.pdf"),
-        feature_importance_png = os.path.join(OUTDIR, "public/feature_importance.png"),
-        feature_importance_tsv = os.path.join(OUTDIR, "public/feature_importance.tsv"),
+        roc_plot = os.path.join(OUTDIR, "../%s_public/roc_plot.png"%OUTDIR_BASENAME),
+        feature_importance_png = os.path.join(OUTDIR, "../%s_public/feature_importance.png"%OUTDIR_BASENAME),
+        feature_importance_tsv = os.path.join(OUTDIR, "../%s_public/feature_importance.tsv"%OUTDIR_BASENAME),
 
 rule all:
     input:
         libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
-        roc_plot = os.path.join(OUTDIR, "public/roc_plot.png"),
+        roc_plot = os.path.join(OUTDIR, "../%s_public/roc_plot.png"%OUTDIR_BASENAME),
         precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
         model_pkl = os.path.join(OUTDIR, "model.pkl"),
         corr_bed_pos = os.path.join(POSDIR, "corr_pos.bed"),
@@ -41,7 +41,6 @@ rule all:
         index_bed_pos = os.path.join(POSDIR, "index_pos.bed"),
         index_bed_neg = os.path.join(NEGDIR, "index_neg.bed"),
         selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed"),
-        heatmap_classes_pdf = os.path.join(OUTDIR, "public/heatmap_classes.pdf"),
 
 rule precision_recall_plot:
     input:
@@ -57,7 +56,7 @@ rule roc_plot:
         y_test_proba_tsv_list = expand(os.path.join(OUTDIR, "CV/{chr}/y_test_proba.tsv"), chr=CHROM),
         script = os.path.join(SCRIPTDIR, "roc_plot.py"),
     output:
-        roc_plot = os.path.join(OUTDIR, "public/roc_plot.png"),
+        roc_plot = os.path.join(OUTDIR, "../%s_public/roc_plot.png"%OUTDIR_BASENAME),
     shell:
         """{PYTHONBIN} {input.script} {input.y_test_proba_tsv_list} {output.roc_plot}"""
 
@@ -112,19 +111,6 @@ rule feature_bed_chrom:
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.annot_bed_idx} {input.annot_bed} -f {input.feature_txt} >{output.selected_annot_bed}"""
 
-rule heatmap:
-    input:
-        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
-        feature_all_txt = os.path.join(OUTDIR, "feature/feature_all.txt"),
-        script = os.path.join(SCRIPTDIR, "heatmap.R"),
-    output:
-        heatmap_detailed_pdf = os.path.join(OUTDIR, "heatmap_detailed.pdf"),
-        heatmap_classes_pdf = os.path.join(OUTDIR, "public/heatmap_classes.pdf"),
-    shell:
-        """Rscript {input.script} {input.pos_neg_index2annot_r2_label} {input.feature_all_txt} {output.heatmap_detailed_pdf} {output.heatmap_classes_pdf};
-            convert {output.heatmap_classes_pdf} {output.heatmap_classes_pdf}.jpg;
-            convert {output.heatmap_detailed_pdf} {output.heatmap_detailed_pdf}.jpg"""
-
 rule merge_index2annot_r2_label_tsv:
     input:
         index2annot_r2_label_tsv_pos = expand(os.path.join(POSDIR, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
@@ -137,7 +123,7 @@ rule merge_index2annot_r2_label_tsv:
 
 rule extract_feature_all:
     input:
-        feature_importance_tsv = os.path.join(OUTDIR, "public/feature_importance.tsv"),
+        feature_importance_tsv = os.path.join(OUTDIR, "../%s_public/feature_importance.tsv"%OUTDIR_BASENAME),
     output:
         feature_all_txt = os.path.join(OUTDIR, "feature/feature_all.txt"),
     shell:
@@ -145,7 +131,7 @@ rule extract_feature_all:
 
 rule extract_feature2tex:
     input:
-        feature_importance_tsv = os.path.join(OUTDIR, "public/feature_importance.tsv"),
+        feature_importance_tsv = os.path.join(OUTDIR, "../%s_public/feature_importance.tsv"%OUTDIR_BASENAME),
     output:
         feature_txt = os.path.join(OUTDIR, "feature/feature.txt"),
     shell:
@@ -262,8 +248,8 @@ rule create_model:
         script = os.path.join(SCRIPTDIR, "create_model.py")
     output:
         model_pkl = os.path.join(OUTDIR, "model.pkl"),
-        feature_importance_tsv = os.path.join(OUTDIR, "public/feature_importance.tsv"),
-        feature_importance_png = os.path.join(OUTDIR, "public/feature_importance.png"),
+        feature_importance_tsv = os.path.join(OUTDIR, "../%s_public/feature_importance.tsv"%OUTDIR_BASENAME),
+        feature_importance_png = os.path.join(OUTDIR, "../%s_public/feature_importance.png"%OUTDIR_BASENAME),
     shell:
         """{PYTHONBIN} {input.script} {input.libsvm} {input.variable_txt} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""
 
