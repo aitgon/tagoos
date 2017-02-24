@@ -24,8 +24,16 @@ variable_last_index_visited = False
 
 with open(instance_path, 'w') as instance_fout, open(libsvm_path, 'w') as libsvm_fout:
     for line in reader:
-        instance = line[0]
-        variable = line[1]
+        if len(line)==2:
+            instance = line[0]
+            variable = line[1]
+        elif len(line)==4:
+            instance = line[0]
+            score = line[1]
+            variable = line[2]
+            label = line[3]
+        else:
+            sys.exit(1)
         if instance != visited_instance: # if is new instance
             if not libsvm_line is None:
                 if not variable_last_index_visited: libsvm_line += " %d:0"%(last_variable_index)

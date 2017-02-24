@@ -1,0 +1,201 @@
+ANNOT_LABEL = os.getenv('ANNOT_LABEL')
+ANNOT_1COL_BED=os.getenv('ANNOT_1COL_BED')
+INDEX_LABEL = os.getenv('INDEX_LABEL')
+CHROM=sorted(os.getenv('CHROM').split())
+GENOME1K_DIR = os.getenv('GENOME1K_DIR')
+HOME = os.getenv('HOME')
+OUTDIR = os.getenv('OUTDIR')
+OUTDIR_BASENAME = os.path.basename(OUTDIR)
+PYTHONBIN = os.getenv('PYTHONBIN')
+POSDIR = os.getenv('POSDIR')
+THREADS = int(os.getenv('THREADS'))
+NEGDIR = os.getenv('NEGDIR')
+SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
+SIGN = os.getenv('SIGN')
+TAG_RSID_NEG = os.getenv('TAG_RSID_NEG')
+TAG_RSID_POS = os.getenv('TAG_RSID_POS')
+TAG_SIGN=[[os.getenv('TAG_RSID'), os.getenv('SIGN')]]
+
+SIGN = ['pos', 'neg']
+from os.path import basename
+
+from os.path import dirname
+ANNOT_1COL_DIR = dirname(ANNOT_1COL_BED)
+
+rule public:
+    input:
+        libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
+        roc_plot = os.path.join(OUTDIR, "../%s_public/roc_plot.png"%OUTDIR_BASENAME),
+        feature_importance_png = os.path.join(OUTDIR, "../%s_public/feature_importance.png"%OUTDIR_BASENAME),
+        feature_importance_tsv = os.path.join(OUTDIR, "../%s_public/feature_importance.tsv"%OUTDIR_BASENAME),
+
+#rule all:
+#    input:
+#        libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
+#        roc_plot = os.path.join(OUTDIR, "../%s_public/roc_plot.png"%OUTDIR_BASENAME),
+#        precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
+#        model_pkl = os.path.join(OUTDIR, "model.pkl"),
+#        corr_bed_pos = os.path.join(POSDIR, "corr_pos.bed"),
+#        corr_bed_neg = os.path.join(NEGDIR, "corr_neg.bed"),
+#        tag_bed_pos = os.path.join(POSDIR, "tag_pos.bed"),
+#        tag_bed_neg = os.path.join(NEGDIR, "tag_neg.bed"),
+#        index_bed_pos = os.path.join(POSDIR, "index_pos.bed"),
+#        index_bed_neg = os.path.join(NEGDIR, "index_neg.bed"),
+#        selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed"),
+
+rule precision_recall_plot:
+    input:
+        y_test_proba_tsv_list = expand(os.path.join(OUTDIR, "CV/{chr}/y_test_proba.tsv"), chr=CHROM),
+        script = os.path.join(SCRIPTDIR, "precision_recall_plot.py"),
+    output:
+        precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
+    shell:
+        """{PYTHONBIN} {input.script} {input.y_test_proba_tsv_list} {output.precision_recall_plot}"""
+
+rule roc_plot:
+    input:
+        y_test_proba_tsv_list = expand(os.path.join(OUTDIR, "CV/{chr}/y_test_proba.tsv"), chr=CHROM),
+        script = os.path.join(SCRIPTDIR, "roc_plot.py"),
+    output:
+        roc_plot = os.path.join(OUTDIR, "../%s_public/roc_plot.png"%OUTDIR_BASENAME),
+    shell:
+        """{PYTHONBIN} {input.script} {input.y_test_proba_tsv_list} {output.roc_plot}"""
+
+rule y_test_proba:
+    input:
+        test_libsvm = os.path.join(OUTDIR, "CV/{chr}/test.libsvm"),
+        train_libsvm = os.path.join(OUTDIR, "CV/{chr}/train.libsvm"),
+        test_instance = os.path.join(OUTDIR, "CV/{chr}/test_instance.txt"),
+        script = os.path.join(SCRIPTDIR, "y_test_proba.py"),
+    output:
+        y_test_proba_tsv = os.path.join(OUTDIR, "CV/{chr}/y_test_proba.tsv"),
+    shell:
+        """{PYTHONBIN} {input.script} {input.test_libsvm} {input.test_instance} {input.train_libsvm} {output.y_test_proba_tsv}"""
+
+rule cv_libsvm:
+    input:
+        rsid_chrom_libsvm = os.path.join(OUTDIR, "CV/rsid_chrom.libsvm"),
+    output:
+        test_libsvm = os.path.join(OUTDIR, "CV/{chr}/test.libsvm"),
+        train_libsvm = os.path.join(OUTDIR, "CV/{chr}/train.libsvm"),
+        test_instance = os.path.join(OUTDIR, "CV/{chr}/test_instance.txt"),
+        train_instance = os.path.join(OUTDIR, "CV/{chr}/train_instance.txt"),
+    params:
+        chr = "chr{chr}"
+    shell:
+        """awk -F "\t" '{{if($2=="{params.chr}"){{ print $1 >"{output.test_instance}"; print $3 >"{output.test_libsvm}" }} else {{print $1>"{output.train_instance}"; print $3 >"{output.train_libsvm}" }} }}' {input.rsid_chrom_libsvm}"""
+
+rule rsid_chrom_libsvm:
+    input:
+        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+        rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
+    output:
+        rsid_chrom_libsvm = os.path.join(OUTDIR, "CV/rsid_chrom.libsvm"),
+    shell:
+        """paste -d "\t" {input.rsid2chrom} {input.libsvm} > {output.rsid_chrom_libsvm}"""
+
+#rule feature_bed_chrom_all:
+#    input:
+#        selected_chrom_annot_bed = expand(os.path.join(OUTDIR, "feature/{chr}/feature.bed"), chr=CHROM),
+#    output:
+#        selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed")
+#    shell:
+#        """sort -k1,1 -k2,2n {input.selected_chrom_annot_bed} -o  {output.selected_annot_bed}"""
+
+#rule feature_bed_chrom:
+#    input:
+#        feature_txt = os.path.join(OUTDIR, "feature/feature.txt"),
+#        annot_bed = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed"%(ANNOT_LABEL, ANNOT_LABEL)),
+#        annot_bed_idx = os.path.join(HOME, "data/2015_svmgwas/data/annotation_ngs_based/%s/chrom/{chr}/%s_1col.bed.idx"%(ANNOT_LABEL, ANNOT_LABEL)),
+#    output:
+#        selected_annot_bed =os.path.join(OUTDIR, "feature/{chr}/feature.bed"),
+#    shell:
+#        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.annot_bed_idx} {input.annot_bed} -f {input.feature_txt} >{output.selected_annot_bed}"""
+
+rule merge_index2annot_r2_label_tsv:
+    input:
+        index2annot_r2_label_tsv_pos = expand(os.path.join(POSDIR, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
+        index2annot_r2_label_tsv_neg = expand(os.path.join(NEGDIR, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
+    output:
+        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
+    threads: THREADS
+    shell:
+        """LC_ALL=C sort -u --parallel {threads} -k1,1 -k4,4nr -k3,3 {input.index2annot_r2_label_tsv_pos} {input.index2annot_r2_label_tsv_neg} |awk -F"\t" '!seen[$1, $3]++' > {output.pos_neg_index2annot_r2_label}"""
+
+#rule extract_feature_all:
+#    input:
+#        feature_importance_tsv = os.path.join(OUTDIR, "../%s_public/feature_importance.tsv"%OUTDIR_BASENAME),
+#    output:
+#        feature_all_txt = os.path.join(OUTDIR, "feature/feature_all.txt"),
+#    shell:
+#        """cut -f1 {input.feature_importance_tsv} >{output.feature_all_txt}"""
+
+#rule extract_feature2tex:
+#    input:
+#        feature_importance_tsv = os.path.join(OUTDIR, "../%s_public/feature_importance.tsv"%OUTDIR_BASENAME),
+#    output:
+#        feature_txt = os.path.join(OUTDIR, "feature/feature.txt"),
+#    shell:
+#        """cut -f1 {input.feature_importance_tsv} |head -n 30 >{output.feature_txt}"""
+
+rule rsid2chrom:
+    input:
+        instance = os.path.join(OUTDIR, "instance.txt"),
+    output:
+        rsid2chrom = os.path.join(OUTDIR, "rsid2chrom.tsv"),
+    shell:
+        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed.idx {HOME}/data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed -f {input.instance} |awk '{{print $4"\t"$1}}'>{output.rsid2chrom}"""
+
+rule create_model:
+    input:
+        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+        variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
+        script = os.path.join(SCRIPTDIR, "create_model.py")
+    output:
+        model_pkl = os.path.join(OUTDIR, "model.pkl"),
+        feature_importance_tsv = os.path.join(OUTDIR, "../%s_public/feature_importance.tsv"%OUTDIR_BASENAME),
+        feature_importance_png = os.path.join(OUTDIR, "../%s_public/feature_importance.png"%OUTDIR_BASENAME),
+    shell:
+        """{PYTHONBIN} {input.script} {input.libsvm} {input.variable_txt} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""
+
+rule libsvm_pos_neg_count:
+    input:
+        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+    output:
+        libsvm_pos_neg_count = os.path.join(OUTDIR, "libsvm_pos_neg_count.txt"),
+    shell:
+        """LC_ALL=C grep -P "^1 " {input.libsvm} |wc -l >{output.libsvm_pos_neg_count};
+            LC_ALL=C grep -P "^-1 " {input.libsvm} |wc -l >>{output.libsvm_pos_neg_count};"""
+
+rule merge_libsvm:
+    input:
+        instance_txt_pos = expand(os.path.join(POSDIR, "{chr}/instance.txt"), chr=CHROM),
+        annotation_libsvm_pos = expand(os.path.join(POSDIR, "{chr}/annotation.libsvm"), chr=CHROM),
+        instance_txt_neg = expand(os.path.join(OUTDIR, "chrom/{chr}/instance.txt"), chr=CHROM),
+        annotation_libsvm_neg = expand(os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"), chr=CHROM),
+    output:
+        libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
+        instance = os.path.join(OUTDIR, "instance.txt"),
+    shell:
+        """cat {input.instance_txt_pos} {input.instance_txt_neg} >{output.instance};
+            cat {input.annotation_libsvm_pos} {input.annotation_libsvm_neg} >{output.libsvm};"""
+
+rule grep_pasted_instance_libsvm_neg:
+    input: 
+        instance_pos = os.path.join(POSDIR, "{chr}/instance.txt"),
+        pasted_instance_libsvm = os.path.join(NEGDIR, "{chr}/pasted_instance.libsvm"),
+    output:
+        instance_txt = os.path.join(OUTDIR, "chrom/{chr}/instance.txt"),
+        annotation_libsvm = os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"),
+    shell:
+        """LC_ALL=C grep -v -w -F -f {input.instance_pos} {input.pasted_instance_libsvm} |awk -F "\t" '{{ print $1 >"{output.instance_txt}"; print $2 >"{output.annotation_libsvm}" }}'"""
+
+rule pasted_instance_libsvm:
+    input: 
+        libsvm = os.path.join(NEGDIR, "{chr}/annotation.libsvm"),
+        instance = os.path.join(NEGDIR, "{chr}/instance.txt"),
+    output:
+        pasted_instance_libsvm = os.path.join(NEGDIR, "{chr}/pasted_instance.libsvm"),
+    shell:
+        """paste {input.instance} {input.libsvm} > {output.pasted_instance_libsvm}"""
+

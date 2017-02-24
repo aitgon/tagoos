@@ -5,6 +5,7 @@ HOME = os.getenv('HOME')
 MODEL_PKL = os.getenv('MODEL_PKL')
 OUTDIR = os.getenv('OUTDIR')
 SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
+THREADS = int(os.getenv('THREADS'))
 
 from os.path import dirname
 # public dir is in the dir with the model
@@ -12,14 +13,24 @@ MODEL_PKL_DIR = os.path.join(dirname(MODEL_PKL))
 MODEL_PKL_DIR_BASENAME = os.path.basename(MODEL_PKL_DIR)
 PUBLIC_DIR = os.path.join(MODEL_PKL_DIR, "../%s_public")%MODEL_PKL_DIR_BASENAME
 
-rule all:
+rule percentile:
+    input:
+        score_tsv_merged = os.path.join(OUTDIR, "dbsnp_score.tsv"),
+        script = os.path.join(SCRIPTDIR, "percentile.py"),
+    output:
+        score_percentile = os.path.join(OUTDIR, "dbsnp_percentile.tsv")
+    threads: THREADS
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.score_tsv_merged} {output.score_percentile};"""
+
+rule score:
     input:
         score_tsv = expand(os.path.join(OUTDIR, "chrom/{chr}/score.tsv"), chr=CHROM)
     output:
-        score_tsv_merged = os.path.join(PUBLIC_DIR, "dbsnp_score.tsv")
-    threads: 8
+        score_tsv_merged = os.path.join(OUTDIR, "dbsnp_score.tsv")
+    threads: THREADS
     shell:
-        """LC_ALL=C sort -u --parallel {threads} {input.score_tsv} -o {output.score_tsv_merged}"""
+        """LC_ALL=C sort -u -k2,2nr -k1,1 --parallel {threads} {input.score_tsv} > {output.score_tsv_merged}"""
 
 rule chrom_score_tsv:
     input:
