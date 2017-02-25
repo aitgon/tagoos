@@ -6,6 +6,7 @@ GENOME1K_DIR = os.getenv('GENOME1K_DIR')
 HOME = os.getenv('HOME')
 INDEXDIR = os.getenv('INDEXDIR')
 LABEL = os.getenv('LABEL')
+LD=os.getenv('LD')
 PYTHONBIN = os.getenv('PYTHONBIN')
 THREADS = int(os.getenv('THREADS'))
 TAGDIR = os.getenv('TAGDIR')
@@ -16,7 +17,7 @@ from os.path import basename
 
 from os.path import dirname
 ANNOT_1COL_DIR = dirname(ANNOT_1COL_BED)
-
+LD_SLUG="ld" + LD.replace(".", "")
 
 rule all:
     input:
@@ -119,11 +120,11 @@ rule sort_tagld_k1:
 rule tagld:
     input:
         tag_rsid_sorted = os.path.join(TAGDIR, "%s.sorted.rsid"%TAG_RSID),
-        ld_3cols_sorted = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_ld_3cols_sorted.ld"),
+        plink_ld = os.path.join(GENOME1K_DIR, "chrom/{chr}/%s/chr{chr}.ld"%LD_SLUG),
     output:
         tagld = os.path.join(TAGDIR, "chrom/{chr}/tag_ld.tsv"),
     shell:
-        """LC_ALL=C join -1 1 -2 1 -o 2.1,2.2,2.3 {input.tag_rsid_sorted} {input.ld_3cols_sorted} >{output.tagld}"""
+        """LC_ALL=C join -1 1 -2 1 -o 2.1,2.2,2.3 {input.tag_rsid_sorted} {input.plink_ld} >{output.tagld}"""
 
 rule sort_tag_rsid:
     input:
@@ -141,40 +142,23 @@ rule sort_indexld_k2:
         indexld_sortedk2 = os.path.join(INDEXDIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
     threads: THREADS
     shell:
-        """LC_ALL=C sort -u --parallel {threads} -k2 {input.indexld} -o {output.indexld_sortedk2}"""
+        """LC_ALL=C sort -u --parallel {threads} -k2,2 {input.indexld} -o {output.indexld_sortedk2}"""
 
 rule indexld:
     input:
         index_rsid_sorted = os.path.join(INDEXDIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),
-        ld_3cols = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_ld_3cols_sorted.ld"),
+        plink_ld = os.path.join(GENOME1K_DIR, "chrom/{chr}/%s/chr{chr}.ld"%LD_SLUG),
     output:
         indexld = os.path.join(INDEXDIR, "chrom/{chr}/index_ld.tsv"),
     shell:
-        """LC_ALL=C join -1 1 -2 1 -o 2.1,2.2,2.3 {input.index_rsid_sorted} {input.ld_3cols} >{output.indexld}"""
+        """LC_ALL=C join -1 1 -2 1 -o 2.1,2.2,2.3 {input.index_rsid_sorted} {input.plink_ld} >{output.indexld}"""
 
 rule sort_index_rsid:
     input:
         index_rsid = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
     output:
-        index_rsid_sorted = os.path.join(INDEXDIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),
+        index_rsid_sorted = os.path.join(INDEXDIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),  
     threads: THREADS
     shell:
         """LC_ALL=C sort --parallel {threads} -u {input.index_rsid} -o {output.index_rsid_sorted}"""
-
-rule sort_ld_3cols:
-    input:
-        ld_3cols = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_ld_3cols.ld"),
-    output:
-        ld_3cols_sorted = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_ld_3cols_sorted.ld"),
-    threads: THREADS
-    shell:
-        """LC_ALL=C sort --parallel {threads} -u {input.ld_3cols} -o{output.ld_3cols_sorted}"""
-
-rule ld_to_3cols:
-    input:
-        ld = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_ld.ld"),
-    output:
-        ld_3cols = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_ld_3cols.ld"),
-    shell:
-        """LC_ALL=C cut -f3,6,7 {input.ld} >{output.ld_3cols}"""
 

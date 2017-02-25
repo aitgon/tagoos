@@ -92,7 +92,7 @@ rule rsid_chrom_libsvm:
     output:
         rsid_chrom_libsvm = os.path.join(OUTDIR, "CV/rsid_chrom.libsvm"),
     shell:
-        """paste -d "\t" {input.rsid2chrom} {input.libsvm} > {output.rsid_chrom_libsvm}"""
+        """LC_ALL=C paste -d "\t" {input.rsid2chrom} {input.libsvm} > {output.rsid_chrom_libsvm}"""
 
 #rule feature_bed_chrom_all:
 #    input:
@@ -197,5 +197,5 @@ rule pasted_instance_libsvm:
     output:
         pasted_instance_libsvm = os.path.join(NEGDIR, "{chr}/pasted_instance.libsvm"),
     shell:
-        """paste {input.instance} {input.libsvm} > {output.pasted_instance_libsvm}"""
+        """LC_ALL=C paste {input.instance} {input.libsvm} > {output.pasted_instance_libsvm}"""
 

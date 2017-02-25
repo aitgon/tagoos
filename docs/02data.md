@@ -28,11 +28,14 @@ time snakemake -s ${TAGOOS}/snakefile/preannotate.yml -j $NBCHROM -c "qsub -X -V
 - Compute the correlated and index variants of 1000 genome data with the __genome1k.yml__ snakefile
 
 ~~~
-export CHROM=$(seq 21 22)
+export LD=0.8
+export CHROM=$(seq 1 22)
+#export CHROM=5
 export GENOME1K_DIR=$HOME/data/2015_svmgwas/data/variant/1000genomes/eur
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
+export THREADS=8
 export NBCHROM=`python -c "import os; print(len(os.getenv('CHROM').split()))"`
-time snakemake -s genome1k.yml -p -j $NBCHROM -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e tmp/stderr.log -o tmp/stdout.log" -d $GENOME1K_DIR -pn
+time snakemake -s ${TAGOOS}/snakefile/genome1k.yml -p -j $NBCHROM -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $GENOME1K_DIR/stderr.log -o $GENOME1K_DIR/stdout.log" -d $GENOME1K_DIR -pn
 ~~~
 
 - Download the dbsnp variants using the __download_dbsnp.yml__ snakefile
