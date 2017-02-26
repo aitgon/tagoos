@@ -7,10 +7,11 @@ We have shown the detailed parameters for the GRASP variants. A few other phenot
 ~~~
 export TAG_RSID_POS=/cobelix/gonzalez/data/2015_svmgwas/data/variant/literature_association/traits/heightMergedNature2010NatGen2014.rsid
 export POS_LABEL=heightMergedNature2010NatGen2014
-export NEG_LABEL=1kg100000
+export NEG_LABEL=1kg10000000
 export ANNOT_LABEL=annotationcorr
 export INDEX_LABEL=index3
 export ANNOT_1COL_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}_1col.bed
+export LD=0.8
 ~~~
 
 ## Blood pressure
@@ -18,7 +19,7 @@ export ANNOT_1COL_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_
 ~~~
 export TAG_RSID_POS=$HOME/data/2015_svmgwas/data/variant/literature_association/traits/bloodPressureMerged.rsid
 export POS_LABEL=bloodPressureMerged
-export NEG_LABEL=1kg100000
+export NEG_LABEL=1kg10000000
 export ANNOT_LABEL=annotationcorr
 export INDEX_LABEL=index3
 export ANNOT_1COL_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}_1col.bed

@@ -112,15 +112,15 @@ rule rsid_chrom_libsvm:
 #    shell:
 #        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.annot_bed_idx} {input.annot_bed} -f {input.feature_txt} >{output.selected_annot_bed}"""
 
-rule merge_index2annot_r2_label_tsv:
-    input:
-        index2annot_r2_label_tsv_pos = expand(os.path.join(POSDIR, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
-        index2annot_r2_label_tsv_neg = expand(os.path.join(NEGDIR, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
-    output:
-        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
-    threads: THREADS
-    shell:
-        """LC_ALL=C sort -u --parallel {threads} -k1,1 -k4,4nr -k3,3 {input.index2annot_r2_label_tsv_pos} {input.index2annot_r2_label_tsv_neg} |awk -F"\t" '!seen[$1, $3]++' > {output.pos_neg_index2annot_r2_label}"""
+#rule merge_index2annot_r2_label_tsv:
+#    input:
+#        index2annot_r2_label_tsv_pos = expand(os.path.join(POSDIR, "chrom/{chr}/index2annot_r2_label.tsv"), chr=CHROM),
+#        index2annot_r2_label_tsv_neg = expand(os.path.join(NEGDIR, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
+#    output:
+#        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
+#    threads: THREADS
+#    shell:
+#        """LC_ALL=C sort -u --parallel {threads} -k1,1 -k4,4nr -k3,3 {input.index2annot_r2_label_tsv_pos} {input.index2annot_r2_label_tsv_neg} |awk -F"\t" '!seen[$1, $3]++' > {output.pos_neg_index2annot_r2_label}"""
 
 #rule extract_feature_all:
 #    input:
@@ -169,8 +169,8 @@ rule libsvm_pos_neg_count:
 
 rule merge_libsvm:
     input:
-        instance_txt_pos = expand(os.path.join(POSDIR, "{chr}/instance.txt"), chr=CHROM),
-        annotation_libsvm_pos = expand(os.path.join(POSDIR, "{chr}/annotation.libsvm"), chr=CHROM),
+        instance_txt_pos = expand(os.path.join(POSDIR, "chrom/{chr}/instance.txt"), chr=CHROM),
+        annotation_libsvm_pos = expand(os.path.join(POSDIR, "chrom/{chr}/annotation.libsvm"), chr=CHROM),
         instance_txt_neg = expand(os.path.join(OUTDIR, "chrom/{chr}/instance.txt"), chr=CHROM),
         annotation_libsvm_neg = expand(os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"), chr=CHROM),
     output:
@@ -182,8 +182,8 @@ rule merge_libsvm:
 
 rule grep_pasted_instance_libsvm_neg:
     input: 
-        instance_pos = os.path.join(POSDIR, "{chr}/instance.txt"),
-        pasted_instance_libsvm = os.path.join(NEGDIR, "{chr}/pasted_instance.libsvm"),
+        instance_pos = os.path.join(POSDIR, "chrom/{chr}/instance.txt"),
+        pasted_instance_libsvm = os.path.join(NEGDIR, "chrom/{chr}/pasted_instance.libsvm"),
     output:
         instance_txt = os.path.join(OUTDIR, "chrom/{chr}/instance.txt"),
         annotation_libsvm = os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"),
@@ -192,10 +192,10 @@ rule grep_pasted_instance_libsvm_neg:
 
 rule pasted_instance_libsvm:
     input: 
-        libsvm = os.path.join(NEGDIR, "{chr}/annotation.libsvm"),
-        instance = os.path.join(NEGDIR, "{chr}/instance.txt"),
+        libsvm = os.path.join(NEGDIR, "chrom/{chr}/annotation.libsvm"),
+        instance = os.path.join(NEGDIR, "chrom/{chr}/instance.txt"),
     output:
-        pasted_instance_libsvm = os.path.join(NEGDIR, "{chr}/pasted_instance.libsvm"),
+        pasted_instance_libsvm = os.path.join(NEGDIR, "chrom/{chr}/pasted_instance.libsvm"),
     shell:
         """LC_ALL=C paste {input.instance} {input.libsvm} > {output.pasted_instance_libsvm}"""
 
