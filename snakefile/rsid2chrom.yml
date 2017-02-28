@@ -1,0 +1,17 @@
+HOME = os.getenv('HOME')
+TAGDIR = os.getenv('TAGDIR')
+TAG_RSID_POS = os.getenv('TAG_RSID_POS')
+THREADS = int(os.getenv('THREADS'))
+
+rule rsdi2chrom:
+    input:
+        tag_rsid_pos = TAG_RSID_POS,
+        peak_bed = os.path.join(HOME, "data/2015_svmgwas/data/variant/1000genomes/eur/eur.peak.bed"),
+        script = os.path.join(HOME, "data/2015_svmgwas/data/hcomp/get_record"),
+    output:
+        chrom_list = os.path.join(TAGDIR, "../chrom_list.txt")
+    threads: THREADS
+    shell:
+        "export LC_ALL=C; time {input.script} {input.peak_bed}.idx {input.peak_bed} -f {input.tag_rsid_pos} |cut -f1,1 |sort -u --parallel {threads} |tr -d 'chr' > {output.chrom_list}"
+
+

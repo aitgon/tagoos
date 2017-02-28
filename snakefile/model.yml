@@ -7,9 +7,9 @@ HOME = os.getenv('HOME')
 OUTDIR = os.getenv('OUTDIR')
 OUTDIR_BASENAME = os.path.basename(OUTDIR)
 PYTHONBIN = os.getenv('PYTHONBIN')
-POSDIR = os.getenv('POSDIR')
+TAGDIR_POS = os.getenv('TAGDIR_POS')
 THREADS = int(os.getenv('THREADS'))
-NEGDIR = os.getenv('NEGDIR')
+TAGDIR_NEG = os.getenv('TAGDIR_NEG')
 SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
 SIGN = os.getenv('SIGN')
 TAG_RSID_NEG = os.getenv('TAG_RSID_NEG')
@@ -35,12 +35,12 @@ rule public:
 #        roc_plot = os.path.join(OUTDIR, "../%s_public/roc_plot.png"%OUTDIR_BASENAME),
 #        precision_recall_plot = os.path.join(OUTDIR, "precision_recall_plot.png"),
 #        model_pkl = os.path.join(OUTDIR, "model.pkl"),
-#        corr_bed_pos = os.path.join(POSDIR, "corr_pos.bed"),
-#        corr_bed_neg = os.path.join(NEGDIR, "corr_neg.bed"),
-#        tag_bed_pos = os.path.join(POSDIR, "tag_pos.bed"),
-#        tag_bed_neg = os.path.join(NEGDIR, "tag_neg.bed"),
-#        index_bed_pos = os.path.join(POSDIR, "index_pos.bed"),
-#        index_bed_neg = os.path.join(NEGDIR, "index_neg.bed"),
+#        corr_bed_pos = os.path.join(TAGDIR_POS, "corr_pos.bed"),
+#        corr_bed_neg = os.path.join(TAGDIR_NEG, "corr_neg.bed"),
+#        tag_bed_pos = os.path.join(TAGDIR_POS, "tag_pos.bed"),
+#        tag_bed_neg = os.path.join(TAGDIR_NEG, "tag_neg.bed"),
+#        index_bed_pos = os.path.join(TAGDIR_POS, "index_pos.bed"),
+#        index_bed_neg = os.path.join(TAGDIR_NEG, "index_neg.bed"),
 #        selected_annot_bed = os.path.join(OUTDIR, "feature/feature.bed"),
 
 rule precision_recall_plot:
@@ -114,8 +114,8 @@ rule rsid_chrom_libsvm:
 
 #rule merge_index2annot_r2_label_tsv:
 #    input:
-#        index2annot_r2_label_tsv_pos = expand(os.path.join(POSDIR, "chrom/{chr}/index2annot_r2_label.tsv"), chr=CHROM),
-#        index2annot_r2_label_tsv_neg = expand(os.path.join(NEGDIR, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
+#        index2annot_r2_label_tsv_pos = expand(os.path.join(TAGDIR_POS, "chrom/{chr}/index2annot_r2_label.tsv"), chr=CHROM),
+#        index2annot_r2_label_tsv_neg = expand(os.path.join(TAGDIR_NEG, "{chr}/index2annot_r2_label.tsv"), chr=CHROM),
 #    output:
 #        pos_neg_index2annot_r2_label = os.path.join(OUTDIR, "index2annot_r2_label.tsv"),
 #    threads: THREADS
@@ -169,8 +169,8 @@ rule libsvm_pos_neg_count:
 
 rule merge_libsvm:
     input:
-        instance_txt_pos = expand(os.path.join(POSDIR, "chrom/{chr}/instance.txt"), chr=CHROM),
-        annotation_libsvm_pos = expand(os.path.join(POSDIR, "chrom/{chr}/annotation.libsvm"), chr=CHROM),
+        instance_txt_pos = expand(os.path.join(TAGDIR_POS, "chrom/{chr}/instance.txt"), chr=CHROM),
+        annotation_libsvm_pos = expand(os.path.join(TAGDIR_POS, "chrom/{chr}/annotation.libsvm"), chr=CHROM),
         instance_txt_neg = expand(os.path.join(OUTDIR, "chrom/{chr}/instance.txt"), chr=CHROM),
         annotation_libsvm_neg = expand(os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"), chr=CHROM),
     output:
@@ -182,8 +182,8 @@ rule merge_libsvm:
 
 rule grep_pasted_instance_libsvm_neg:
     input: 
-        instance_pos = os.path.join(POSDIR, "chrom/{chr}/instance.txt"),
-        pasted_instance_libsvm = os.path.join(NEGDIR, "chrom/{chr}/pasted_instance.libsvm"),
+        instance_pos = os.path.join(TAGDIR_POS, "chrom/{chr}/instance.txt"),
+        pasted_instance_libsvm = os.path.join(TAGDIR_NEG, "chrom/{chr}/pasted_instance.libsvm"),
     output:
         instance_txt = os.path.join(OUTDIR, "chrom/{chr}/instance.txt"),
         annotation_libsvm = os.path.join(OUTDIR, "chrom/{chr}/annotation.libsvm"),
@@ -192,10 +192,10 @@ rule grep_pasted_instance_libsvm_neg:
 
 rule pasted_instance_libsvm:
     input: 
-        libsvm = os.path.join(NEGDIR, "chrom/{chr}/annotation.libsvm"),
-        instance = os.path.join(NEGDIR, "chrom/{chr}/instance.txt"),
+        libsvm = os.path.join(TAGDIR_NEG, "chrom/{chr}/annotation.libsvm"),
+        instance = os.path.join(TAGDIR_NEG, "chrom/{chr}/instance.txt"),
     output:
-        pasted_instance_libsvm = os.path.join(NEGDIR, "chrom/{chr}/pasted_instance.libsvm"),
+        pasted_instance_libsvm = os.path.join(TAGDIR_NEG, "chrom/{chr}/pasted_instance.libsvm"),
     shell:
         """LC_ALL=C paste {input.instance} {input.libsvm} > {output.pasted_instance_libsvm}"""
 
