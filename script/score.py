@@ -18,7 +18,7 @@ def main(argv):
     proba = model.predict(xdm)
     score=pandas.DataFrame({"rsid": instance[0].tolist(), "score": proba.tolist()})
     score.sort_values(by=["score", "rsid"], ascending=[False, True], inplace=True)
-    score.to_csv(score_tsv, sep="\t", header=False, index=False, float_format='%.3f')
+    score.to_csv(score_tsv, sep="\t", header=False, index=False, float_format='%.6f')
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -14,5 +14,5 @@ with open(percentile_path, 'w') as fout:
         rsid = line[0]
         score = line[1]
         percentile = round((num_lines-i)/num_lines*100,2)
-        fout.write("%s\t%s\t%.2f\n"%(rsid,score,percentile))
+        fout.write("%s\t%.4f\n"%(rsid,percentile))
 

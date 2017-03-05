@@ -3,6 +3,7 @@ ANNOT_1COL_BED=os.getenv('ANNOT_1COL_BED')
 INDEX_LABEL = os.getenv('INDEX_LABEL')
 CHROM=sorted(os.getenv('CHROM').split())
 GENOME1K_DIR = os.getenv('GENOME1K_DIR')
+GENOME1K_PEAKBED_DIR = os.getenv('GENOME1K_PEAKBED_DIR')
 HOME = os.getenv('HOME')
 INDEXDIR = os.getenv('INDEXDIR')
 LABEL = os.getenv('LABEL')
@@ -56,7 +57,7 @@ rule sort_label:
 rule index2annot_r2_tsv:
     input:
         index2tag2corr_r2_tsv_sortedk3 = os.path.join(TAGDIR, "chrom/{chr}/index2tag2corr_r2_sortedk3.tsv"),
-        sorted_annotated_tsv = os.path.join(GENOME1K_DIR, "chrom/{chr}/%s/intersect_sorted.tsv"%ANNOT_LABEL),
+        sorted_annotated_tsv = os.path.join(GENOME1K_PEAKBED_DIR, "{chr}/%s/intersect_sorted.tsv"%ANNOT_LABEL),
     output:
         index2annot_r2_tsv = os.path.join(TAGDIR, "chrom/{chr}/index2annot_r2.tsv")
     threads: THREADS
@@ -65,9 +66,9 @@ rule index2annot_r2_tsv:
 
 rule sort_annotated_tsv:
     input:
-        annotated_tsv = os.path.join(GENOME1K_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL),
+        annotated_tsv = os.path.join(GENOME1K_PEAKBED_DIR, "{chr}/%s/intersect.tsv"%ANNOT_LABEL),
     output:
-        sorted_annotated_tsv = os.path.join(GENOME1K_DIR, "chrom/{chr}/%s/intersect_sorted.tsv"%ANNOT_LABEL),
+        sorted_annotated_tsv = os.path.join(GENOME1K_PEAKBED_DIR, "{chr}/%s/intersect_sorted.tsv"%ANNOT_LABEL),
     threads: THREADS
     shell:
         """LC_ALL=C time sort --parallel {threads} {input.annotated_tsv} -o {output.sorted_annotated_tsv};"""
@@ -120,7 +121,7 @@ rule sort_tagld_k1:
 rule tagld:
     input:
         tag_rsid_sorted = os.path.join(TAGDIR, "%s.sorted.rsid"%TAG_RSID),
-        plink_ld = os.path.join(GENOME1K_DIR, "chrom/{chr}/%s/chr{chr}.ld"%LD_SLUG),
+        plink_ld = os.path.join(GENOME1K_DIR, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
     output:
         tagld = os.path.join(TAGDIR, "chrom/{chr}/tag_ld.tsv"),
     shell:
@@ -147,7 +148,7 @@ rule sort_indexld_k2:
 rule indexld:
     input:
         index_rsid_sorted = os.path.join(INDEXDIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),
-        plink_ld = os.path.join(GENOME1K_DIR, "chrom/{chr}/%s/chr{chr}.ld"%LD_SLUG),
+        plink_ld = os.path.join(GENOME1K_DIR, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
     output:
         indexld = os.path.join(INDEXDIR, "chrom/{chr}/index_ld.tsv"),
     shell:
@@ -155,7 +156,7 @@ rule indexld:
 
 rule sort_index_rsid:
     input:
-        index_rsid = os.path.join(GENOME1K_DIR, "chrom/{chr}/chr{chr}_%s.prune.in"%INDEX_LABEL),
+        index_rsid = os.path.join(GENOME1K_DIR, "%s/{chr}/chr{chr}_%s.prune.in"%(INDEX_LABEL,INDEX_LABEL) ),
     output:
         index_rsid_sorted = os.path.join(INDEXDIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),  
     threads: THREADS

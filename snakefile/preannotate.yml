@@ -10,11 +10,11 @@ ANNOT_1COL_DIR = dirname(ANNOT_1COL_BED)
 
 rule all:
     input:
-        libsvm = expand(os.path.join(SNP_DIR, "chrom/{chr}/%s/annotation.libsvm"%ANNOT_LABEL), chr=CHROM),
+        libsvm = expand(os.path.join(SNP_DIR, "{chr}/%s/annotation.libsvm"%ANNOT_LABEL), chr=CHROM),
 
 rule annotated_tsv:
     input:
-        annotated_tsv = expand(os.path.join(SNP_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL), chr=CHROM),
+        annotated_tsv = expand(os.path.join(SNP_DIR, "{chr}/%s/intersect.tsv"%ANNOT_LABEL), chr=CHROM),
 
 rule index:
     input:
@@ -26,28 +26,28 @@ rule index:
 
 rule to_libsvm:
     input:
-        annotated_tsv = os.path.join(SNP_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL),
+        annotated_tsv = os.path.join(SNP_DIR, "{chr}/%s/intersect.tsv"%ANNOT_LABEL),
         variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
         script = os.path.join(SCRIPTDIR, "tsv2libsvm.py"),
     output:
-        instance_txt = os.path.join(SNP_DIR, "chrom/{chr}/%s/instance.txt"%ANNOT_LABEL),
-        libsvm = os.path.join(SNP_DIR, "chrom/{chr}/%s/annotation.libsvm"%ANNOT_LABEL),
+        instance_txt = os.path.join(SNP_DIR, "{chr}/%s/instance.txt"%ANNOT_LABEL),
+        libsvm = os.path.join(SNP_DIR, "{chr}/%s/annotation.libsvm"%ANNOT_LABEL),
     shell:
         """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.annotated_tsv} {input.variable_txt} {output.instance_txt} {output.libsvm}"""
 
 rule sort_annotated_tsv:
     input:
-        nonsorted_annotated_tsv = os.path.join(SNP_DIR, "chrom/{chr}/%s/nonsorted_intersect.tsv"%ANNOT_LABEL),
+        nonsorted_annotated_tsv = os.path.join(SNP_DIR, "{chr}/%s/nonsorted_intersect.tsv"%ANNOT_LABEL),
     output:
-        annotated_tsv = os.path.join(SNP_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL),
+        annotated_tsv = os.path.join(SNP_DIR, "{chr}/%s/intersect.tsv"%ANNOT_LABEL),
     threads: 8
     shell: """LC_ALL=C sort -u --parallel {threads} {input.nonsorted_annotated_tsv} -o {output.annotated_tsv}"""
 
 rule intersect_chrom:
     input:
-        snp_bed = os.path.join(SNP_DIR, "chrom/{chr}/chr{chr}.bed"),
+        snp_bed = os.path.join(SNP_DIR, "{chr}/chr{chr}_peak.bed"),
         annot_1col_chrom_bed = os.path.join(ANNOT_1COL_DIR, "{chr}/%s_1col.bed"%ANNOT_LABEL)
     output:
-        nonsorted_annotated_tsv = os.path.join(SNP_DIR, "chrom/{chr}/%s/nonsorted_intersect.tsv"%ANNOT_LABEL),
+        nonsorted_annotated_tsv = os.path.join(SNP_DIR, "{chr}/%s/nonsorted_intersect.tsv"%ANNOT_LABEL),
     shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_1col_chrom_bed} -wb |awk '{{print $4"\t"$8}}' >{output.nonsorted_annotated_tsv}"""
 

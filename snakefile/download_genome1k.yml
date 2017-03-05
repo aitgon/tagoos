@@ -1,0 +1,105 @@
+CHROM=os.getenv('CHROM').split()
+GENOME1K_DIR=os.getenv('GENOME1K_DIR')
+THREADS = int(os.getenv('THREADS'))
+#ANNOT_LABEL=os.getenv('ANNOT_LABEL')
+#LD=os.getenv('LD')
+#SNP_DIR = os.getenv('SNP_DIR')
+HOME = os.getenv('HOME')
+#SCRIPTDIR = os.getenv('SCRIPTDIR')
+
+#LD_SLUG="ld" + LD.replace(".", "")
+
+rule all:
+    input:
+        expand(os.path.join(GENOME1K_DIR, "vcf_gz/chr{chr}.vcf.gz"), chr=CHROM),
+        plink_bed = expand(os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
+        peak_bed = expand(os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"), chr=CHROM),
+        intergenic_peak_bed = expand(os.path.join(GENOME1K_DIR, "intergenic_peak_bed/{chr}/chr{chr}_peak.bed"), chr=CHROM),
+        intergenic_rsid = expand(os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}.rsid"), chr=CHROM),
+        intergenic_plink_bed = expand(os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
+
+rule exclude_dupvar:
+    input:
+        intergenic_dupvar_plink_bim = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
+        intergenic_dupvar_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
+    params:
+        intergenic_dupvar_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink"),
+        intergenic_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_plink"),
+    output:
+        intergenic_dupvar_rsid = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar.rsid"),
+        intergenic_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_plink.bed"),
+    threads : THREADS
+    shell:
+        """LC_ALL=C sort -k2,2 {input.intergenic_dupvar_plink_bim} |cut -f2,2 |uniq -d >{output.intergenic_dupvar_rsid};
+            plink --exclude {output.intergenic_dupvar_rsid} --bfile {params.intergenic_dupvar_plink_bed} --make-bed --out {params.intergenic_plink_bed}"""
+
+rule intergenic_plink_bed:
+    input:
+        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
+        intergenic_rsid = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}.rsid"),
+    params:
+        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink"),
+        intergenic_dupvar_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink"),
+    output:
+        intergenic_dupvar_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
+        intergenic_dupvar_plink_bim = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
+    shell:
+        """plink --extract {input.intergenic_rsid} --bfile {params.plink_bed} --make-bed --out {params.intergenic_dupvar_plink_bed}"""
+
+rule intergenic_rsid:
+    input:
+        intergenic_peak_bed = os.path.join(GENOME1K_DIR, "intergenic_peak_bed/{chr}/chr{chr}_peak.bed"),
+    output:
+        intergenic_rsid = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}.rsid"),
+    shell:
+        """cut -f4,4 {input.intergenic_peak_bed} >{output.intergenic_rsid}"""
+
+rule intergenic_peak_bed:
+    input:
+        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"),
+        refGene_bed = os.path.join(HOME, "data/2015_svmgwas/data/var/hg19.refGene.bed"),
+    output:
+        intergenic_peak_bed = os.path.join(GENOME1K_DIR, "intergenic_peak_bed/{chr}/chr{chr}_peak.bed"),
+    shell:
+        """bedtools subtract -a {input.peak_bed} -b {input.refGene_bed} -A >{output.intergenic_peak_bed}"""
+
+#bedtools subtract -a peak_bed -b /cobelix/gonzalez/data/2015_svmgwas/data/var/hg19.refGene.bed >
+
+rule create_peak_bed:
+    input:
+        plink_bim = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bim"),
+    output:
+        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"),
+    threads: THREADS
+    shell:
+        """awk '{{print "chr"$1"\t"$4-1"\t"$4"\t"$2}}' {input.plink_bim} |sort -k1,1 -k2,2n --parallel {threads} -o {output.peak_bed}"""
+
+rule filter_eur_convert_bed_maf_snps_only:
+    input:
+        eur_ped_list = os.path.join(GENOME1K_DIR, "eur.ped"),
+        vcf_gz = os.path.join(GENOME1K_DIR, "vcf_gz/chr{chr}.vcf.gz"),
+    params:
+        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink"),
+    output:
+        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
+        plink_bim = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bim"),
+    shell:
+        """plink --keep {input.eur_ped_list} --vcf {input.vcf_gz} --maf --snps-only --list-duplicate-vars ids-only suppress-first --make-bed --out {params.plink_bed}"""
+
+
+rule list_eur_pop:
+    output:
+        eur_txt = os.path.join(GENOME1K_DIR, "eur.txt"),
+        eur_ped_list = os.path.join(GENOME1K_DIR, "eur.ped"),
+    shell:
+        """"wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_male_samples_v3.20130502.ALL.panel -q -O - |grep EUR |cut -f2,2 |sort -u >{output.eur_txt}; wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_samples.20130502.ALL.ped -q -O - |grep -f eur.txt >{output.eur_ped_list}"""
+
+rule download_genome1k:
+    params:
+        chr = "{chr}",
+        url = "ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz",
+    output:
+        vcf_gz = os.path.join(GENOME1K_DIR, "vcf_gz/chr{chr}.vcf.gz"),
+    shell:
+        """wget {params.url} -O {output.vcf_gz}"""
+

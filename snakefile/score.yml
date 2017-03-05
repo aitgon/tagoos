@@ -19,7 +19,6 @@ rule percentile:
         script = os.path.join(SCRIPTDIR, "percentile.py"),
     output:
         score_percentile = os.path.join(OUTDIR, "dbsnp_percentile.tsv")
-    threads: THREADS
     shell:
         """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.score_tsv_merged} {output.score_percentile};"""
 
