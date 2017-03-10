@@ -53,19 +53,21 @@ time snakemake -s ${TAGOOS}/snakefile/preannotate.yml -j $NBCHROM -c "qsub -X -V
 
 ~~~
 export CHROM=$(seq 1 22)
+#export CHROM=22
 export DBSNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp
+export THREADS=8
 export NBCHROM=`python -c "import os; print(len(os.getenv('CHROM').split()))"`
-time snakemake -s ${TAGOOS}/snakefile/download_dbsnp.yml -j $NBCHROM -c "qsub -X -V -d $PWD -q tagc -l nodes=1:ppn=
-{threads} -e stderr.log -o stdout.log" -d $PWD -pn
+time snakemake -s ${TAGOOS}/snakefile/download_dbsnp.yml -j $NBCHROM -c "qsub -X -V -d $PWD -q tagc -l nodes=1:ppn={threads} -e stderr.log -o stdout.log" -d $PWD -pn
 ~~~
 
-- Intersect/annotate dbsnp variants using the __preannotate.yml__ snakefile like for the 1000 genome variants
+- Intersect/annotate dbsnp variants using the __preannotate.yml__ snakefile
 
 ~~~
 export ANNOT_LABEL=annotationcorr
 export ANNOT_1COL_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}_1col.bed
 #
 export CHROM=$(seq 1 22)
+#export CHROM=22
 export SNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
 export NBCHROM=`python -c "import os; print(len(os.getenv('CHROM').split()))"`
