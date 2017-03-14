@@ -1,3 +1,5 @@
+# Download and process data
+
 Split the annotation in different chromosomes using the __split_annotation.yml__ snakefile
 
 ~~~
