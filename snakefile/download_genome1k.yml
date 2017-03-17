@@ -14,7 +14,7 @@ rule all:
         expand(os.path.join(GENOME1K_DIR, "vcf_gz/chr{chr}.vcf.gz"), chr=CHROM),
         plink_bed = expand(os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
         peak_bed = expand(os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"), chr=CHROM),
-        intergenic_peak_bed = expand(os.path.join(GENOME1K_DIR, "intergenic_peak_bed/{chr}/chr{chr}_peak.bed"), chr=CHROM),
+        intergenic_peak_bed = expand(os.path.join(GENOME1K_DIR, "intergenic_peak_bed/chrom/{chr}/chr{chr}.bed"), chr=CHROM),
         intergenic_rsid = expand(os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}.rsid"), chr=CHROM),
         intergenic_plink_bed = expand(os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
 
@@ -48,7 +48,7 @@ rule intergenic_plink_bed:
 
 rule intergenic_rsid:
     input:
-        intergenic_peak_bed = os.path.join(GENOME1K_DIR, "intergenic_peak_bed/{chr}/chr{chr}_peak.bed"),
+        intergenic_peak_bed = os.path.join(GENOME1K_DIR, "intergenic_peak_bed/chrom/{chr}/chr{chr}.bed"),
     output:
         intergenic_rsid = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}.rsid"),
     shell:
@@ -59,7 +59,7 @@ rule intergenic_peak_bed:
         peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"),
         refGene_bed = os.path.join(HOME, "data/2015_svmgwas/data/var/hg19.refGene.bed"),
     output:
-        intergenic_peak_bed = os.path.join(GENOME1K_DIR, "intergenic_peak_bed/{chr}/chr{chr}_peak.bed"),
+        intergenic_peak_bed = os.path.join(GENOME1K_DIR, "intergenic_peak_bed/chrom/{chr}/chr{chr}.bed"),
     shell:
         """bedtools subtract -a {input.peak_bed} -b {input.refGene_bed} -A >{output.intergenic_peak_bed}"""
 

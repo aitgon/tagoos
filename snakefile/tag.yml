@@ -66,7 +66,7 @@ rule index2annot_r2_tsv:
 
 rule sort_annotated_tsv:
     input:
-        annotated_tsv = os.path.join(GENOME1K_PEAKBED_DIR, "{chr}/%s/intersect.tsv"%ANNOT_LABEL),
+        annotated_tsv = os.path.join(GENOME1K_PEAKBED_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL),
     output:
         sorted_annotated_tsv = os.path.join(GENOME1K_PEAKBED_DIR, "{chr}/%s/intersect_sorted.tsv"%ANNOT_LABEL),
     threads: THREADS
