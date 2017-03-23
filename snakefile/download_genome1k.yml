@@ -1,69 +1,63 @@
 CHROM=os.getenv('CHROM').split()
 GENOME1K_DIR=os.getenv('GENOME1K_DIR')
-THREADS = int(os.getenv('THREADS'))
-#ANNOT_LABEL=os.getenv('ANNOT_LABEL')
-#LD=os.getenv('LD')
-#SNP_DIR = os.getenv('SNP_DIR')
+GENOME1K_OUT_DIR=os.getenv('GENOME1K_OUT_DIR')
 HOME = os.getenv('HOME')
-#SCRIPTDIR = os.getenv('SCRIPTDIR')
-
-#LD_SLUG="ld" + LD.replace(".", "")
+THREADS = int(os.getenv('THREADS'))
+GENOMIC_REGION_BED = os.getenv('GENOMIC_REGION_BED')
 
 rule all:
     input:
         expand(os.path.join(GENOME1K_DIR, "vcf_gz/chr{chr}.vcf.gz"), chr=CHROM),
         plink_bed = expand(os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
         peak_bed = expand(os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"), chr=CHROM),
-        intergenic_peak_bed = expand(os.path.join(GENOME1K_DIR, "intergenic_peak_bed/chrom/{chr}/chr{chr}.bed"), chr=CHROM),
-        intergenic_rsid = expand(os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}.rsid"), chr=CHROM),
-        intergenic_plink_bed = expand(os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
+        regional_peak_bed = expand(os.path.join(GENOME1K_OUT_DIR, "peak_bed/chrom/{chr}/chr{chr}.bed"), chr=CHROM),
+        regional_rsid = expand(os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}.rsid"), chr=CHROM),
+        regional_plink_bed = expand(os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
 
 rule exclude_dupvar:
     input:
-        intergenic_dupvar_plink_bim = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
-        intergenic_dupvar_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
+        regional_dupvar_plink_bim = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
+        regional_dupvar_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
     params:
-        intergenic_dupvar_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink"),
-        intergenic_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_plink"),
+        regional_dupvar_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink"),
+        regional_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_plink"),
     output:
-        intergenic_dupvar_rsid = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar.rsid"),
-        intergenic_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_plink.bed"),
+        regional_dupvar_rsid = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar.rsid"),
+        regional_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
     threads : THREADS
     shell:
-        """LC_ALL=C sort -k2,2 {input.intergenic_dupvar_plink_bim} |cut -f2,2 |uniq -d >{output.intergenic_dupvar_rsid};
-            plink --exclude {output.intergenic_dupvar_rsid} --bfile {params.intergenic_dupvar_plink_bed} --make-bed --out {params.intergenic_plink_bed}"""
+        """LC_ALL=C sort -k2,2 {input.regional_dupvar_plink_bim} |cut -f2,2 |uniq -d >{output.regional_dupvar_rsid};
+            plink --exclude {output.regional_dupvar_rsid} --bfile {params.regional_dupvar_plink_bed} --make-bed --out {params.regional_plink_bed}"""
 
-rule intergenic_plink_bed:
+rule regional_plink_bed:
     input:
         plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
-        intergenic_rsid = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}.rsid"),
+        regional_rsid = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}.rsid"),
     params:
         plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink"),
-        intergenic_dupvar_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink"),
+        regional_dupvar_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink"),
     output:
-        intergenic_dupvar_plink_bed = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
-        intergenic_dupvar_plink_bim = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
+        regional_dupvar_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
+        regional_dupvar_plink_bim = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
     shell:
-        """plink --extract {input.intergenic_rsid} --bfile {params.plink_bed} --make-bed --out {params.intergenic_dupvar_plink_bed}"""
+        """plink --extract {input.regional_rsid} --bfile {params.plink_bed} --make-bed --out {params.regional_dupvar_plink_bed}"""
 
-rule intergenic_rsid:
+rule regional_rsid:
     input:
-        intergenic_peak_bed = os.path.join(GENOME1K_DIR, "intergenic_peak_bed/chrom/{chr}/chr{chr}.bed"),
+        regional_peak_bed = os.path.join(GENOME1K_OUT_DIR, "peak_bed/chrom/{chr}/chr{chr}.bed"),
     output:
-        intergenic_rsid = os.path.join(GENOME1K_DIR, "intergenic_plink_bed/{chr}/chr{chr}.rsid"),
+        regional_rsid = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}.rsid"),
     shell:
-        """cut -f4,4 {input.intergenic_peak_bed} >{output.intergenic_rsid}"""
+        """cut -f4,4 {input.regional_peak_bed} >{output.regional_rsid}"""
 
-rule intergenic_peak_bed:
+rule regional_peak_bed:
     input:
         peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"),
-        refGene_bed = os.path.join(HOME, "data/2015_svmgwas/data/var/hg19.refGene.bed"),
+        genomic_region_bed = GENOMIC_REGION_BED,
     output:
-        intergenic_peak_bed = os.path.join(GENOME1K_DIR, "intergenic_peak_bed/chrom/{chr}/chr{chr}.bed"),
+        regional_peak_bed = os.path.join(GENOME1K_OUT_DIR, "peak_bed/chrom/{chr}/chr{chr}.bed"),
     shell:
-        """bedtools subtract -a {input.peak_bed} -b {input.refGene_bed} -A >{output.intergenic_peak_bed}"""
-
-#bedtools subtract -a peak_bed -b /cobelix/gonzalez/data/2015_svmgwas/data/var/hg19.refGene.bed >
+        """bedtools intersect --sorted -a {input.peak_bed} -b {input.genomic_region_bed} | sort -u -k1,1 -k2,2n >{output.regional_peak_bed}"""
 
 rule create_peak_bed:
     input:

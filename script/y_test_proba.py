@@ -37,6 +37,9 @@ def main(argv):
     train_libsvm_path = sys.argv[3] #os.path.join(cv_path, "train.libsvm")
     y_test_proba_tsv = sys.argv[4] # output
     #
+    outdir = os.path.dirname(y_test_proba_tsv)
+    auc_path = os.path.join(outdir, "auc.txt")
+    #
     test_instance = pandas.read_csv(test_instance_path, header=None)
     xdm_train = xgboost.DMatrix(train_libsvm_path)
     xdm_test = xgboost.DMatrix(test_libsvm_path)
@@ -53,6 +56,12 @@ def main(argv):
     y_test_proba.sort_index(inplace=True)
     y_test_proba.sort_values(by=['proba', 'label'], axis=0, ascending=[False, False], inplace=True)
     y_test_proba.to_csv(y_test_proba_tsv, sep="\t", index=True, index_label="variant")
+    fpr, tpr, thresholds = roc_curve(y_test_proba['label'].tolist(), y_test_proba['proba'].tolist(), pos_label=1)
+    roc_auc = auc(fpr, tpr)
+    roc_auc = "%.2f" % roc_auc
+    with open(auc_path, 'w') as fout:
+        fout.write(roc_auc)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -1,53 +1,53 @@
 ANNOT_LABEL = os.getenv('ANNOT_LABEL')
-ANNOT_1COL_BED=os.getenv('ANNOT_1COL_BED')
+ANNOTATION_BED=os.getenv('ANNOTATION_BED')
 INDEX_LABEL = os.getenv('INDEX_LABEL')
 CHROM=sorted(os.getenv('CHROM').split())
 GENOME1K_DIR = os.getenv('GENOME1K_DIR')
 GENOME1K_PEAKBED_DIR = os.getenv('GENOME1K_PEAKBED_DIR')
 HOME = os.getenv('HOME')
-INDEXDIR = os.getenv('INDEXDIR')
+INDEX_DIR = os.getenv('INDEX_DIR')
 LABEL = os.getenv('LABEL')
 LD=os.getenv('LD')
 PYTHONBIN = os.getenv('PYTHONBIN')
 THREADS = int(os.getenv('THREADS'))
-TAGDIR = os.getenv('TAGDIR')
-SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
+TAG_DIR = os.getenv('TAG_DIR')
+SCRIPT_DIR = os.path.join(os.getenv('TAGOOS'), "script")
 TAG_RSID = os.getenv('TAG_RSID')
 
 from os.path import basename
 
 from os.path import dirname
-ANNOT_1COL_DIR = dirname(ANNOT_1COL_BED)
+ANNOTATION_DIR = dirname(ANNOTATION_BED)
 LD_SLUG="ld" + LD.replace(".", "")
 
 rule all:
     input:
-        pasted_instance_libsvm = expand(os.path.join(TAGDIR, "chrom/{chr}/pasted_instance.libsvm"), chr=CHROM),
+        pasted_instance_libsvm = expand(os.path.join(TAG_DIR, "chrom/{chr}/pasted_instance.libsvm"), chr=CHROM),
 
 rule pasted_instance_libsvm:
     input: 
-        libsvm = os.path.join(TAGDIR, "chrom/{chr}/annotation.libsvm"),
-        instance = os.path.join(TAGDIR, "chrom/{chr}/instance.txt"),
+        libsvm = os.path.join(TAG_DIR, "chrom/{chr}/annotation.libsvm"),
+        instance = os.path.join(TAG_DIR, "chrom/{chr}/instance.txt"),
     output:
-        pasted_instance_libsvm = os.path.join(TAGDIR, "chrom/{chr}/pasted_instance.libsvm"),
+        pasted_instance_libsvm = os.path.join(TAG_DIR, "chrom/{chr}/pasted_instance.libsvm"),
     shell:
         """paste {input.instance} {input.libsvm} > {output.pasted_instance_libsvm}"""
 
 rule chrom_to_libsvm:
     input: 
-        index2annot_r2_label = os.path.join(TAGDIR, "chrom/{chr}/index2annot_r2_label.tsv"),
-        variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
-        script = os.path.join(SCRIPTDIR, "tsv2libsvm.py"),
+        index2annot_r2_label = os.path.join(TAG_DIR, "chrom/{chr}/index2annot_r2_label.tsv"),
+        variable_txt = os.path.join(ANNOTATION_DIR, "variable.txt"),
+        script = os.path.join(SCRIPT_DIR, "tsv2libsvm.py"),
     output:
-        libsvm = os.path.join(TAGDIR, "chrom/{chr}/annotation.libsvm"),
-        instance = os.path.join(TAGDIR, "chrom/{chr}/instance.txt"),
+        libsvm = os.path.join(TAG_DIR, "chrom/{chr}/annotation.libsvm"),
+        instance = os.path.join(TAG_DIR, "chrom/{chr}/instance.txt"),
     shell:
         """python {input.script} {input.index2annot_r2_label} {input.variable_txt} {output.instance} {output.libsvm}"""
 
 rule sort_label:
-    input: os.path.join(TAGDIR, "chrom/{chr}/index2annot_r2.tsv")
+    input: os.path.join(TAG_DIR, "chrom/{chr}/index2annot_r2.tsv")
     output:
-        index2annot_r2_label = os.path.join(TAGDIR, "chrom/{chr}/index2annot_r2_label.tsv")
+        index2annot_r2_label = os.path.join(TAG_DIR, "chrom/{chr}/index2annot_r2_label.tsv")
     params:
         label = LABEL
     threads: THREADS
@@ -56,10 +56,10 @@ rule sort_label:
 
 rule index2annot_r2_tsv:
     input:
-        index2tag2corr_r2_tsv_sortedk3 = os.path.join(TAGDIR, "chrom/{chr}/index2tag2corr_r2_sortedk3.tsv"),
+        index2tag2corr_r2_tsv_sortedk3 = os.path.join(TAG_DIR, "chrom/{chr}/index2tag2corr_r2_sortedk3.tsv"),
         sorted_annotated_tsv = os.path.join(GENOME1K_PEAKBED_DIR, "{chr}/%s/intersect_sorted.tsv"%ANNOT_LABEL),
     output:
-        index2annot_r2_tsv = os.path.join(TAGDIR, "chrom/{chr}/index2annot_r2.tsv")
+        index2annot_r2_tsv = os.path.join(TAG_DIR, "chrom/{chr}/index2annot_r2.tsv")
     threads: THREADS
     shell:
         """LC_ALL=C join -1 3 -2 1  {input.index2tag2corr_r2_tsv_sortedk3} {input.sorted_annotated_tsv} |cut -d " " -f 1,5,7 >{output.index2annot_r2_tsv}"""
@@ -75,55 +75,55 @@ rule sort_annotated_tsv:
 
 rule sortk3_index2tag2corr_r2_tsv2:
     input:
-        index2tag2corr_r2_tsv = os.path.join(TAGDIR, "chrom/{chr}/index2tag2corr_r2.tsv"),
+        index2tag2corr_r2_tsv = os.path.join(TAG_DIR, "chrom/{chr}/index2tag2corr_r2.tsv"),
     output:
-        index2tag2corr_r2_tsv_sortedk3 = os.path.join(TAGDIR, "chrom/{chr}/index2tag2corr_r2_sortedk3.tsv"),
+        index2tag2corr_r2_tsv_sortedk3 = os.path.join(TAG_DIR, "chrom/{chr}/index2tag2corr_r2_sortedk3.tsv"),
     threads: THREADS
     shell:
         """LC_ALL=C sort -u --parallel {threads} -k3,3 {input.index2tag2corr_r2_tsv} -o {output.index2tag2corr_r2_tsv_sortedk3}"""
 
 rule index2tag2corr_r2_tsv2:
     input:
-        index2tag2tagcorr_tsv_sortedk4 = os.path.join(TAGDIR, "chrom/{chr}/index2tag2tagcorr_sortedk4.tsv"),
-        indexld_sortedk2 = os.path.join(INDEXDIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
+        index2tag2tagcorr_tsv_sortedk4 = os.path.join(TAG_DIR, "chrom/{chr}/index2tag2tagcorr_sortedk4.tsv"),
+        indexld_sortedk2 = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
     output:
-        index2tag2corr_r2_tsv = os.path.join(TAGDIR, "chrom/{chr}/index2tag2corr_r2.tsv")
+        index2tag2corr_r2_tsv = os.path.join(TAG_DIR, "chrom/{chr}/index2tag2corr_r2.tsv")
     shell:
         """LC_ALL=C join -1 4 -2 2 -o 1.1,1.2,1.3,1.4,1.5,2.1,2.2,2.3 {input.index2tag2tagcorr_tsv_sortedk4} {input.indexld_sortedk2} |awk 'BEGIN {{FS=" ";OFS="\t";print "index\ttag\tcorr\tindex2tag_r2\tindex2corr_r2\ttag2corr_r2"}} {{if ($1==$6) print $1,$2,$4,$3,$8,$5}}' >{output.index2tag2corr_r2_tsv}"""
 
 rule sortk4_index2tag2tagcorr_r2:
     input:
-        index2tag2tagcorr_tsv = os.path.join(TAGDIR, "chrom/{chr}/index2tag2tagcorr.tsv"),
+        index2tag2tagcorr_tsv = os.path.join(TAG_DIR, "chrom/{chr}/index2tag2tagcorr.tsv"),
     output:
-        index2tag2tagcorr_tsv_sortedk4 = os.path.join(TAGDIR, "chrom/{chr}/index2tag2tagcorr_sortedk4.tsv"),
+        index2tag2tagcorr_tsv_sortedk4 = os.path.join(TAG_DIR, "chrom/{chr}/index2tag2tagcorr_sortedk4.tsv"),
     threads: THREADS
     shell:
         """LC_ALL=C sort -u --parallel {threads} -k4,4 {input.index2tag2tagcorr_tsv} -o {output.index2tag2tagcorr_tsv_sortedk4}"""
 
 rule index2tag2tagcorr_r2:
     input:
-        indexld_sortedk2 = os.path.join(INDEXDIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
-        tagld_sortedk1 = os.path.join(TAGDIR, "chrom/{chr}/tag_ld_sortedk1.tsv"),
+        indexld_sortedk2 = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
+        tagld_sortedk1 = os.path.join(TAG_DIR, "chrom/{chr}/tag_ld_sortedk1.tsv"),
     output:
-        index2tag2tagcorr_tsv = os.path.join(TAGDIR, "chrom/{chr}/index2tag2tagcorr.tsv")
+        index2tag2tagcorr_tsv = os.path.join(TAG_DIR, "chrom/{chr}/index2tag2tagcorr.tsv")
     shell:
         """LC_ALL=C join -1 2 -2 1 -o 1.1,1.2,1.3,2.2,2.3 {input.indexld_sortedk2} {input.tagld_sortedk1} | sort -u >{output.index2tag2tagcorr_tsv}"""
 
 rule sort_tagld_k1:
     input:
-        tagld = os.path.join(TAGDIR, "chrom/{chr}/tag_ld.tsv"),
+        tagld = os.path.join(TAG_DIR, "chrom/{chr}/tag_ld.tsv"),
     output:
-        tagld_sortedk1 = os.path.join(TAGDIR, "chrom/{chr}/tag_ld_sortedk1.tsv"),
+        tagld_sortedk1 = os.path.join(TAG_DIR, "chrom/{chr}/tag_ld_sortedk1.tsv"),
     threads: THREADS
     shell:
         """LC_ALL=C sort -u --parallel {threads} -k1 {input.tagld} -o {output.tagld_sortedk1}"""
 
 rule tagld:
     input:
-        tag_rsid_sorted = os.path.join(TAGDIR, "%s.sorted.rsid"%TAG_RSID),
+        tag_rsid_sorted = os.path.join(TAG_DIR, "%s.sorted.rsid"%TAG_RSID),
         plink_ld = os.path.join(GENOME1K_DIR, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
     output:
-        tagld = os.path.join(TAGDIR, "chrom/{chr}/tag_ld.tsv"),
+        tagld = os.path.join(TAG_DIR, "chrom/{chr}/tag_ld.tsv"),
     shell:
         """LC_ALL=C join -1 1 -2 1 -o 2.1,2.2,2.3 {input.tag_rsid_sorted} {input.plink_ld} >{output.tagld}"""
 
@@ -131,26 +131,26 @@ rule sort_tag_rsid:
     input:
         tag_rsid = TAG_RSID,
     output:
-        tag_rsid_sorted = os.path.join(TAGDIR, "%s.sorted.rsid"%TAG_RSID),
+        tag_rsid_sorted = os.path.join(TAG_DIR, "%s.sorted.rsid"%TAG_RSID),
     threads: THREADS
     shell:
         """LC_ALL=C sort --parallel {threads} -u {input.tag_rsid} -o {output.tag_rsid_sorted}"""
 
 rule sort_indexld_k2:
     input:
-        indexld = os.path.join(INDEXDIR, "chrom/{chr}/index_ld.tsv"),
+        indexld = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld.tsv"),
     output:
-        indexld_sortedk2 = os.path.join(INDEXDIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
+        indexld_sortedk2 = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
     threads: THREADS
     shell:
         """LC_ALL=C sort -u --parallel {threads} -k2,2 {input.indexld} -o {output.indexld_sortedk2}"""
 
 rule indexld:
     input:
-        index_rsid_sorted = os.path.join(INDEXDIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),
+        index_rsid_sorted = os.path.join(INDEX_DIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),
         plink_ld = os.path.join(GENOME1K_DIR, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
     output:
-        indexld = os.path.join(INDEXDIR, "chrom/{chr}/index_ld.tsv"),
+        indexld = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld.tsv"),
     shell:
         """LC_ALL=C join -1 1 -2 1 -o 2.1,2.2,2.3 {input.index_rsid_sorted} {input.plink_ld} >{output.indexld}"""
 
@@ -158,7 +158,7 @@ rule sort_index_rsid:
     input:
         index_rsid = os.path.join(GENOME1K_DIR, "%s/{chr}/chr{chr}_%s.prune.in"%(INDEX_LABEL,INDEX_LABEL) ),
     output:
-        index_rsid_sorted = os.path.join(INDEXDIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),  
+        index_rsid_sorted = os.path.join(INDEX_DIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),  
     threads: THREADS
     shell:
         """LC_ALL=C sort --parallel {threads} -u {input.index_rsid} -o {output.index_rsid_sorted}"""

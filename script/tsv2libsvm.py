@@ -9,6 +9,7 @@ variable_path=sys.argv[2] #"variable.txt"
 instance_path=sys.argv[3] # "instance.txt"
 libsvm_path=sys.argv[4] # "annot.libsvm"
 
+
 label = "-1"
 score = "1"
 
@@ -44,7 +45,8 @@ with open(instance_path, 'w') as instance_fout, open(libsvm_path, 'w') as libsvm
         else:
             libsvm_line += " %s:%s"%(variable2i[variable], score)
         visited_instance = instance
-    if not variable_last_index_visited: libsvm_line += " %d:0"%(last_variable_index)
-    instance_fout.write(visited_instance + "\n")
-    libsvm_fout.write(libsvm_line + "\n")
+    if not libsvm_line is None:
+        if not variable_last_index_visited: libsvm_line += " %d:0"%(last_variable_index)
+        instance_fout.write(visited_instance + "\n")
+        libsvm_fout.write(libsvm_line + "\n")
 

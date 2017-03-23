@@ -29,7 +29,7 @@ rule bed_index:
 rule intergenic_dbsnp:
     input:
         bed=os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.sorted.bed"),
-        refGene_bed = os.path.join(HOME, "data/2015_svmgwas/data/var/hg19.refGene.bed"),
+        refGene_bed = os.path.join(HOME, "data/2015_svmgwas/data/var/hg19.refGene_50kb.bed"),
     output:
         bed = os.path.join(DBSNP_DIR, "chrom/{chr}/chr{chr}.bed"),
     shell:

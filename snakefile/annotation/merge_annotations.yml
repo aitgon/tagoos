@@ -7,6 +7,7 @@ rule cat_annotations:
         encode=os.path.join(ANNOTATION_DIR, "encode/encode.bed"),
         encode2=os.path.join(ANNOTATION_DIR, "encode2/encode2.bed"),
         remap=os.path.join(ANNOTATION_DIR, "remap/remap.bed"),
+        roadmap=os.path.join(ANNOTATION_DIR, "roadmap/roadmap.bed"),
         youngh3k27ac=os.path.join(ANNOTATION_DIR, "youngh3k27ac/youngh3k27ac.bed"),
     output:
         mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed")

@@ -1,5 +1,6 @@
 CHROM=os.getenv('CHROM').split()
 ANNOT_1COL_BED=os.getenv('ANNOT_1COL_BED')
+THREADS=int(os.getenv('THREADS'))
 ANNOT_LABEL=os.getenv('ANNOT_LABEL')
 SNP_DIR = os.getenv('SNP_DIR')
 HOME = os.getenv('HOME')
@@ -40,7 +41,7 @@ rule sort_annotated_tsv:
         nonsorted_annotated_tsv = os.path.join(SNP_DIR, "chrom/{chr}/%s/nonsorted_intersect.tsv"%ANNOT_LABEL),
     output:
         annotated_tsv = os.path.join(SNP_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL),
-    threads: 8
+    threads: THREADS
     shell: """LC_ALL=C sort -u --parallel {threads} {input.nonsorted_annotated_tsv} -o {output.annotated_tsv}"""
 
 rule intersect_chrom:
