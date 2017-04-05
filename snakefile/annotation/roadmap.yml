@@ -48,6 +48,6 @@ rule download:
         """rm -rf {ROADMAP_DATA_DIR}/raw; mkdir -p {ROADMAP_DATA_DIR}/raw;
             cat {input.ROADMAP_URL_LIST} | xargs -n1 -P{threads} wget --directory-prefix={ROADMAP_DATA_DIR}/raw;
         wget http://egg2.wustl.edu/roadmap/data/byFileType/metadata/EID_metadata.tab --directory-prefix=$ROADMAP_DATA_DIR;
-        cut -f1,4 {output.EID_metadata_tab} |tr  "." "_" >{output.cell_type_sorted_tsv};
+        cut -f1,4,7 {output.EID_metadata_tab} |tr  "." "_" | tr "-" "_" | tr A-Z a-z |awk 'BEGIN{{FS="\t";OFS="\t"}}{{print $1,$2"-"$3}}'  >{output.cell_type_sorted_tsv};
         sort {output.cell_type_sorted_tsv} -o {output.cell_type_sorted_tsv}"""
 

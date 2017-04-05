@@ -23,16 +23,9 @@ export VARIANT_POSITION=intronic
 export TAG_POS_RSID=$HOME/data/2015_svmgwas/data/variant/literature_association/traits/bloodPressureMerged.rsid
 export POS_LABEL=bloodPressureMerged
 export NEG_LABEL=1kg10000000
-export ANNOT_LABEL=mergedannot
+export ANNOT_LABEL=encode2
 export INDEX_LABEL=index3
 export LD=0.8
-~~~
-
-Create model using a subset of available chromosomes
-
-~~~
-export CHROM="3 4 6 8 9 11 12 15 16 17 19 22"
-# Go on with model.yml
 ~~~
 
 ## Serum Urate

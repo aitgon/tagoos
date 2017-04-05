@@ -85,10 +85,14 @@ time snakemake -s ${TAGOOS}/snakefile/preannotate.yml -j 32 -c "qsub -X -V -q ta
 - Download the dbsnp variants using the __download_dbsnp.yml__ snakefile
 
 ~~~
+export VARIANT_POSITION=intronic
+#
 export CHROM=$(seq 1 22)
 #export CHROM=22
+export GENOMIC_REGION_BED=${HOME}/data/2015_svmgwas/data/var/genome_regions/UCSC_hg19_intronsUTRexons.bed
 export DBSNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp
-export THREADS=8
+export DBSNP_OUT_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp/${VARIANT_POSITION}
+export THREADS=4
 export NBCHROM=`python -c "import os; print(len(os.getenv('CHROM').split()))"`
 time snakemake -s ${TAGOOS}/snakefile/download_dbsnp.yml -j $NBCHROM -c "qsub -X -V -d $PWD -q tagc -l nodes=1:ppn={threads} -e stderr.log -o stdout.log" -d $PWD -pn
 ~~~
@@ -98,12 +102,12 @@ time snakemake -s ${TAGOOS}/snakefile/download_dbsnp.yml -j $NBCHROM -c "qsub -X
 ~~~
 export ANNOT_LABEL=mergedannot
 export ANNOT_1COL_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
+export VARIANT_POSITION=intronic
 #
-#export CHROM=$(seq 1 22)
-export CHROM=1
-export SNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp
+export CHROM=$(seq 1 22)
+#export CHROM=22
+export SNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp/${VARIANT_POSITION}
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
-export NBCHROM=`python -c "import os; print(len(os.getenv('CHROM').split()))"`
-time snakemake -s ${TAGOOS}/snakefile/preannotate.yml -p -j $NBCHROM -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $SNP_DIR/stderr.log -o $SNP_DIR/stdout.log" -d $SNP_DIR -pn
+time snakemake -s ${TAGOOS}/snakefile/preannotate.yml -p -j 32 -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $SNP_DIR/stderr.log -o $SNP_DIR/stdout.log" -d $SNP_DIR -pn
 ~~~
 

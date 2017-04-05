@@ -2,13 +2,14 @@
 
 CHROM=os.getenv('CHROM').split()
 DBSNP_DIR=os.getenv('DBSNP_DIR')
+DBSNP_OUT_DIR=os.getenv('DBSNP_OUT_DIR')
 HOME = os.getenv('HOME')
 THREADS = int(os.getenv('THREADS'))
-
+GENOMIC_REGION_BED = os.getenv('GENOMIC_REGION_BED')
 
 rule all:
     input:
-        expand(os.path.join(DBSNP_DIR, "chrom/{chr}/chr{chr}.bed.f4.idx"), chr=CHROM),
+        expand(os.path.join(DBSNP_OUT_DIR, "chrom/{chr}/chr{chr}.bed.f4.idx"), chr=CHROM),
 
 #rule intersect_chrom:
 #    input:
@@ -20,20 +21,30 @@ rule all:
 
 rule bed_index:
     input:
-        bed=os.path.join(DBSNP_DIR, "chrom/{chr}/chr{chr}.bed")
+        bed = os.path.join(DBSNP_OUT_DIR, "chrom/{chr}/chr{chr}.bed"),
     output:
-        bed_idx=os.path.join(DBSNP_DIR, "chrom/{chr}/chr{chr}.bed.f4.idx")
+        bed_idx=os.path.join(DBSNP_OUT_DIR, "chrom/{chr}/chr{chr}.bed.f4.idx")
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=4 {input.bed} >{output.bed_idx}"""
 
 rule intergenic_dbsnp:
     input:
-        bed=os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.sorted.bed"),
-        refGene_bed = os.path.join(HOME, "data/2015_svmgwas/data/var/hg19.refGene_50kb.bed"),
+        bed = os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.sorted.bed"),
+        genomic_region_bed = GENOMIC_REGION_BED,
     output:
-        bed = os.path.join(DBSNP_DIR, "chrom/{chr}/chr{chr}.bed"),
+        bed = os.path.join(DBSNP_OUT_DIR, "chrom/{chr}/chr{chr}.bed"),
     shell:
-        """bedtools subtract -a {input.bed} -b {input.refGene_bed} -A >{output.bed}"""
+        """bedtools intersect -sorted -a {input.bed} -b {input.genomic_region_bed} | sort -u -k1,1 -k2,2n >{output.bed}"""
+
+#rule regional_peak_bed:
+#    input:
+#        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"),
+#        genomic_region_bed = GENOMIC_REGION_BED,
+#    output:
+#        regional_peak_bed = os.path.join(GENOME1K_OUT_DIR, "peak_bed/chrom/{chr}/chr{chr}.bed"),
+#    shell:
+#        """bedtools intersect --sorted -a {input.peak_bed} -b {input.genomic_region_bed} | sort -u -k1,1 -k2,2n >{output.regional_peak_bed}"""
+
 
 rule sort_bed:
     input:

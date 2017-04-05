@@ -6,21 +6,21 @@ THREADS = int(os.getenv('THREADS'))
 
 rule sort_bed:
     input:
-        encode2_1col_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_1col_nonsorted.bed"),
+        encode2_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_nonsorted.bed"),
     output:
-        encode2_1col_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_1col.bed"),
+        encode2_bed=os.path.join(ENCODE2_DATA_DIR, "encode2.bed"),
     threads: THREADS
     shell:
-        """sort -k1,1 -k2,2n --parallel {threads} {input.encode2_1col_bed} -o {output.encode2_1col_bed}"""
+        """sort -k1,1 -k2,2n --parallel {threads} {input.encode2_bed} -o {output.encode2_bed}"""
 
 rule join_bed_annotation:
     input:
-        encode2_1col_file_sortedk4_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_1col_file_sortedk4.bed"),
+        encode2_file_sortedk4_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_file_sortedk4.bed"),
         experiment2annotation2file_sortedk5_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2annotation2file_sortedk5.tsv"),
     output:
-        encode2_1col_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_1col_nonsorted.bed"),
+        encode2_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_nonsorted.bed"),
     shell:
-        """join -1 4 -2 5 {input.encode2_1col_file_sortedk4_bed} {input.experiment2annotation2file_sortedk5_tsv} -o 1.1,1.2,1.3,2.3,2.2 |awk 'BEGIN{{OFS="\t";FS=" "}}{{print $1,$2,$3,$5"."$4".ENCODE2"}}' >{output.encode2_1col_bed}"""
+        """join -1 4 -2 5 {input.encode2_file_sortedk4_bed} {input.experiment2annotation2file_sortedk5_tsv} -o 1.1,1.2,1.3,2.3,2.2 |awk 'BEGIN{{OFS="\t";FS=" "}}{{print $1,$2,$3,$5"."$4".ENCODE2"}}' >{output.encode2_bed}"""
 
 rule sort_k5_experiment2annotation:
     input:
@@ -30,24 +30,24 @@ rule sort_k5_experiment2annotation:
     shell:
         """LC_ALL=C sort -k5,5 {input.experiment2annotation2file_tsv} -o {output.experiment2annotation2file_sortedk5_tsv};"""
 
-rule sort_k4_encode2_1col:
+rule sort_k4_encode2:
     input:
-        encode2_1col_file_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_1col_file.bed"),
+        encode2_file_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_file.bed"),
     output:
-        encode2_1col_file_sortedk4_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_1col_file_sortedk4.bed"),
+        encode2_file_sortedk4_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_file_sortedk4.bed"),
     threads: THREADS
     shell:
-        """LC_ALL=C sort -k4,4 --parallel {threads} {input.encode2_1col_file_bed} -o {output.encode2_1col_file_sortedk4_bed};"""
+        """LC_ALL=C sort -k4,4 --parallel {threads} {input.encode2_file_bed} -o {output.encode2_file_sortedk4_bed};"""
 
 rule cat_bed_gz:
     input:
         bed_gz_dir_downloaded=os.path.join(ENCODE2_DATA_DIR, "bed_gz_dir_downloaded")
     output:
-        encode2_1col_file_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_1col_file.bed"),
+        encode2_file_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_file.bed"),
     params:
         bed_gz_dir=os.path.join(ENCODE2_DATA_DIR, "bed_gz")
     shell:
-        """ls {params.bed_gz_dir} |while read F; do export FN=$F; gunzip -c {params.bed_gz_dir}/$FN |awk -v ID="${{FN%.bed.gz}}" 'BEGIN{{OFS="\t"}}{{print $1,$2,$3,ID}}'; done >{output.encode2_1col_file_bed};"""
+        """ls {params.bed_gz_dir} |while read F; do export FN=$F; gunzip -c {params.bed_gz_dir}/$FN |awk -v ID="${{FN%.bed.gz}}" 'BEGIN{{OFS="\t"}}{{print $1,$2,$3,ID}}'; done >{output.encode2_file_bed};"""
 
 rule download_bed_gz:
     input:
@@ -64,13 +64,13 @@ rule download_bed_gz:
 
 rule merged_experiment_files:
     input:
-        experiment2annotation_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2annotation.tsv"),
+        experiment2annotation2_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2annotation2.tsv"),
         experiment2file_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2file_sorted.tsv"),
     output:
         experiment2annotation2file_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2annotation2file.tsv"),
         bed_gz_url_list=os.path.join(ENCODE2_DATA_DIR, "file_url_list.txt"),
     shell:
-        """join -1 1 -2 1 {input.experiment2annotation_tsv} {input.experiment2file_tsv} >{output.experiment2annotation2file_tsv};
+        """join -1 1 -2 1 -i {input.experiment2annotation2_tsv} {input.experiment2file_tsv} >{output.experiment2annotation2file_tsv};
             cat {output.experiment2annotation2file_tsv} |cut -d " " -f4 |while read L; do echo "https://www.encodeproject.org$L"; done >{output.bed_gz_url_list}"""
 
 rule sort_experiment2file:
@@ -100,7 +100,7 @@ rule download_experiment_json:
         experiment_json_dir_downloaded=os.path.join(ENCODE2_DATA_DIR, "experiment_json_dir_downloaded"),
     params:
         experiment_json_dir=os.path.join(ENCODE2_DATA_DIR, "experiment_json")
-    threads: THREADS*2
+    threads: THREADS
     shell:
         """rm -rf  {params.experiment_json_dir} && mkdir -p {params.experiment_json_dir}
             cat {input.experiment_url_list} | xargs -n1 -P{threads} wget --directory-prefix={params.experiment_json_dir};
@@ -114,6 +114,18 @@ rule download_experiment_json_list:
     shell:
         """cat {input.experiment_list} |cut -f2,2 | grep -v Accession |while read F; do echo "https://www.encodeproject.org/search/?type=file&dataset=/experiments/$F/&format=json&frame=object&limit=all"; done > {output.experiment_url_list}"""
 
+rule process_experiment2annotation:
+    input:
+        experiment2annotation_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2annotation.tsv"),
+        celltype_dict_proc_tsv=os.path.join(HOME, "MEGA/2015_svmgwas/data/var/celltype_dict_proc.tsv"),
+    output:
+        experiment2annotation_sortedk3_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2annotation.sortedk3.tsv"),
+        experiment2annotation2_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2annotation2.tsv"),
+    shell:
+        """sort -k3,3 {input.experiment2annotation_tsv} -o {output.experiment2annotation_sortedk3_tsv};
+            sort -k1,1 {input.celltype_dict_proc_tsv} -o {input.celltype_dict_proc_tsv};
+            join -1 3 -2 1 -a 1 -o 1.1,1.2,2.2,2.3 {output.experiment2annotation_sortedk3_tsv} {input.celltype_dict_proc_tsv}|awk '{{print toupper($1)"\t"$2"\t"$3}}' |sort >{output.experiment2annotation2_tsv}"""
+
 rule download_experiment_list:
     output:
         experiment_list=os.path.join(ENCODE2_DATA_DIR, "experiment.tsv"),
@@ -124,5 +136,5 @@ rule download_experiment_list:
     shell:
         """wget '{params.url}' -O {output.experiment_list}; 
             awk 'BEGIN{{FS="\t"}}$20==""{{print $0}}' {output.experiment_list} >{output.experiment_nontreated_list};
-            cut -f 2,3,4,5,8 {output.experiment_nontreated_list} |awk 'BEGIN{{FS="\t";OFS="\t";}}{{if ($2=="ChIP-seq") print $1,$4,$5; if ($2!="ChIP-seq") print $1,$2,$5;}}'| tr -d " " |tr -d "," |sort -k1,1 >{output.experiment2annotation_tsv}"""
+            cut -f 2,3,4,5,8 {output.experiment_nontreated_list} |awk 'BEGIN{{FS="\t";OFS="\t";}}{{if ($2=="ChIP-seq") print $1,$4,$5; if ($2!="ChIP-seq") print $1,$2,$5;}}'| tr -d " " |tr -d "," | tr "-" "_" | tr A-Z a-z |sort -k1,1 >{output.experiment2annotation_tsv}"""
 
