@@ -27,8 +27,9 @@ def main(argv):
     variable = ['label'] + variable[0].tolist()
     # Model ----------------------------
     xgdmat = xgboost.DMatrix(fin_libsvm, feature_names=variable)
-    params={'silent': True}
-    model = xgboost.train(params, xgdmat)
+    scale_pos_weight = (xgdmat.get_label()==-1).sum()/(xgdmat.get_label()==1).sum()
+    pars = {'silent': True, 'scale_pos_weight': scale_pos_weight, 'max_delta_step' : 1}
+    model = xgboost.train(pars, xgdmat)
     pickle.dump(model, open(model_path, "wb"))
     # Feature importance ----------------------------
     feature_importance = pandas.DataFrame.from_records(list(model.get_score(importance_type="gain").items()))

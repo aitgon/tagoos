@@ -1,6 +1,6 @@
 CHROM=os.getenv('CHROM').split()
 GENOME1K_DIR=os.getenv('GENOME1K_DIR')
-GENOME1K_OUT_DIR=os.getenv('GENOME1K_OUT_DIR')
+OUTDIR=os.getenv('OUTDIR')
 HOME = os.getenv('HOME')
 THREADS = int(os.getenv('THREADS'))
 GENOMIC_REGION_BED = os.getenv('GENOMIC_REGION_BED')
@@ -10,20 +10,20 @@ rule all:
         expand(os.path.join(GENOME1K_DIR, "vcf_gz/chr{chr}.vcf.gz"), chr=CHROM),
         plink_bed = expand(os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
         peak_bed = expand(os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"), chr=CHROM),
-        regional_peak_bed = expand(os.path.join(GENOME1K_OUT_DIR, "peak_bed/chrom/{chr}/chr{chr}.bed"), chr=CHROM),
-        regional_rsid = expand(os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}.rsid"), chr=CHROM),
-        regional_plink_bed = expand(os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
+        regional_peak_bed = expand(os.path.join(OUTDIR, "peak_bed/chrom/{chr}/chr{chr}.bed"), chr=CHROM),
+        regional_rsid = expand(os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}.rsid"), chr=CHROM),
+        regional_plink_bed = expand(os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
 
 rule exclude_dupvar:
     input:
-        regional_dupvar_plink_bim = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
-        regional_dupvar_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
+        regional_dupvar_plink_bim = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
+        regional_dupvar_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
     params:
-        regional_dupvar_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink"),
-        regional_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_plink"),
+        regional_dupvar_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink"),
+        regional_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_plink"),
     output:
-        regional_dupvar_rsid = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar.rsid"),
-        regional_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
+        regional_dupvar_rsid = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar.rsid"),
+        regional_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
     threads : THREADS
     shell:
         """LC_ALL=C sort -k2,2 {input.regional_dupvar_plink_bim} |cut -f2,2 |uniq -d >{output.regional_dupvar_rsid};
@@ -32,21 +32,21 @@ rule exclude_dupvar:
 rule regional_plink_bed:
     input:
         plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
-        regional_rsid = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}.rsid"),
+        regional_rsid = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}.rsid"),
     params:
         plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink"),
-        regional_dupvar_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink"),
+        regional_dupvar_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink"),
     output:
-        regional_dupvar_plink_bed = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
-        regional_dupvar_plink_bim = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
+        regional_dupvar_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
+        regional_dupvar_plink_bim = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
     shell:
         """plink --extract {input.regional_rsid} --bfile {params.plink_bed} --make-bed --out {params.regional_dupvar_plink_bed}"""
 
 rule regional_rsid:
     input:
-        regional_peak_bed = os.path.join(GENOME1K_OUT_DIR, "peak_bed/chrom/{chr}/chr{chr}.bed"),
+        regional_peak_bed = os.path.join(OUTDIR, "peak_bed/chrom/{chr}/chr{chr}.bed"),
     output:
-        regional_rsid = os.path.join(GENOME1K_OUT_DIR, "plink_bed/{chr}/chr{chr}.rsid"),
+        regional_rsid = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}.rsid"),
     shell:
         """cut -f4,4 {input.regional_peak_bed} >{output.regional_rsid}"""
 
@@ -55,9 +55,9 @@ rule regional_peak_bed:
         peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"),
         genomic_region_bed = GENOMIC_REGION_BED,
     output:
-        regional_peak_bed = os.path.join(GENOME1K_OUT_DIR, "peak_bed/chrom/{chr}/chr{chr}.bed"),
+        regional_peak_bed = os.path.join(OUTDIR, "peak_bed/chrom/{chr}/chr{chr}.bed"),
     shell:
-        """bedtools intersect --sorted -a {input.peak_bed} -b {input.genomic_region_bed} | sort -u -k1,1 -k2,2n >{output.regional_peak_bed}"""
+        """bedtools intersect -sorted -a {input.peak_bed} -b {input.genomic_region_bed} | sort -u -k1,1 -k2,2n >{output.regional_peak_bed}"""
 
 rule create_peak_bed:
     input:

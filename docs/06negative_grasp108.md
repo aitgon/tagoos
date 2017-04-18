@@ -1,36 +1,45 @@
-# Model learning and DBSNP variant prediction
+# Compute models
 
-## GRASP database
+Here I compute with given phenotypes (height, blood pressure) as positive and GRASP108 (associated) as negative
 
-In this example we create a model for
+## Choose a phenotyep
 
-- Associated GRASP variants (p-val <10⁸)
-- 100000 random variants for the 1000 genome DB
-- The __annotationcorr__ variants
-- The __index__ variants
-
-The important paramenters are set before the hash character
+Height
 
 ~~~
-export REGION=intergendistal
-export TAG_POS_RSID=$HOME/data/2015_svmgwas/data/variant/GRASP/GRASP108.rsid
-export POS_LABEL=GRASP108
-export NEG_LABEL=1kg10000000
-export ANNOT_LABEL=encode2
+export VARIANT_POSITION=intergenic
+export TAG_POS_RSID=$HOME/data/2015_svmgwas/data/variant/literature_association/traits/heightMergedNature2010NatGen2014.rsid
+export POS_LABEL=heightMergedNature2010NatGen2014
+export NEG_LABEL=GRASP108
+export ANNOT_LABEL=mergedannot
 export INDEX_LABEL=index3
 export LD=0.8
 ~~~
 
+BloodPressure
+
+~~~
+export VARIANT_POSITION=intergenic
+export TAG_POS_RSID=$HOME/data/2015_svmgwas/data/variant/literature_association/traits/bloodPressureMerged.rsid
+export POS_LABEL=bloodPressureMerged
+export NEG_LABEL=GRASP108
+export ANNOT_LABEL=mergedannot
+export INDEX_LABEL=index3
+export LD=0.8
+~~~
+
+## Other commands
+
 ~~~
 export THREADS=2
 #
-export TAG_POS_DIR=$PWD/out/${POS_LABEL}${REGION}/pos/${ANNOT_LABEL}_${INDEX_LABEL}
-export TAG_NEG_DIR=$PWD/out/neg/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}
-export TAG_NEG_RSID=$HOME/data/2015_svmgwas/data/variant/1000genomes/${NEG_LABEL}.rsid
+export TAG_POS_DIR=$PWD/out/${POS_LABEL}${VARIANT_POSITION}/pos/${ANNOT_LABEL}_${INDEX_LABEL}
+export TAG_NEG_DIR=$PWD/out/neg/${NEG_LABEL}${VARIANT_POSITION}_${ANNOT_LABEL}_${INDEX_LABEL}
+export TAG_NEG_RSID=$HOME/data/2015_svmgwas/data/variant/GRASP/GRASP108.rsid
 #
 export ANNOTATION_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
 export GENOME1K_DIR=$HOME/data/2015_svmgwas/data/variant/1000genomes
-export GENOME1K_PEAKBED_DIR=$GENOME1K_DIR/${REGION}/peak_bed
+export GENOME1K_PEAKBED_DIR=$GENOME1K_DIR/${VARIANT_POSITION}/peak_bed
 export INDEX_DIR=$PWD/out/${INDEX_LABEL}
 export PYTHONBIN=$(which python)
 export SCRIPT_DIR=${TAGOOS}/script
@@ -69,7 +78,7 @@ First get chroms as a function of AUCs
 
 ~~~
 export CHROM=$(cat $TAG_POS_DIR/../chrom_list.txt)
-export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1
+export OUTDIR=$PWD/out/${POS_LABEL}${VARIANT_POSITION}/${NEG_LABEL}${VARIANT_POSITION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1
 #
 time snakemake -s ${TAGOOS}/snakefile/model.yml -p -j $NBCHROM -c "qsub -X -V -d $OUTDIR -q tagc -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~
@@ -81,8 +90,8 @@ find $OUTDIR/CV/. -name auc.txt |sort |while read F; do AUC=$(cat $F); F2=${F%"/
 If AUCs of chroms not good, then create a new model for this chromosomes
 
 ~~~
-export CHROM=$(cat $PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1/CV/selected_chroms.txt)
-export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_model2
+export CHROM=$(cat $PWD/out/${POS_LABEL}${VARIANT_POSITION}/${NEG_LABEL}${VARIANT_POSITION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1/CV/selected_chroms.txt)
+export OUTDIR=$PWD/out/${POS_LABEL}${VARIANT_POSITION}/${NEG_LABEL}${VARIANT_POSITION}_${ANNOT_LABEL}_${INDEX_LABEL}_model2
 #
 time snakemake -s ${TAGOOS}/snakefile/model.yml -p -j $NBCHROM -c "qsub -X -V -d $OUTDIR -q tagc -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~
@@ -93,12 +102,12 @@ Score DBSNP
 export THREADS=2
 #export CHROM=22
 export CHROM=$(seq 22)
-#export CHROM=$(cat $PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1/CV/selected_chroms.txt)
-export MODEL_PKL=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_model2/model.pkl
+#export CHROM=$(cat $PWD/out/${POS_LABEL}${VARIANT_POSITION}/${NEG_LABEL}${VARIANT_POSITION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1/CV/selected_chroms.txt)
+export MODEL_PKL=$PWD/out/${POS_LABEL}${VARIANT_POSITION}/${NEG_LABEL}${VARIANT_POSITION}_${ANNOT_LABEL}_${INDEX_LABEL}_model2/model.pkl
 #
-export DBSNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp/${REGION}
+export DBSNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp/${VARIANT_POSITION}
 export SCRIPT_DIR=${TAGOOS}/script
-export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_dbsnp
+export OUTDIR=$PWD/out/${POS_LABEL}${VARIANT_POSITION}/${NEG_LABEL}${VARIANT_POSITION}_${ANNOT_LABEL}_${INDEX_LABEL}_dbsnp
 
 time snakemake -s ${TAGOOS}/snakefile/score.yml -j 32 -c "qsub -X -V -d $OUTDIR -q tagc -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~

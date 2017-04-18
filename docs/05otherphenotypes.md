@@ -23,6 +23,18 @@ export VARIANT_POSITION=intronic
 export TAG_POS_RSID=$HOME/data/2015_svmgwas/data/variant/literature_association/traits/bloodPressureMerged.rsid
 export POS_LABEL=bloodPressureMerged
 export NEG_LABEL=1kg10000000
+export ANNOT_LABEL=mergedannot
+export INDEX_LABEL=index3
+export LD=0.8
+~~~
+
+With grasp108 as negative
+
+~~~
+export VARIANT_POSITION=intronic
+export TAG_POS_RSID=$HOME/data/2015_svmgwas/data/variant/literature_association/traits/bloodPressureMerged.rsid
+export POS_LABEL=bloodPressureMerged
+export NEG_LABEL=GRASP108
 export ANNOT_LABEL=encode2
 export INDEX_LABEL=index3
 export LD=0.8

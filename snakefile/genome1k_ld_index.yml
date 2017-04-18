@@ -1,5 +1,5 @@
 CHROM=os.getenv('CHROM').split()
-GENOME1K_DIR=os.getenv('GENOME1K_DIR')
+OUTDIR=os.getenv('OUTDIR')
 GENOME1K_PLINKBED_DIR=os.getenv('GENOME1K_PLINKBED_DIR')
 ANNOT_LABEL=os.getenv('ANNOT_LABEL')
 LD=os.getenv('LD')
@@ -12,23 +12,23 @@ LD_SLUG=LD.replace(".", "")
 
 rule all:
     input:
-        plink_ld = expand(os.path.join(GENOME1K_DIR, "ld%s/{chr}/chr{chr}.ld"%LD_SLUG), chr=CHROM),
-        prune_in = expand(os.path.join(GENOME1K_DIR, "index3/{chr}/chr{chr}_index3.prune.in"), chr=CHROM),
+        plink_ld = expand(os.path.join(OUTDIR, "ld%s/{chr}/chr{chr}.ld"%LD_SLUG), chr=CHROM),
+        prune_in = expand(os.path.join(OUTDIR, "index3/{chr}/chr{chr}_index3.prune.in"), chr=CHROM),
 
 rule sort_ldproc:
     input:
-        plink_ld_nonsorted = os.path.join(GENOME1K_DIR, "ld%s/{chr}/chr{chr}_nonsorted.ld"%LD_SLUG)
+        plink_ld_nonsorted = os.path.join(OUTDIR, "ld%s/{chr}/chr{chr}_nonsorted.ld"%LD_SLUG)
     output:
-        plink_ld = os.path.join(GENOME1K_DIR, "ld%s/{chr}/chr{chr}.ld"%LD_SLUG)
+        plink_ld = os.path.join(OUTDIR, "ld%s/{chr}/chr{chr}.ld"%LD_SLUG)
     threads: THREADS
     shell:
         """LC_ALL=C sort -u --parallel {threads}  {input.plink_ld_nonsorted} -o {output.plink_ld}"""
 
 rule ldproc:
     input:
-        plink_ld_raw = os.path.join(GENOME1K_DIR, "ld%s/{chr}/chr{chr}_raw.ld"%LD_SLUG),
+        plink_ld_raw = os.path.join(OUTDIR, "ld%s/{chr}/chr{chr}_raw.ld"%LD_SLUG),
     output:
-        plink_ld_nonsorted = os.path.join(GENOME1K_DIR, "ld%s/{chr}/chr{chr}_nonsorted.ld"%LD_SLUG)
+        plink_ld_nonsorted = os.path.join(OUTDIR, "ld%s/{chr}/chr{chr}_nonsorted.ld"%LD_SLUG)
     shell:
         """LC_ALL=C awk '{{print $3"\t"$6"\t"$7}}' {input.plink_ld_raw} > {output.plink_ld_nonsorted}"""
 
@@ -38,10 +38,10 @@ rule ld:
         chrom_rsid = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}.rsid"),
     params:
         plink_bed_prefix = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink"),
-        plink_ld_prefix = os.path.join(GENOME1K_DIR, "ld%s/{chr}/chr{chr}_raw"%LD_SLUG),
+        plink_ld_prefix = os.path.join(OUTDIR, "ld%s/{chr}/chr{chr}_raw"%LD_SLUG),
         ld = LD
     output:
-        plink_ld_raw = os.path.join(GENOME1K_DIR, "ld%s/{chr}/chr{chr}_raw.ld"%LD_SLUG),
+        plink_ld_raw = os.path.join(OUTDIR, "ld%s/{chr}/chr{chr}_raw.ld"%LD_SLUG),
     shell:
         """plink --bfile {params.plink_bed_prefix} --ld-snp-list {input.chrom_rsid} --ld-window-kb 1000 --ld-window 1000000 --ld-window-r2 {params.ld} --r2 --out {params.plink_ld_prefix}"""
 
@@ -50,9 +50,9 @@ rule index3:
         plink_bed = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink.bed"),
     params:
         plink_bed_prefix = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink"),
-        plink_index_prune_prefix = os.path.join(GENOME1K_DIR, "index3/{chr}/chr{chr}_index3"),
+        plink_index_prune_prefix = os.path.join(OUTDIR, "index3/{chr}/chr{chr}_index3"),
     output:
-        prune_in = os.path.join(GENOME1K_DIR, "index3/{chr}/chr{chr}_index3.prune.in"),
+        prune_in = os.path.join(OUTDIR, "index3/{chr}/chr{chr}_index3.prune.in"),
     shell:
-        """plink --bfile {params.plink_bed_prefix} --indep 5 1 100 --out {params.plink_index_prune_prefix}"""
+        """mkdir -p $(dirname {output.prune_in}); plink --bfile {params.plink_bed_prefix} --indep 5 1 100 --out {params.plink_index_prune_prefix}"""
 
