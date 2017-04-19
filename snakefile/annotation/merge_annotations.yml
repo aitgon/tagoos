@@ -1,16 +1,19 @@
 ANNOTATION_DIR=os.getenv('ANNOTATION_DIR')
+THREADS = int(os.getenv('THREADS'))
 
-rule cat_annotations:
+rule cat_sort:
     input:
         eenhancer=os.path.join(ANNOTATION_DIR, "eenhancer/eenhancer.bed"),
         gtex=os.path.join(ANNOTATION_DIR, "gtex/gtex.bed"),
-        encode=os.path.join(ANNOTATION_DIR, "encode/encode.bed"),
         encode2=os.path.join(ANNOTATION_DIR, "encode2/encode2.bed"),
         remap=os.path.join(ANNOTATION_DIR, "remap/remap.bed"),
         roadmap=os.path.join(ANNOTATION_DIR, "roadmap/roadmap.bed"),
         youngh3k27ac=os.path.join(ANNOTATION_DIR, "youngh3k27ac/youngh3k27ac.bed"),
     output:
         mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed")
+    threads: THREADS
     shell:
-        """cat {input} >{output.mergedannot}"""
+        """sort -u -k1,1 -k2,2n --parallel {threads} {input} >{output.mergedannot}"""
+
+#        encode=os.path.join(ANNOTATION_DIR, "encode/encode.bed"),
 

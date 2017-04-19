@@ -1,0 +1,56 @@
+ANNOTATION_DATA=os.getenv('ANNOTATION_DATA')
+REMAP_DATA_DIR = os.getenv('REMAP_DATA_DIR')
+THREADS = int(os.getenv('THREADS'))
+
+rule sort_bed:
+    input:
+        bed_unsorted=os.path.join(REMAP_DATA_DIR, "remap_unsorted.bed"),
+    output:
+        bed=os.path.join(REMAP_DATA_DIR, "remap.bed"),
+    threads: THREADS
+    shell:
+        """sort -u -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
+
+rule join_bed_annotation:
+    input:
+        bed_sortedk4=os.path.join(REMAP_DATA_DIR, "filPeaks_all_sortedk4.bed"),
+        annotation_data=os.path.join(REMAP_DATA_DIR, "annotation_data.tsv"),
+    output:
+        bed_unsorted=os.path.join(REMAP_DATA_DIR, "remap_unsorted.bed"),
+    shell:
+        """join -1 4 -2 1 {input.bed_sortedk4} {input.annotation_data} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$8"."$7"-"$9"."$6}}' >{output.bed_unsorted}"""
+
+rule sort_id_bed:
+    input:
+        bed=os.path.join(REMAP_DATA_DIR, "filPeaks_all.bed"),
+    output:
+        bed_sortedk4=os.path.join(REMAP_DATA_DIR, "filPeaks_all_sortedk4.bed"),
+    threads: THREADS
+    shell:
+        """sort -u --parallel {THREADS} -k4,4 {input.bed} -o {output.bed_sortedk4}"""
+
+rule gunzip_bed_gz:
+    input:
+        bed_gz=os.path.join(REMAP_DATA_DIR, "filPeaks_all.bed.gz"),
+    output:
+        bed=os.path.join(REMAP_DATA_DIR, "filPeaks_all.bed"),
+    shell:
+        """gunzip -c {input.bed_gz} |awk 'BEGIN{{OFS="\t"}}{{print $1,$2,$3,$4}}' >{output.bed}"""
+
+rule download_bed_gz:
+    input:
+        annotation_data_sortedk3=os.path.join(REMAP_DATA_DIR, "annotation_data_sortedk3.tsv"),
+    params: remap_data_dir=REMAP_DATA_DIR
+    output:
+        bed_gz=os.path.join(REMAP_DATA_DIR, "filPeaks_all.bed.gz"),
+    shell:
+        """wget http://tagc.univ-mrs.fr/remap/download/All/filPeaks_all.bed.gz --directory-prefix={params.remap_data_dir};"""
+
+rule grep_sort_experiment_list:
+    input:
+        annotation_data=ANNOTATION_DATA
+    output:
+        annotation_data=os.path.join(REMAP_DATA_DIR, "annotation_data.tsv"),
+    shell:
+        """grep remap {input.annotation_data} |sort -u -k1,1 -o {output.annotation_data}"""
+

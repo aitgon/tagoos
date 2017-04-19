@@ -1,0 +1,69 @@
+ANNOTATION_DATA=os.getenv('ANNOTATION_DATA')
+YOUNGH3K27AC_DATA_DIR = os.getenv('YOUNGH3K27AC_DATA_DIR')
+THREADS = int(os.getenv('THREADS'))
+
+rule sort_bed:
+    input:
+        bed_unsorted=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac_unsorted.bed"),
+    output:
+        bed=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac.bed"),
+    threads: THREADS
+    shell:
+        """sort -u -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
+
+rule join_bed_annotation:
+    input:
+        bed_sortedk4=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac_id_sortedk4.bed"),
+        annotation_data=os.path.join(YOUNGH3K27AC_DATA_DIR, "annotation_data_sortedk3.tsv"),
+    output:
+        bed_unsorted=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac_unsorted.bed"),
+    shell:
+        """join -1 4 -2 3 {input.bed_sortedk4} {input.annotation_data} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$8"."$7"-"$9"."$6}}' >{output.bed_unsorted}"""
+
+rule sort_id_bed:
+    input:
+        bed=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac_id.bed"),
+    output:
+        bed_sortedk4=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac_id_sortedk4.bed"),
+    threads: THREADS
+    shell:
+        """sort -u --parallel {THREADS} -k4,4 {input.bed} -o {output.bed_sortedk4}"""
+
+rule bed_id:
+    input:
+        annotation_data_sortedk3=os.path.join(YOUNGH3K27AC_DATA_DIR, "annotation_data_sortedk3.tsv"),
+    output:
+        bed=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac_id.bed"),
+    params:
+        bed_dir=os.path.join(YOUNGH3K27AC_DATA_DIR, "bed")
+    shell:
+        """cat {input.annotation_data_sortedk3} |cut -f3,3 |while read LABEL; do FN=$LABEL; awk -v LABEL="$LABEL" 'BEGIN{{OFS="\t"}}NR>1{{print $1,$2,$3,LABEL}}' {params.bed_dir}/$FN.bed; done >{output.bed}"""
+
+rule unzip:
+    input:
+        zip=os.path.join(YOUNGH3K27AC_DATA_DIR, "mmc8.zip"),
+    params:
+        bed_dir=os.path.join(YOUNGH3K27AC_DATA_DIR, "bed")
+    threads: THREADS
+    output:
+        bed_unzipped=os.path.join(YOUNGH3K27AC_DATA_DIR, "bed.unzipped"),
+    shell:
+        """unzip {input.zip} -d {params.bed_dir}; touch {output.bed_unzipped}"""
+
+rule download_zip:
+    input:
+        annotation_data_sortedk3=os.path.join(YOUNGH3K27AC_DATA_DIR, "annotation_data_sortedk3.tsv"),
+    params: data_dir=YOUNGH3K27AC_DATA_DIR
+    output:
+        zip=os.path.join(YOUNGH3K27AC_DATA_DIR, "mmc8.zip"),
+    shell:
+        """wget http://www.cell.com/cms/attachment/2021776442/2041649929/mmc8.zip --directory-prefix={params.data_dir};"""
+
+rule grep_sort_experiment_list:
+    input:
+        annotation_data=ANNOTATION_DATA
+    output:
+        annotation_data=os.path.join(YOUNGH3K27AC_DATA_DIR, "annotation_data_sortedk3.tsv"),
+    shell:
+        """grep youngh3k27ac {input.annotation_data} |sort -u -k3,3 -o {output.annotation_data}"""
+
