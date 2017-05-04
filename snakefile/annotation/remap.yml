@@ -18,7 +18,7 @@ rule join_bed_annotation:
     output:
         bed_unsorted=os.path.join(REMAP_DATA_DIR, "remap_unsorted.bed"),
     shell:
-        """join -1 4 -2 1 {input.bed_sortedk4} {input.annotation_data} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$8"."$7"-"$9"."$6}}' >{output.bed_unsorted}"""
+        """join -1 4 -2 1 {input.bed_sortedk4} {input.annotation_data} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$8"."$7"-"$9"."$6"ReMap"}}' >{output.bed_unsorted}"""
 
 rule sort_id_bed:
     input:
