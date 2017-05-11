@@ -67,8 +67,7 @@ time snakemake -s ${TAGOOS}/snakefile/annotate.yml -j $SNAKEMAKE_J -c "qsub -X -
 - Download the dbsnp variants using the __download_dbsnp.yml__ snakefile
 
 ~~~
-export CHROM=$(seq 1 22)
-#export CHROM=22
+export CHROM=$(seq 22)
 export DBSNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp
 export DBSNP_OUT_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp/${REGION}
 export THREADS=2
@@ -81,7 +80,6 @@ time snakemake -s ${TAGOOS}/snakefile/download_dbsnp.yml -j $NBCHROM -c "qsub -X
 ~~~
 export ANNOT_1COL_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
 export CHROM=$(seq 22)
-#export CHROM=22
 export SNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp/${REGION}
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
 time snakemake -s ${TAGOOS}/snakefile/annotate.yml -p -j $SNAKEMAKE_J -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $SNP_DIR/stderr.log -o $SNP_DIR/stdout.log" -d $SNP_DIR -pn

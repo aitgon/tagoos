@@ -13,6 +13,14 @@ MODEL_PKL_DIR = os.path.join(dirname(MODEL_PKL))
 MODEL_PKL_DIR_BASENAME = os.path.basename(MODEL_PKL_DIR)
 PUBLIC_DIR = os.path.join(MODEL_PKL_DIR, "../%s_public")%MODEL_PKL_DIR_BASENAME
 
+rule score_index:
+    input:
+        score_tsv = os.path.join(OUTDIR, "score.tsv")
+    output:
+        score_tsv_idx = os.path.join(OUTDIR, "score.tsv.idx")
+    shell:
+        """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=1 {input.score_tsv}  > {output.score_tsv_idx}"""
+
 rule percentile:
     input:
         score_tsv_merged = os.path.join(OUTDIR, "score.tsv"),
