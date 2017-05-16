@@ -4,31 +4,78 @@ HOME = os.getenv('HOME')
 REGION = os.getenv('REGION')
 THREADS = int(os.getenv('THREADS'))
 
+rule all:
+    input:
+        grasp105 = os.path.join(GRASP_DATA_DIR, REGION, "grasp105.rsid"),
+        grasp106 = os.path.join(GRASP_DATA_DIR, REGION, "grasp106.rsid"),
+        grasp107 = os.path.join(GRASP_DATA_DIR, REGION, "grasp107.rsid"),
+        grasp108 = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.rsid"),
+
+rule grasp106pred:
+    input:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
+    output:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp106.rsid"),
+    params:
+        pvaluelow = 0.000005,
+        pvaluehigh = 0.00005
+    shell:
+        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", sep="\t", header=None, dtype={{5: numpy.float64}}); df=df.ix[df[5]>{params.pvaluelow}]; df=df.ix[df[5]<={params.pvaluehigh}]; df[3].to_csv("{output.bed}", sep="\t", header=False, index=False)'"""
+
+rule grasp107pred:
+    input:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
+    output:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp107.rsid"),
+    params:
+        pvaluelow = 0.0000005,
+        pvaluehigh = 0.000005
+    shell:
+        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", sep="\t", header=None, dtype={{5: numpy.float64}}); df=df.ix[df[5]>{params.pvaluelow}]; df=df.ix[df[5]<={params.pvaluehigh}]; df[3].to_csv("{output.bed}", sep="\t", header=False, index=False)'"""
+
+rule grasp105neg:
+    input:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
+    output:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp105.rsid"),
+    params: pvaluehigh = 0.00005
+    shell:
+        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", sep="\t", header=None, dtype={{5: numpy.float64}}); df=df.ix[df[5]>{params.pvaluehigh}]; df[3].to_csv("{output.bed}", sep="\t", header=False, index=False)'"""
+
+rule grasp108pos:
+    input:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
+    output:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.rsid"),
+    params: pvaluelow = 0.00000005
+    shell:
+        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", sep="\t", header=None, dtype={{5: numpy.float64}}); df=df.ix[df[5]<={params.pvaluelow}]; df[3].to_csv("{output.bed}", sep="\t", header=False, index=False)'"""
+
 rule filter_region:
     input:
-        bed=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_5.bed"),
+        bed=os.path.join(GRASP_DATA_DIR, "proc/grasp.bed"),
         genomic_region_bed = GENOMIC_REGION_BED,
     output:
-        bed = os.path.join(GRASP_DATA_DIR, REGION, "GraspFullDataset2_5.bed"),
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
     shell:
         """bedtools intersect -sorted -a {input.bed} -b {input.genomic_region_bed} | sort -u -k1,1 -k2,2n >{output.bed}"""
 
 rule tobed:
     input:
-        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_5.tsv")
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/grasp.tsv")
     output:
-        bed=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_5.bed")
+        bed=os.path.join(GRASP_DATA_DIR, "proc/grasp.bed")
     shell:
-        """awk 'BEGIN{{OFS="\t"}}{{print "chr"$2,$3-1,$3,$1,$5,$4}}' {input.tsv} |sort -k1,1 -k2,2n >{output.bed}"""
+        """awk 'BEGIN{{OFS="\t"}}{{print "chr"$2,$3-1,$3,$1,$5,$4}}' {input.tsv} |sort -u -k1,1 -k2,2n >{output.bed}"""
 
 # keep best p-value
 rule proc5:
     input:
         tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_4.tsv")
     output:
-        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_5.tsv")
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/grasp.tsv")
     shell:
-        """python -c 'import pandas; import numpy; df=pandas.read_csv("{input.tsv}", sep="\t", encoding = "ISO-8859-1", header=None, dtype={{1:numpy.str, 3:numpy.float64}}); df.sort_values(by=[3], ascending=True, inplace=True); df=df.ix[df[3]!=0]; df.drop_duplicates(subset=[0], keep="first", inplace=True); df.to_csv("{output.tsv}", sep="\t", header=None)'"""
+        """python -c 'import pandas; import numpy; df=pandas.read_csv("{input.tsv}", sep="\t", encoding = "ISO-8859-1", header=None, dtype={{1:numpy.str, 3:numpy.float64}}); df.sort_values(by=[3], ascending=True, inplace=True); df=df.ix[df[3]!=0]; df.drop_duplicates(subset=[0], keep="first", inplace=True); df.to_csv("{output.tsv}", sep="\t", header=None, index=False)'"""
 
 # remove pvalues prefixed with _
 rule proc4:

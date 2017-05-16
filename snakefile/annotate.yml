@@ -12,9 +12,6 @@ ANNOT_1COL_DIR = dirname(ANNOT_1COL_BED)
 rule all:
     input:
         libsvm = expand(os.path.join(SNP_DIR, "chrom/{chr}/%s/annotation.libsvm"%ANNOT_LABEL), chr=CHROM),
-
-rule annotated_tsv:
-    input:
         annotated_tsv = expand(os.path.join(SNP_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL), chr=CHROM),
 
 rule index:

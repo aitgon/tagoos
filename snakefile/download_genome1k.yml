@@ -86,7 +86,8 @@ rule list_eur_pop:
         eur_txt = os.path.join(GENOME1K_DIR, "eur.txt"),
         eur_ped_list = os.path.join(GENOME1K_DIR, "eur.ped"),
     shell:
-        """"wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_male_samples_v3.20130502.ALL.panel -q -O - |grep EUR |cut -f2,2 |sort -u >{output.eur_txt}; wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_samples.20130502.ALL.ped -q -O - |grep -f eur.txt >{output.eur_ped_list}"""
+        """wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_male_samples_v3.20130502.ALL.panel -q -O - |grep EUR |cut -f2,2 |sort -u >{output.eur_txt};
+        wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_samples.20130502.ALL.ped -q -O - |grep -f {output.eur_txt} >{output.eur_ped_list}"""
 
 rule download_genome1k:
     params:

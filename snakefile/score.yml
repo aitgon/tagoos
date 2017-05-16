@@ -13,6 +13,11 @@ MODEL_PKL_DIR = os.path.join(dirname(MODEL_PKL))
 MODEL_PKL_DIR_BASENAME = os.path.basename(MODEL_PKL_DIR)
 PUBLIC_DIR = os.path.join(MODEL_PKL_DIR, "../%s_public")%MODEL_PKL_DIR_BASENAME
 
+rule all:
+    input:
+        score_tsv_idx = os.path.join(OUTDIR, "score.tsv.idx"),
+        score_percentile = os.path.join(OUTDIR, "percentile.tsv"),
+
 rule score_index:
     input:
         score_tsv = os.path.join(OUTDIR, "score.tsv")

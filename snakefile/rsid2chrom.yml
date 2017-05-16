@@ -13,5 +13,5 @@ rule rsdi2chrom:
         chrom_list = os.path.join(TAG_DIR, "../chrom_list.txt")
     threads: THREADS
     shell:
-        """find {GENOME1K_PEAKBED_DIR} -name "chr*.bed" |xargs cat |grep -F -w -f $HOME/data/2015_svmgwas/data/variant/literature_association/traits/heightMergedNature2010NatGen2014.rsid |cut -f1,1 |sort -u --parallel {threads} |tr -d 'chr' > {output.chrom_list}"""
+        """find {GENOME1K_PEAKBED_DIR} -name "chr*.bed" |xargs cat |grep -F -w -f {input.tag_rsid_pos} |cut -f1,1 |sort -u --parallel {threads} |tr -d 'chr' > {output.chrom_list}"""
 

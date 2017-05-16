@@ -112,6 +112,10 @@ rule merge_libsvm:
         """cat {input.instance_txt_pos} {input.instance_txt_neg} >{output.instance};
             cat {input.annotation_libsvm_pos} {input.annotation_libsvm_neg} >{output.libsvm};"""
 
+rule tmp:
+    input:
+        annotation_libsvm = os.path.join(OUTDIR, "chrom/20/annotation.libsvm"),
+
 rule grep_pasted_instance_libsvm_neg:
     input: 
         instance_pos = os.path.join(TAG_POS_DIR, "chrom/{chr}/instance.txt"),

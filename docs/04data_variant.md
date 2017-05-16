@@ -11,17 +11,17 @@ export GENOMIC_REGION_BED=${HOME}/data/2015_svmgwas/data/var/genome_regions/hg19
 
 ~~~
 export REGION=intronic
-export GENOMIC_REGION_BED=${HOME}/data/2015_svmgwas/data/var/genome_regions/UCSC_hg19_intronsUTRexons.bed
+export GENOMIC_REGION_BED=${HOME}/data/2015_svmgwas/data/var/genome_regions/ucsc_hg19_RefSeqGenes_5utrExonIntron3utrExon.bed
 ~~~
 
 ~~~
 export REGION=intergenprox
-export GENOMIC_REGION_BED=${HOME}/data/2015_svmgwas/data/var/genome_regions/hg19_intergenic_proximal.bed
+export GENOMIC_REGION_BED=${HOME}/data/2015_svmgwas/data/var/genome_regions/ucsc_hg19_intergenic_proximal.bed
 ~~~
 
 ~~~
 export REGION=intergendistal
-export GENOMIC_REGION_BED=${HOME}/data/2015_svmgwas/data/var/genome_regions/hg19_intergenic_distal.bed
+export GENOMIC_REGION_BED=${HOME}/data/2015_svmgwas/data/var/genome_regions/ucsc_hg19_intergenic_distal.bed
 ~~~
 
 These are other variables
@@ -29,7 +29,7 @@ These are other variables
 ~~~
 export ANNOT_LABEL=mergedannot
 export LD=0.8
-export THREADS=2
+export THREADS=8
 export SNAKEMAKE_J=32
 ~~~
 
