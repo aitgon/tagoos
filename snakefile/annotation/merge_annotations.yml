@@ -1,5 +1,14 @@
 ANNOTATION_DIR=os.getenv('ANNOTATION_DIR')
 THREADS = int(os.getenv('THREADS'))
+HOME=os.getenv('HOME')
+
+rule annotation_bed_idx:
+    input:
+        mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed")
+    output:
+        mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed.idx")
+    shell:
+        """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=4 {input.mergedannot}  > {output.mergedannot}"""
 
 rule cat_sort:
     input:
@@ -13,7 +22,7 @@ rule cat_sort:
         mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed")
     threads: THREADS
     shell:
-        """sort -u -k1,1 -k2,2n --parallel {threads} {input} >{output.mergedannot}"""
+        """sort -u -k1,1 -k2,2n --parallel {threads} {input} |grep -P "^chr[1-9][0-2]*\t" >{output.mergedannot}"""
 
 #        encode=os.path.join(ANNOTATION_DIR, "encode/encode.bed"),
 

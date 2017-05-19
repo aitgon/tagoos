@@ -7,15 +7,53 @@ THREADS = int(os.getenv('THREADS'))
 rule all:
     input:
         grasp105 = os.path.join(GRASP_DATA_DIR, REGION, "grasp105.rsid"),
-        grasp106 = os.path.join(GRASP_DATA_DIR, REGION, "grasp106.rsid"),
-        grasp107 = os.path.join(GRASP_DATA_DIR, REGION, "grasp107.rsid"),
+        grasp103pred = os.path.join(GRASP_DATA_DIR, REGION, "grasp103pred.rsid"),
+        grasp104pred = os.path.join(GRASP_DATA_DIR, REGION, "grasp104pred.rsid"),
+        grasp105pred = os.path.join(GRASP_DATA_DIR, REGION, "grasp105pred.rsid"),
+        grasp106pred = os.path.join(GRASP_DATA_DIR, REGION, "grasp106pred.rsid"),
+        grasp107pred = os.path.join(GRASP_DATA_DIR, REGION, "grasp107pred.rsid"),
         grasp108 = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.rsid"),
+        grasp108bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.bed"),
+        grasp108bed_idx = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.bed.idx"),
+
+rule grasp103pred:
+    input:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
+    output:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp103pred.rsid"),
+    params:
+        pvaluelow = 0.005,
+        pvaluehigh = 0.05
+    shell:
+        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", sep="\t", header=None, dtype={{5: numpy.float64}}); df=df.ix[df[5]>{params.pvaluelow}]; df=df.ix[df[5]<={params.pvaluehigh}]; df[3].to_csv("{output.bed}", sep="\t", header=False, index=False)'"""
+
+rule grasp104pred:
+    input:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
+    output:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp104pred.rsid"),
+    params:
+        pvaluelow = 0.0005,
+        pvaluehigh = 0.005
+    shell:
+        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", sep="\t", header=None, dtype={{5: numpy.float64}}); df=df.ix[df[5]>{params.pvaluelow}]; df=df.ix[df[5]<={params.pvaluehigh}]; df[3].to_csv("{output.bed}", sep="\t", header=False, index=False)'"""
+
+rule grasp105pred:
+    input:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
+    output:
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp105pred.rsid"),
+    params:
+        pvaluelow = 0.00005,
+        pvaluehigh = 0.0005
+    shell:
+        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", sep="\t", header=None, dtype={{5: numpy.float64}}); df=df.ix[df[5]>{params.pvaluelow}]; df=df.ix[df[5]<={params.pvaluehigh}]; df[3].to_csv("{output.bed}", sep="\t", header=False, index=False)'"""
 
 rule grasp106pred:
     input:
         bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
     output:
-        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp106.rsid"),
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp106pred.rsid"),
     params:
         pvaluelow = 0.000005,
         pvaluehigh = 0.00005
@@ -26,7 +64,7 @@ rule grasp107pred:
     input:
         bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
     output:
-        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp107.rsid"),
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp107pred.rsid"),
     params:
         pvaluelow = 0.0000005,
         pvaluehigh = 0.000005
@@ -46,10 +84,13 @@ rule grasp108pos:
     input:
         bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp.bed"),
     output:
-        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.rsid"),
+        rsid = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.rsid"),
+        bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.bed"),
+        bed_idx = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.bed.idx"),
     params: pvaluelow = 0.00000005
     shell:
-        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", sep="\t", header=None, dtype={{5: numpy.float64}}); df=df.ix[df[5]<={params.pvaluelow}]; df[3].to_csv("{output.bed}", sep="\t", header=False, index=False)'"""
+        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", sep="\t", header=None, dtype={{5: numpy.float64}}); df=df.ix[df[5]<={params.pvaluelow}]; df.to_csv("{output.bed}", sep="\t", header=False, index=False); df[3].to_csv("{output.rsid}", sep="\t", header=False, index=False)';
+        {HOME}/Software/IGVTools/igvtools index {output.bed}"""
 
 rule filter_region:
     input:

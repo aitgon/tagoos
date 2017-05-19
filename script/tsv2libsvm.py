@@ -47,6 +47,8 @@ with open(instance_path, 'w') as instance_fout, open(libsvm_path, 'w') as libsvm
                 libsvm_fout.write(label + " " + " ".join([":".join(str(x) for x in sublist) for sublist in sorted(libsvm_list)]) + "\n")
                 instance_fout.write(previous_instance + "\n") # write previous instance
                 variable_last_index_visited=False
+            if variable=='':
+                import pdb; pdb.set_trace()
             libsvm_list = [(variable2i[variable], score)] # new tuple to store variable:scores indices
             if variable2i[variable] == last_variable_index: variable_last_index_visited=True
         else:  # if is NOT A NEW instance

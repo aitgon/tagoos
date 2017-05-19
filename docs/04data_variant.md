@@ -29,7 +29,7 @@ These are other variables
 ~~~
 export ANNOT_LABEL=mergedannot
 export LD=0.8
-export THREADS=8
+export THREADS=2
 export SNAKEMAKE_J=32
 ~~~
 

@@ -17,7 +17,7 @@ $REGION \in {'genomic', 'intronic', 'intergenprox', 'intergendistal'}$
 Positive
 
 ~~~
-export REGION=intronic # default genomic
+export REGION=genomic # default genomic
 export TAG_POS_RSID=$HOME/data/2015_svmgwas/data/variant/grasp/${REGION}/grasp108.rsid
 export POS_LABEL=GRASP108
 export ANNOT_LABEL=mergedannot
@@ -33,13 +33,14 @@ export TAG_NEG_RSID=$HOME/data/2015_svmgwas/data/variant/grasp/${REGION}/grasp10
 ~~~
 
 ~~~
-export NEG_LABEL=1kg10000000
-export TAG_NEG_RSID=$HOME/data/2015_svmgwas/data/variant/1000genomes/1kg10000000.rsid
+export NBNEG=1000000
+export NEG_LABEL=1kg${NBNEG}
+export TAG_NEG_RSID=$HOME/data/2015_svmgwas/data/variant/1000genomes/1kg1kg${NBNEG}.rsid
 ~~~
 
 
 ~~~
-export THREADS=8
+export THREADS=8 # default 8
 #
 export TAG_POS_DIR=$PWD/out/${POS_LABEL}${REGION}/pos/${ANNOT_LABEL}_${INDEX_LABEL}
 export TAG_NEG_DIR=$PWD/out/neg/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}
