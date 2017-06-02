@@ -17,7 +17,7 @@ $REGION \in {'genomic', 'intronic', 'intergenprox', 'intergendistal'}$
 Positive
 
 ~~~
-export REGION=genomic # default genomic
+export REGION=intronic # default intronic
 export TAG_POS_RSID=$HOME/data/2015_svmgwas/data/variant/grasp/${REGION}/grasp108.rsid
 export POS_LABEL=GRASP108
 export ANNOT_LABEL=mergedannot

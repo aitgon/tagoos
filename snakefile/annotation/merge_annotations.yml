@@ -22,7 +22,5 @@ rule cat_sort:
         mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed")
     threads: THREADS
     shell:
-        """sort -u -k1,1 -k2,2n --parallel {threads} {input} |grep -P "^chr[1-9][0-2]*\t" >{output.mergedannot}"""
-
-#        encode=os.path.join(ANNOTATION_DIR, "encode/encode.bed"),
+        """sort -u -k1,1 -k2,2n --parallel {threads} {input} |grep -P "^chr[1-9][0-9]?\t" >{output.mergedannot}"""
 

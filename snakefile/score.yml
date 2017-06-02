@@ -15,8 +15,7 @@ PUBLIC_DIR = os.path.join(MODEL_PKL_DIR, "../%s_public")%MODEL_PKL_DIR_BASENAME
 
 rule all:
     input:
-        score_tsv_idx = os.path.join(OUTDIR, "score.tsv.idx"),
-        score_percentile = os.path.join(OUTDIR, "percentile.tsv"),
+        score_percentile_idx = os.path.join(OUTDIR, "percentile.tsv.idx"),
 
 rule score_index:
     input:
@@ -25,6 +24,14 @@ rule score_index:
         score_tsv_idx = os.path.join(OUTDIR, "score.tsv.idx")
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=1 {input.score_tsv}  > {output.score_tsv_idx}"""
+
+rule percentile_index:
+    input:
+        score_percentile = os.path.join(OUTDIR, "percentile.tsv")
+    output:
+        score_percentile_idx = os.path.join(OUTDIR, "percentile.tsv.idx")
+    shell:
+        """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=1 {input.score_percentile}  > {output.score_percentile_idx}"""
 
 rule percentile:
     input:

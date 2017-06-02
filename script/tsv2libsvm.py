@@ -15,7 +15,9 @@ score = "1"
 
 reader = csv.reader(open(tsv_path, 'r'), delimiter="\t")
 variable2i={}
-for i,variable in enumerate(csv.reader(open(variable_path, 'r'))): variable2i[variable[0]]=i+1
+for i,variable in enumerate(csv.reader(open(variable_path, 'r'))):
+    print(i,variable)
+    variable2i[variable[0]]=i+1
 last_variable_index=max(variable2i.values()) # needs for bug in xgboost
 
 previous_instance = None

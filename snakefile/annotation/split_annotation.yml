@@ -18,7 +18,7 @@ rule variable_txt:
         variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt")
     threads: 8
     shell:
-        """cut -f4,4 {input.annot_bed} >{output.variable_txt}; LC_ALL=C sort --parallel {threads} -u {output.variable_txt} -o {output.variable_txt}"""
+        """cut -f4,4 {input.annot_bed} | sort --parallel {threads} -u -o {output.variable_txt}"""
 
 rule sort:
     input:

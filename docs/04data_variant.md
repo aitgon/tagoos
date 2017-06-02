@@ -69,7 +69,7 @@ time snakemake -s ${TAGOOS}/snakefile/genome1k_ld_index.yml -p -j $NBCHROM -c "q
 Intersect/annotate the 1000 genome variants
 
 ~~~
-export ANNOT_1COL_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}_1col.bed
+export ANNOTATION_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}
 export CHROM=$(seq 22)
 export SNP_DIR=$HOME/data/2015_svmgwas/data/variant/1000genomes/$REGION/peak_bed
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
@@ -92,7 +92,7 @@ time snakemake -s ${TAGOOS}/snakefile/download_dbsnp.yml -j $NBCHROM -c "qsub -X
 - Intersect/annotate dbsnp variants
 
 ~~~
-export ANNOT_1COL_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
+export ANNOTATION_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}
 export CHROM=$(seq 22)
 export SNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp/${REGION}
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script

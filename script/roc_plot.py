@@ -1,9 +1,3 @@
-#dat_bak = pandas.read_hdf(dat_path, 'key') # reads data
-#cv_splitted_data = cv_split_data(dat, outdir_path) # splits data in dic with chrom keys
-#cv_probas = cv_proba(cv_splitted_data, outdir_path) # writes dict with cv_probas[chrom]['y_proba'] = y_proba
-#roc_plot(cv_probas, roc_path, auc_path) # plots roc
-#precision_recall_plot(cv_probas, precision_recall_path, auprc_path) # plots precision recall   
-
 import matplotlib
 matplotlib.use('Agg')
 from matplotlib import pyplot
@@ -31,8 +25,6 @@ def roc_plot(y_test_proba_path_list, roc_path, auc_path):
     cv_rocs = {}
     #for chrom in sorted(cv_probas.keys()):
     for i,y_test_proba_path in enumerate(y_test_proba_path_list):
-        #if not cv_probas[chrom] is None:
-        #y_test_proba_path = cv_probas[chrom]['y_test_proba']
         y_test_proba_df = pandas.read_csv(y_test_proba_path, sep="\t", header=0)
         y_test_label = y_test_proba_df.label.tolist()
         y_test_proba = y_test_proba_df.proba.tolist()
@@ -54,10 +46,10 @@ def roc_plot(y_test_proba_path_list, roc_path, auc_path):
     ax.plot(base_fpr, mean_tprs, 'b', label="auc: %s" % (auc_mean))
     ax.set_xlim([0.0, 1.0])
     ax.set_ylim([0.0, 1.0])
-    ax.set_xlabel('False Positive Rate')
-    ax.set_ylabel('True Positive Rate')
-    ax.set_title('Receiver operating characteristic example')
-    ax.legend(loc="lower right")
+    ax.set_xlabel('False positive rate',fontsize=20)
+    ax.set_ylabel('True positive rate',fontsize=20)
+    ax.set_title('ROC curve',fontsize=20)
+    ax.legend(loc="lower right",prop={'size':20})
     fig.savefig(roc_path)
 
 def main(argv):

@@ -1,13 +1,10 @@
 CHROM=os.getenv('CHROM').split()
-ANNOT_1COL_BED=os.getenv('ANNOT_1COL_BED')
+ANNOTATION_DIR=os.getenv('ANNOTATION_DIR')
 THREADS=int(os.getenv('THREADS'))
 ANNOT_LABEL=os.getenv('ANNOT_LABEL')
 SNP_DIR = os.getenv('SNP_DIR')
 HOME = os.getenv('HOME')
 SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
-
-from os.path import dirname
-ANNOT_1COL_DIR = dirname(ANNOT_1COL_BED)
 
 rule all:
     input:
@@ -16,16 +13,16 @@ rule all:
 
 rule index:
     input:
-        annot_1col_chrom = os.path.join(ANNOT_1COL_DIR, "{chr}/%s.bed"%ANNOT_LABEL)
+        annot_1col_chrom = os.path.join(ANNOTATION_DIR, "{chr}/%s.bed"%ANNOT_LABEL)
     output:
-        annot_1col_chrom_idx = os.path.join(ANNOT_1COL_DIR, "{chr}/%s.bed.f4.idx"%ANNOT_LABEL),
+        annot_1col_chrom_idx = os.path.join(ANNOTATION_DIR, "{chr}/%s.bed.f4.idx"%ANNOT_LABEL),
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=4 {input.annot_1col_chrom} >{output.annot_1col_chrom_idx}"""
 
 rule to_libsvm:
     input:
         annotated_tsv = os.path.join(SNP_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL),
-        variable_txt = os.path.join(ANNOT_1COL_DIR, "variable.txt"),
+        variable_txt = os.path.join(ANNOTATION_DIR, "variable.txt"),
         script = os.path.join(SCRIPTDIR, "tsv2libsvm.py"),
     output:
         instance_txt = os.path.join(SNP_DIR, "chrom/{chr}/%s/instance.txt"%ANNOT_LABEL),
@@ -44,7 +41,7 @@ rule sort_annotated_tsv:
 rule intersect_chrom:
     input:
         snp_bed = os.path.join(SNP_DIR, "chrom/{chr}/chr{chr}.bed"),
-        annot_1col_chrom_bed = os.path.join(ANNOT_1COL_DIR, "chrom/{chr}/%s.bed"%ANNOT_LABEL)
+        annot_1col_chrom_bed = os.path.join(ANNOTATION_DIR, "chrom/{chr}/%s.bed"%ANNOT_LABEL)
     output:
         nonsorted_annotated_tsv = os.path.join(SNP_DIR, "chrom/{chr}/%s/nonsorted_intersect.tsv"%ANNOT_LABEL),
     shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_1col_chrom_bed} -wb |awk '{{print $4"\t"$8}}' >{output.nonsorted_annotated_tsv}"""
