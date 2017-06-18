@@ -9,7 +9,7 @@ rule sort_bed:
         bed=os.path.join(REMAP_DATA_DIR, "remap.bed"),
     threads: THREADS
     shell:
-        """sort -u -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
+        """sort -k1,1 -k2,2n -k3,3n -k4,4 --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
 
 rule join_bed_annotation:
     input:
@@ -27,7 +27,7 @@ rule sort_id_bed:
         bed_sortedk4=os.path.join(REMAP_DATA_DIR, "filPeaks_all_sortedk4.bed"),
     threads: THREADS
     shell:
-        """sort -u --parallel {THREADS} -k4,4 {input.bed} -o {output.bed_sortedk4}"""
+        """sort --parallel {THREADS} -k4,4 {input.bed} -o {output.bed_sortedk4}"""
 
 rule gunzip_bed_gz:
     input:

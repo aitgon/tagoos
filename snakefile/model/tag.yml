@@ -61,7 +61,7 @@ rule sort_label:
 rule index2annot_r2_nonunique_tsv:
     input:
         index2corr_r2_sortedk2 = os.path.join(TAG_DIR, "chrom/{chr}/index2corr_r2_sortedk2.tsv"),
-        annotated_tsv = os.path.join(GENOME1K_PEAKBED_DIR, "chrom/{chr}/%s/intersect.tsv"%ANNOT_LABEL),
+        annotated_tsv = os.path.join(GENOME1K_PEAKBED_DIR, "{chr}/%s/intersect.tsv"%ANNOT_LABEL),
     output:
         index2annot_r2_nonunique_tsv = os.path.join(TAG_DIR, "chrom/{chr}/index2annot_r2_nonunique.tsv")
     shell:
@@ -116,7 +116,7 @@ rule sort_tagld_k1:
 rule tagld:
     input:
         tag_rsid_sorted = os.path.join(TAG_DIR, "%s.sorted.rsid"%TAG_RSID),
-        plink_ld = os.path.join(GENOME1K_DIR, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
+        plink_ld = os.path.join(GENOME1K_DIR, REGION, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
     output:
         tagld = os.path.join(TAG_DIR, "chrom/{chr}/tag_ld.tsv"),
     shell:
@@ -144,7 +144,7 @@ rule sort_indexld_k2:
 rule indexld:
     input:
         index_rsid_sorted = os.path.join(INDEX_DIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),
-        plink_ld = os.path.join(GENOME1K_DIR, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
+        plink_ld = os.path.join(GENOME1K_DIR, REGION, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
     output:
         indexld = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld.tsv"),
     shell:

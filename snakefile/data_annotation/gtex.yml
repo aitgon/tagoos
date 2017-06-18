@@ -9,7 +9,7 @@ rule sort_bed:
         bed=os.path.join(GTEX_DATA_DIR, "gtex.bed"),
     threads: THREADS
     shell:
-        """sort -u -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
+        """sort -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
 
 rule join_bed_annotation:
     input:
@@ -27,7 +27,7 @@ rule sort_id_bed:
         id_bed=os.path.join(GTEX_DATA_DIR, "gtex_id_sortedk4.bed"),
     threads: THREADS
     shell:
-        """sort -u --parallel {THREADS} -k4,4 {input.id_bed} -o {output.id_bed}"""
+        """sort --parallel {THREADS} -k4,4 {input.id_bed} -o {output.id_bed}"""
 
 rule gunzip:
     input:
@@ -64,5 +64,5 @@ rule grep_sort_experiment_list:
     output:
         annotation_data_sortedk3=os.path.join(GTEX_DATA_DIR, "annotation_data_sortedk3.tsv"),
     shell:
-        """grep gtex {input.annotation_data} |sort -u -k1,1 -o {output.annotation_data_sortedk3}"""
+        """grep gtex {input.annotation_data} |sort -k1,1 -o {output.annotation_data_sortedk3}"""
 

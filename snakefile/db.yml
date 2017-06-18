@@ -1,0 +1,122 @@
+CHROM=sorted(os.getenv('CHROM').split())
+DB = os.getenv('DB')
+GENOMIC_TSV = os.getenv('GENOMIC_TSV')
+HOME = os.getenv('HOME')
+INTERGENDISTAL_TSV = os.getenv('INTERGENDISTAL_TSV')
+INTERGENPROX_TSV = os.getenv('INTERGENPROX_TSV')
+INTRONIC_TSV = os.getenv('INTRONIC_TSV')
+OUT_SQL = os.getenv('OUT_SQL')
+OUTDIR = os.getenv('OUTDIR')
+TAGOOS = os.getenv('TAGOOS')
+THREADS = int(os.getenv('THREADS'))
+TSV_PATH = os.getenv('TSV_PATH')
+
+rule db:
+    input:
+        out_sql = OUT_SQL,
+    output:
+        db = DB,
+    shell:
+        """sqlite3 {output.db} <{input.out_sql}"""
+
+rule script_sql:
+    input:
+        tsv_path = TSV_PATH,
+        script_template_sql = os.path.join(TAGOOS, "script/script.template.sql")
+    output:
+        out_sql = OUT_SQL,
+    shell:
+        """sed 's@TSV_PATH@{input.tsv_path}@' {input.script_template_sql} > {output.out_sql};"""
+
+rule cat:
+    input:
+        out_tsv = expand(os.path.join(OUTDIR, "proc/{chr}/out6.tsv"), chr=CHROM),
+    output:
+        tsv_path = TSV_PATH,
+    shell:
+        """cat {input.out_tsv} >{output.tsv_path}"""
+
+rule:
+    input:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out5.tsv"),
+        genomic_tsv = os.path.join(OUTDIR, "proc/{chr}/intergendistal.tsv"),
+    output:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out6.tsv"),
+    shell:
+        """grep -v -P "^x"  {input.out_tsv}  |tr -d x > {output.out_tsv}"""
+
+rule:
+    input:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out4.tsv"),
+        genomic_tsv = os.path.join(OUTDIR, "proc/{chr}/intergendistal.tsv"),
+    output:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out5.tsv"),
+    shell:
+        """join  -ex -1 1 -2 1 -a1 -a2 -o  0,1.2,1.3,1.4,1.5,1.6,1.7,2.2 {input.out_tsv} {input.genomic_tsv} > {output.out_tsv}"""
+
+rule:
+    input:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out3.tsv"),
+        genomic_tsv = os.path.join(OUTDIR, "proc/{chr}/intergenprox.tsv"),
+    output:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out4.tsv"),
+    shell:
+        """join  -ex -1 1 -2 1 -a1 -a2 -o 0,1.2,1.3,1.4,1.5,1.6,2.2 {input.out_tsv} {input.genomic_tsv} |sort -o {output.out_tsv}"""
+
+rule:
+    input:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out2.tsv"),
+        genomic_tsv = os.path.join(OUTDIR, "proc/{chr}/intronic.tsv"),
+    output:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out3.tsv"),
+    shell:
+        """join  -ex -1 1 -2 1 -a1 -a2 -o 0,1.2,1.3,1.4,1.5,2.2 {input.out_tsv} {input.genomic_tsv} |sort -o {output.out_tsv}"""
+
+rule:
+    input:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out.tsv"),
+        genomic_tsv = os.path.join(OUTDIR, "proc/{chr}/genomic.tsv"),
+    output:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out2.tsv"),
+    shell:
+        """join  -ex -1 1 -2 1 -a2 -o 2.1,1.2,1.3,1.4,2.2 {input.out_tsv} {input.genomic_tsv} |sort -o {output.out_tsv}"""
+
+rule:
+    input:
+        posid2rsid_tsv = os.path.join(OUTDIR, "proc/{chr}/posid2rsid_sortedk2.tsv"),
+        rsid2gene_tsv = os.path.join(OUTDIR, "proc/{chr}/rsid2gene_u_k3_k1.tsv"),
+    output:
+        out_tsv = os.path.join(OUTDIR, "proc/{chr}/out.tsv"),
+    shell:
+        """join  -ex -a1 -a2 {input.posid2rsid_tsv} {input.rsid2gene_tsv} -1 2 -2 1 |sort -o {output.out_tsv}"""
+
+rule sort:
+    input:
+        posid2rsid_tsv=os.path.join(HOME, "data/2015_svmgwas/data/variant/dbsnp/proc/posid2rsid_chr{chr}.tsv"),
+        genomic_tsv = GENOMIC_TSV,
+        intronic_tsv = INTRONIC_TSV,
+        intergenprox_tsv = INTERGENPROX_TSV,
+        intergendistal_tsv = INTERGENDISTAL_TSV,
+    output:
+        posid2rsid_tsv = os.path.join(OUTDIR, "proc/{chr}/posid2rsid_sortedk2.tsv"),
+        genomic_tsv = os.path.join(OUTDIR, "proc/{chr}/genomic.tsv"),
+        intronic_tsv = os.path.join(OUTDIR, "proc/{chr}/intronic.tsv"),
+        intergenprox_tsv = os.path.join(OUTDIR, "proc/{chr}/intergenprox.tsv"),
+        intergendistal_tsv = os.path.join(OUTDIR, "proc/{chr}/intergendistal.tsv"),
+    threads: THREADS
+    shell:
+        """sort -k2 --parallel {threads} {input.posid2rsid_tsv} -o {output.posid2rsid_tsv};
+        sort -u --parallel {threads} {input.genomic_tsv} -o {output.genomic_tsv};
+        sort -u --parallel {threads} {input.intronic_tsv} -o {output.intronic_tsv};
+        sort -u --parallel {threads} {input.intergenprox_tsv} -o {output.intergenprox_tsv};
+        sort -u --parallel {threads} {input.intergendistal_tsv} -o {output.intergendistal_tsv};"""
+
+rule:
+    input:
+        rsid2gene_tsv = os.path.join(HOME, "data/2015_svmgwas/data/variant/dbsnp/raw_bed/{chr}/rsid2gene_chr{chr}.tsv")
+    output:
+        rsid2gene_tsv = os.path.join(OUTDIR, "proc/{chr}/rsid2gene_u_k3_k1.tsv")
+    threads: THREADS
+    shell:
+        """sort -u --parallel {threads} -k3,3n -k1,1 {input.rsid2gene_tsv} -o {output.rsid2gene_tsv};
+            awk '!seen[$1]++' {output.rsid2gene_tsv}  |sort --parallel {threads} -o {output.rsid2gene_tsv}"""

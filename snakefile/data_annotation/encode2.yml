@@ -12,7 +12,7 @@ rule sort_bed:
         bed=os.path.join(ENCODE2_DATA_DIR, "encode2.bed"),
     threads: THREADS
     shell:
-        """sort -u -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
+        """sort -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
 
 rule join_bed_annotation:
     input:
@@ -30,7 +30,7 @@ rule sort_id_bed:
         id_bed_sortedk4=os.path.join(ENCODE2_DATA_DIR, "encode2_id_sortedk4.bed"),
     threads: THREADS
     shell:
-        """sort -u --parallel {THREADS} -k4,4 {input.id_bed} -o {output.id_bed_sortedk4}"""
+        """sort --parallel {THREADS} -k4,4 {input.id_bed} -o {output.id_bed_sortedk4}"""
 
 rule id_bed:
     input:
@@ -74,15 +74,15 @@ rule download_experiment_json:
     shell:
         """cat {input.annotation_data_sortedk3} |cut -f3 | xargs -n1 -P{threads} -I@ sh -c "wget 'https://www.encodeproject.org/search/?type=file&dataset=/experiments/@/&format=json&frame=object&limit=all' -O {params.encode_json_data_dir}/json/@.json || true"; touch {output.json_downloaded}"""
 
-rule grep_sort_experiment_list:
-    input:
-        annotation_data=ANNOTATION_DATA
-    output:
-        annotation_data_sortedk3=os.path.join(ENCODE2_DATA_DIR, "annotation_data_sortedk3.tsv"),
-    params: encode_json_data_dir=os.path.join(ENCODE2_DATA_DIR, "json")
-    threads: THREADS
-    output:
-        json_downloaded=os.path.join(ENCODE2_DATA_DIR, "json.downloaded"),
-    shell:
-        """grep encodeproject {input.annotation_data} |sort -u -k3,3 -o {output.annotation_data_sortedk3}"""
+#rule grep_sort_experiment_list:
+#    input:
+#        annotation_data=ANNOTATION_DATA
+#    output:
+#        annotation_data_sortedk3=os.path.join(ENCODE2_DATA_DIR, "annotation_data_sortedk3.tsv"),
+#    params: encode_json_data_dir=os.path.join(ENCODE2_DATA_DIR, "json")
+#    threads: THREADS
+#    output:
+#        json_downloaded=os.path.join(ENCODE2_DATA_DIR, "json.downloaded"),
+#    shell:
+#        """grep encodeproject {input.annotation_data} |sort -u -k3,3 -o {output.annotation_data_sortedk3}"""
 

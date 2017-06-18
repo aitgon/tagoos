@@ -21,6 +21,13 @@ The field "biosample" takes a normalized value representing the cell type or tis
 The field "biosamplegroup" takes a value from this table representing a tissue or organ for the given cell type or tissue such as "tcell" or brain.
 The field "moleculartarget" represent the molecular target of the experiment and takes values such as "h3k27ac", "dnaaseseq" or "gfp-zfp".
 
+General variable
+
+~~~
+export THREADS=16
+export QUEUE=batch
+~~~
+
 ## Encode2
 
 ~~~
@@ -28,8 +35,7 @@ export ENCODE2_URL="https://www.encodeproject.org/report.tsv?type=Experiment&rep
 export ENCODE2_EXPERIMENT_LIST=${TAGOOS}/data/encode2_data2.tsv
 export ANNOTATION_DATA=${TAGOOS}/data/annotation_data2.tsv
 export ENCODE2_DATA_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based/encode2
-export THREADS=8
-time snakemake -s ${TAGOOS}/snakefile/annotation/encode2.yml -p -j 16 -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $ENCODE2_DATA_DIR/stderr.log -o $ENCODE2_DATA_DIR/stdout.log" -d $ENCODE2_DATA_DIR -pn
+time snakemake -s ${TAGOOS}${TAGOOS}/snakefile/data_annotation/encode2.yml -p -j 16 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $ENCODE2_DATA_DIR/stderr.log -o $ENCODE2_DATA_DIR/stdout.log" -d $ENCODE2_DATA_DIR -pn
 ~~~
 
 ## GTEx
@@ -37,8 +43,7 @@ time snakemake -s ${TAGOOS}/snakefile/annotation/encode2.yml -p -j 16 -c "qsub -
 ~~~
 export ANNOTATION_DATA=${TAGOOS}/data/annotation_data2.tsv
 export GTEX_DATA_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based/gtex
-export THREADS=8
-time snakemake -s ${TAGOOS}/snakefile/annotation/gtex.yml -p -j 16 -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $GTEX_DATA_DIR/stderr.log -o $GTEX_DATA_DIR/stdout.log" -d $GTEX_DATA_DIR -pn
+time snakemake -s ${TAGOOS}${TAGOOS}/snakefile/data_annotation/gtex.yml -p -j 16 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $GTEX_DATA_DIR/stderr.log -o $GTEX_DATA_DIR/stdout.log" -d $GTEX_DATA_DIR -pn
 ~~~
 
 ## ReMap
@@ -46,8 +51,7 @@ time snakemake -s ${TAGOOS}/snakefile/annotation/gtex.yml -p -j 16 -c "qsub -X -
 ~~~
 export ANNOTATION_DATA=${TAGOOS}/data/annotation_data2.tsv
 export REMAP_DATA_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based/remap
-export THREADS=8
-time snakemake -s ${TAGOOS}/snakefile/annotation/remap.yml -p -j 16 -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $ROADMAP_DATA_DIR/stderr.log -o $REMAP_DATA_DIR/stdout.log" -d $REMAP_DATA_DIR -pn
+time snakemake -s ${TAGOOS}${TAGOOS}/snakefile/data_annotation/remap.yml -p -j 32 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $ROADMAP_DATA_DIR/stderr.log -o $REMAP_DATA_DIR/stdout.log" -d $REMAP_DATA_DIR -pn
 ~~~
 
 ## Roadmap
@@ -55,8 +59,7 @@ time snakemake -s ${TAGOOS}/snakefile/annotation/remap.yml -p -j 16 -c "qsub -X 
 ~~~
 export ANNOTATION_DATA=${TAGOOS}/data/annotation_data2.tsv
 export ROADMAP_DATA_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based/roadmap
-export THREADS=8
-time snakemake -s ${TAGOOS}/snakefile/annotation/roadmap.yml -p -j 16 -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $ROADMAP_DATA_DIR/stderr.log -o $ROADMAP_DATA_DIR/stdout.log" -d $ROADMAP_DATA_DIR -pn
+time snakemake -s ${TAGOOS}${TAGOOS}/snakefile/data_annotation/roadmap.yml -p -j 32 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $ROADMAP_DATA_DIR/stderr.log -o $ROADMAP_DATA_DIR/stdout.log" -d $ROADMAP_DATA_DIR -pn
 ~~~
 
 ## Young H3K27ac
@@ -64,30 +67,26 @@ time snakemake -s ${TAGOOS}/snakefile/annotation/roadmap.yml -p -j 16 -c "qsub -
 ~~~
 export ANNOTATION_DATA=${TAGOOS}/data/annotation_data2.tsv
 export YOUNGH3K27AC_DATA_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based/youngh3k27ac
-export THREADS=8
-time snakemake -s ${TAGOOS}/snakefile/annotation/youngh3k27ac.yml -p -j 16 -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $YOUNGH3K27AC_DATA_DIR/stderr.log -o $YOUNGH3K27AC_DATA_DIR/stdout.log" -d $YOUNGH3K27AC_DATA_DIR -pn
+time snakemake -s ${TAGOOS}${TAGOOS}/snakefile/data_annotation/youngh3k27ac.yml -p -j 32 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $YOUNGH3K27AC_DATA_DIR/stderr.log -o $YOUNGH3K27AC_DATA_DIR/stdout.log" -d $YOUNGH3K27AC_DATA_DIR -pn
 ~~~
 
 ## Merged all beds into a single one
 
 ~~~
 export ANNOTATION_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based
-export THREADS=8
-time snakemake -s ${TAGOOS}/snakefile/annotation/merge_annotations.yml -p -j 32 -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $ANNOTATION_DIR/stderr.log -o $ANNOTATION_DIR/stdout.log" -d $ANNOTATION_DIR -pn
+time snakemake -s ${TAGOOS}${TAGOOS}/snakefile/data_annotation/merge_annotations.yml -p -j 32 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $ANNOTATION_DIR/stderr.log -o $ANNOTATION_DIR/stdout.log" -d $ANNOTATION_DIR -pn
 ~~~
 
 # Split annotations by chromosoms
 
 ~~~
 export ANNOT_LABEL=mergedannot
-export ANNOTATION_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based
 #
-export ANNOT_1COL_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
-export ANNOT_1COL_DIR=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}
+export ANNOTATION_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
+export ANNOTATION_DIR=$(dirname ${ANNOTATION_BED})
 #
-export CHROM=$(seq 1 22)
-export THREADS=2
-time snakemake -s ${TAGOOS}/snakefile/annotation/split_annotation.yml -p -j 32 -c "qsub -X -V -q tagc -l nodes=1:ppn={threads} -e $ANNOT_1COL_DIR/stderr.log -o $ANNOT_1COL_DIR/stdout.log" -d $ANNOT_1COL_DIR -pn
+export CHROM="$(seq 1 22) X Y"
+time snakemake -s ${TAGOOS}${TAGOOS}/snakefile/data_annotation/split_annotation.yml -p -j 32 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $ANNOTATION_DIR/stderr.log -o $ANNOTATION_DIR/stdout.log" -d $ANNOTATION_DIR -pn
 ~~~
 
 

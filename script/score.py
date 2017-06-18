@@ -13,6 +13,7 @@ def main(argv):
     instance = os.path.join(os.path.dirname(annotation_libsvm), "instance.txt")
     instance = pandas.read_csv(instance, header=None)
     model = pickle.load(open(model_pkl, "rb"))
+    #import pdb; pdb.set_trace()
     xdm = xgboost.DMatrix(annotation_libsvm, feature_names=model.feature_names)
     #xdm = xgboost.DMatrix(annotation_libsvm)
     proba = model.predict(xdm)

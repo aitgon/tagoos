@@ -53,7 +53,7 @@ rule score:
 
 rule chrom_score_tsv:
     input:
-        libsvm = os.path.join(DBSNP_DIR, "chrom/{chr}", ANNOT_LABEL, "annotation.libsvm"),
+        libsvm = os.path.join(DBSNP_DIR, "{chr}", ANNOT_LABEL, "annotation.libsvm"),
         model_pkl = MODEL_PKL,
         script = os.path.join(SCRIPTDIR, "score.py"),
     output:

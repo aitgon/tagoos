@@ -9,7 +9,7 @@ rule sort_bed:
         bed=os.path.join(ROADMAP_DATA_DIR, "roadmap.bed"),
     threads: THREADS
     shell:
-        """sort -u -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
+        """sort -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
 
 rule join_bed_annotation:
     input:
@@ -27,7 +27,7 @@ rule sort_id_bed:
         id_bed_sortedk4=os.path.join(ROADMAP_DATA_DIR, "roadmap_id_sortedk4.bed"),
     threads: THREADS
     shell:
-        """sort -u --parallel {THREADS} -k4,4 {input.id_bed} -o {output.id_bed_sortedk4}"""
+        """sort --parallel {THREADS} -k4,4 {input.id_bed} -o {output.id_bed_sortedk4}"""
 
 rule gunzip_bed_gz:
     input:
@@ -56,5 +56,5 @@ rule grep_sort_experiment_list:
     output:
         annotation_data_sortedk3=os.path.join(ROADMAP_DATA_DIR, "annotation_data_sortedk3.tsv"),
     shell:
-        """grep roadmap {input.annotation_data} |sort -u -k3,3 -o {output.annotation_data_sortedk3}"""
+        """grep roadmap {input.annotation_data} |sort -k3,3 -o {output.annotation_data_sortedk3}"""
 
