@@ -1,24 +1,15 @@
-ANNOTATION_DATA=os.getenv('ANNOTATION_DATA')
+ANNOTATION_DIC=os.getenv('ANNOTATION_DIC')
 ROADMAP_DATA_DIR = os.getenv('ROADMAP_DATA_DIR')
 THREADS = int(os.getenv('THREADS'))
-
-rule sort_bed:
-    input:
-        bed_unsorted=os.path.join(ROADMAP_DATA_DIR, "roadmap_unsorted.bed"),
-    output:
-        bed=os.path.join(ROADMAP_DATA_DIR, "roadmap.bed"),
-    threads: THREADS
-    shell:
-        """sort -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
 
 rule join_bed_annotation:
     input:
         id_bed_sortedk4=os.path.join(ROADMAP_DATA_DIR, "roadmap_id_sortedk4.bed"),
-        annotation_data_sortedk3=os.path.join(ROADMAP_DATA_DIR, "annotation_data_sortedk3.tsv"),
+        annotation_dic=ANNOTATION_DIC,
     output:
-        bed_unsorted=os.path.join(ROADMAP_DATA_DIR, "roadmap_unsorted.bed"),
+        bed=os.path.join(ROADMAP_DATA_DIR, "roadmap.bed"),
     shell:
-        """join -1 4 -2 3 {input.id_bed_sortedk4} {input.annotation_data_sortedk3} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$8"."$7"-"$9"."$6}}' >{output.bed_unsorted}"""
+        """join -1 4 -2 3 {input.id_bed_sortedk4} {input.annotation_dic} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$7"."$8"."$6}}' >{output.bed}"""
 
 rule sort_id_bed:
     input:
@@ -28,6 +19,15 @@ rule sort_id_bed:
     threads: THREADS
     shell:
         """sort --parallel {THREADS} -k4,4 {input.id_bed} -o {output.id_bed_sortedk4}"""
+
+#rule id_bed_h19toGRCh38:
+#    input:
+#        bed=os.path.join(ROADMAP_DATA_DIR, "roadmap_id_hg19.bed"),
+#        hg19ToHg38_chain="/cobelix/gonzalez/Software/repositories/tagoos/data/hg19ToHg38.over.chain.gz"
+#    output:
+#        bed=os.path.join(ROADMAP_DATA_DIR, "roadmap_id.bed"),
+#    shell:
+#        """/cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/python /cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/CrossMap.py bed {input.hg19ToHg38_chain} {input.bed} {output.bed}"""
 
 rule gunzip_bed_gz:
     input:
@@ -41,20 +41,12 @@ rule gunzip_bed_gz:
 
 rule download_bed_gz:
     input:
-        annotation_data_sortedk3=os.path.join(ROADMAP_DATA_DIR, "annotation_data_sortedk3.tsv"),
+        annotation_dic=ANNOTATION_DIC,
     params: bed_gz_data_dir=os.path.join(ROADMAP_DATA_DIR, "bed_gz")
     threads: THREADS
     output:
         bed_gz_downloaded=os.path.join(ROADMAP_DATA_DIR, "bed_gz.downloaded"),
     shell:
-        """mkdir -p {params.bed_gz_data_dir}; cat /cobelix/gonzalez/data/2015_svmgwas/data/annotation_ngs_based/roadmap/annotation_data_sortedk3.tsv |cut -f1,3 |xargs -P{threads} -n2 sh -c 'wget "$0" -O {params.bed_gz_data_dir}/"$1".bed.gz';
+        """rm -rf {params.bed_gz_data_dir} && mkdir -p {params.bed_gz_data_dir}; cat {input.annotation_dic} |cut -f1,3 |xargs -P{threads} -n2 sh -c 'wget "$0" -O {params.bed_gz_data_dir}/"$1".bed.gz';
             touch {output.bed_gz_downloaded}"""
-
-rule grep_sort_experiment_list:
-    input:
-        annotation_data=ANNOTATION_DATA
-    output:
-        annotation_data_sortedk3=os.path.join(ROADMAP_DATA_DIR, "annotation_data_sortedk3.tsv"),
-    shell:
-        """grep roadmap {input.annotation_data} |sort -k3,3 -o {output.annotation_data_sortedk3}"""
 

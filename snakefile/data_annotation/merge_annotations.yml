@@ -1,38 +1,38 @@
-ANNOTATION_DIR=os.getenv('ANNOTATION_DIR')
+MERGED_DATA_DIR=os.getenv('MERGED_DATA_DIR')
 THREADS = int(os.getenv('THREADS'))
 HOME=os.getenv('HOME')
 
 rule all:
     input:
-        mergedannot_bed_f1_idx=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed_f1.idx"),
-        mergedannot_bed_f4_idx=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed_f4.idx"),
+        mergedannot_bed_f1_idx=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f1.idx"),
+        mergedannot_bed_f4_idx=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f4.idx"),
 
 rule annotation_bed_f1_idx:
     input:
-        mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed")
+        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
     output:
-        mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed_f1.idx")
+        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f1.idx")
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=1 {input.mergedannot}  > {output.mergedannot}"""
 
 rule annotation_bed_f4_idx:
     input:
-        mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed")
+        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
     output:
-        mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed_f4.idx")
+        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f4.idx")
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=4 {input.mergedannot}  > {output.mergedannot}"""
 
 rule cat_sort:
     input:
-        eenhancer=os.path.join(ANNOTATION_DIR, "eenhancer/eenhancer.bed"),
-        gtex=os.path.join(ANNOTATION_DIR, "gtex/gtex.bed"),
-        encode2=os.path.join(ANNOTATION_DIR, "encode2/encode2.bed"),
-        remap=os.path.join(ANNOTATION_DIR, "remap/remap.bed"),
-        roadmap=os.path.join(ANNOTATION_DIR, "roadmap/roadmap.bed"),
-        youngh3k27ac=os.path.join(ANNOTATION_DIR, "youngh3k27ac/youngh3k27ac.bed"),
+        eenhancer=os.path.join(MERGED_DATA_DIR, "../eenhancer/eenhancer.bed"),
+        gtex=os.path.join(MERGED_DATA_DIR, "../gtex/gtex.bed"),
+        encode2=os.path.join(MERGED_DATA_DIR, "../encode2/encode2.bed"),
+        remap=os.path.join(MERGED_DATA_DIR, "../remap/remap.bed"),
+        roadmap=os.path.join(MERGED_DATA_DIR, "../roadmap/roadmap.bed"),
+        youngh3k27ac=os.path.join(MERGED_DATA_DIR, "../youngh3k27ac/youngh3k27ac.bed"),
     output:
-        mergedannot=os.path.join(ANNOTATION_DIR, "mergedannot/mergedannot.bed")
+        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
     threads: THREADS
     shell:
         """sort -k1,1 -k2,2n --parallel {threads} {input} |grep -P "^chr[XY1-9][0-9]?\t" >{output.mergedannot}"""

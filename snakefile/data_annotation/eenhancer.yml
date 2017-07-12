@@ -1,0 +1,47 @@
+ANNOTATION_DIC=os.getenv('ANNOTATION_DIC')
+EENHANCER_DATA_DIR = os.getenv('EENHANCER_DATA_DIR')
+EENHANCER_URL = os.getenv('EENHANCER_URL')
+THREADS = int(os.getenv('THREADS'))
+
+#rule id_bed_h19toGRCh38:
+#    input:
+#        bed=os.path.join(EENHANCER_DATA_DIR, "hg19", "eenhancer_id.bed"),
+#        hg19ToHg38_chain="/cobelix/gonzalez/Software/repositories/tagoos/data/hg19ToHg38.over.chain.gz"
+#    output:
+#        bed=os.path.join(EENHANCER_DATA_DIR, "eenhancer.bed"),
+#    shell:
+#        """/cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/python /cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/CrossMap.py bed {input.hg19ToHg38_chain} {input.bed} {output.bed}"""
+
+rule proc:
+    input:
+        touched=os.path.join(EENHANCER_DATA_DIR, "download.touched"),
+    output:
+        bed=os.path.join(EENHANCER_DATA_DIR, "eenhancer.bed"),
+    params:
+        raw=os.path.join(EENHANCER_DATA_DIR, "raw"),
+    shell:
+        """ls {params.raw}/* |while read FNAME; do export FN=$(basename $FNAME); export FN2=${{FN%.bed}}; export FN3=${{FN2%_differentially_expressed_enhancers}}; awk -v FN3=$FN3 'BEGIN{{OFS="\t";FS="\t"}} NR>1{{print $1,$2,$3,"eEnh."FN3".eEnh"}}' $FNAME; done >{output.bed};
+           sed -i.bak -r 's/CL:[0-9]+_//' {output.bed};
+           sed -i.bak -r 's/UBERON:[0-9]+_//' {output.bed};"""
+
+rule download:
+    input:
+        html=os.path.join(EENHANCER_DATA_DIR, "index.html"),
+    output:
+        touched=os.path.join(EENHANCER_DATA_DIR, "download.touched"),
+    params:
+        pattern="http://enhancer.binf.ku.dk/presets/[A-Za-z0-9:_]+.bed",
+        raw=os.path.join(EENHANCER_DATA_DIR, "raw"),
+    threads: THREADS
+    shell:
+        """rm -f {params.raw}/*; egrep -o {params.pattern} {input.html} |xargs -I% -n 1 -P {threads} wget % --directory-prefix={params.raw};
+        touch {output.touched}"""
+    
+
+rule download_index:
+    params: data_dir=EENHANCER_DATA_DIR
+    output:
+        html=os.path.join(EENHANCER_DATA_DIR, "index.html"),
+    shell:
+        """rm -f {output.html}; wget {EENHANCER_URL} --directory-prefix={params.data_dir};"""
+
