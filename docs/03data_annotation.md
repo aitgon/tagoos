@@ -106,7 +106,7 @@ export ANNOT_LABEL=mergedannot
 export ANNOTATION_BED=$PWD/out/data/annotation/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
 export ANNOTATION_DIR=$(dirname ${ANNOTATION_BED})
 #
-export CHROM="$(seq 1 22) X Y"
+export CHROM="$(seq 1 22) X"
 time snakemake -s ${TAGOOS}/snakefile/data_annotation/split_annotation.yml -p -j 32 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $ANNOTATION_DIR/stderr.log -o $ANNOTATION_DIR/stdout.log" -d $ANNOTATION_DIR -pn
 ~~~
 

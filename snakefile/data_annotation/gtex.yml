@@ -2,12 +2,20 @@ ANNOTATION_DIC=os.getenv('ANNOTATION_DIC')
 GTEX_DATA_DIR = os.getenv('GTEX_DATA_DIR')
 THREADS = int(os.getenv('THREADS'))
 
+rule proc1:
+    input:
+        bed=os.path.join(GTEX_DATA_DIR, "proc1.bed"),
+    output:
+        bed=os.path.join(GTEX_DATA_DIR, "gtex.bed"),
+    shell:
+        """cat {input.bed} |tr -d '\r' |awk 'NF==4{{print}}{{}}' >{output.bed};"""
+
 rule join_bed_annotation:
     input:
         id_bed=os.path.join(GTEX_DATA_DIR, "gtex_id_sortedk4.bed"),
         annotation_dic=ANNOTATION_DIC,
     output:
-        bed=os.path.join(GTEX_DATA_DIR, "gtex.bed"),
+        bed=os.path.join(GTEX_DATA_DIR, "proc1.bed"),
     shell:
         """join -1 4 -2 1 {input.id_bed} {input.annotation_dic} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$7"."$6"."$5}}' >{output.bed}"""
 

@@ -4,8 +4,18 @@ HOME=os.getenv('HOME')
 
 rule all:
     input:
+        variable_txt = os.path.join(MERGED_DATA_DIR, "variable.txt"),
         mergedannot_bed_f1_idx=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f1.idx"),
         mergedannot_bed_f4_idx=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f4.idx"),
+
+rule variable_txt:
+    input:
+        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
+    output:
+        variable_txt = os.path.join(MERGED_DATA_DIR, "variable.txt")
+    threads: THREADS
+    shell:
+        """cut -f4,4 {input.mergedannot} | sort --parallel {threads} -u -o {output.variable_txt}"""
 
 rule annotation_bed_f1_idx:
     input:

@@ -1,0 +1,73 @@
+GRASP_DATA_DIR=os.getenv('GRASP_DATA_DIR')
+HOME = os.getenv('HOME')
+THREADS = int(os.getenv('THREADS'))
+
+rule tobed:
+    input:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/grasp.tsv")
+    output:
+        bed=os.path.join(GRASP_DATA_DIR, "proc/grasp.bed")
+    shell:
+        """awk 'BEGIN{{OFS="\t"}}{{print "chr"$2,$3-1,$3,$1,$5,$4}}' {input.tsv} |sort -u -k1,1 -k2,2n >{output.bed}"""
+
+# keep best p-value
+rule proc5:
+    input:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_4.tsv")
+    output:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/grasp.tsv")
+    shell:
+        """python -c 'import pandas; import numpy; df=pandas.read_csv("{input.tsv}", sep="\t", encoding = "ISO-8859-1", header=None, dtype={{1:numpy.str, 3:numpy.float64}}); df.sort_values(by=[3], ascending=True, inplace=True); df=df.ix[df[3]!=0]; df.drop_duplicates(subset=[0], keep="first", inplace=True); df.to_csv("{output.tsv}", sep="\t", header=None, index=False)'"""
+
+# remove pvalues prefixed with _
+rule proc4:
+    input:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_3.tsv")
+    output:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_4.tsv")
+    shell:
+        """awk -F"\t"  '$4!~/_/ {{print}}' {input.tsv} > {output.tsv}"""
+
+# Remove empty p-values
+rule proc3:
+    input:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_2.tsv")
+    output:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_3.tsv")
+    shell:
+        """awk 'BEGIN {{FS="\t"}} $2!="" {{print}}' {input.tsv} |awk -F'\t' 'NF==4 {{print}}' >{output.tsv}"""
+
+# Clean up special characters
+rule proc2:
+    input:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_1.tsv")
+    output:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_2.tsv")
+    shell:
+        """sed "s/[ ]/_/g" {input.tsv} >{output.tsv}"""
+
+# Filter Eur population
+rule proc1:
+    input:
+        tsv=os.path.join(GRASP_DATA_DIR, "raw/GraspFullDataset2.tsv")
+    output:
+        tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_1.tsv")
+    shell:
+        """awk -F"\t"  '$24=="European" {{print "rs"$5"\t"$6"\t"$7"\t"$11}}' {input.tsv} > {output.tsv}"""
+
+rule unzip:
+    input:
+        zip=os.path.join(GRASP_DATA_DIR, "raw/GraspFullDataset2.zip")
+    output:
+        tsv=os.path.join(GRASP_DATA_DIR, "raw/GraspFullDataset2.tsv")
+    shell:
+        """unzip -p {input.zip} GRASP2fullDataset >{output.tsv}"""
+
+rule download:
+    output:
+        zip=os.path.join(GRASP_DATA_DIR, "raw/GraspFullDataset2.zip")
+    params:
+        url="https://s3.amazonaws.com/NHLBI_Public/GRASP/GraspFullDataset2.zip"
+    shell:
+        """wget {params.url} -O {output.zip}"""
+

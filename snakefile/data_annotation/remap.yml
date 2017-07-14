@@ -3,12 +3,20 @@ REMAP_DATA_DIR = os.getenv('REMAP_DATA_DIR')
 REMAP_URL = os.getenv('REMAP_URL')
 THREADS = int(os.getenv('THREADS'))
 
+rule proc1:
+    input:
+        bed=os.path.join(REMAP_DATA_DIR, "proc1.bed"),
+    output:
+        bed=os.path.join(REMAP_DATA_DIR, "remap.bed"),
+    shell:
+        """cat {input.bed} |tr -d '\r' |awk 'NF==4{{print}}{{}}' >{output.bed};"""
+
 rule join_bed_annotation:
     input:
         bed_sortedk4=os.path.join(REMAP_DATA_DIR, "filPeaks_all_sortedk4.bed"),
         annotation_data=ANNOTATION_DIC,
     output:
-        bed=os.path.join(REMAP_DATA_DIR, "remap.bed"),
+        bed=os.path.join(REMAP_DATA_DIR, "proc1.bed"),
     shell:
         """join -1 4 -2 1 {input.bed_sortedk4} {input.annotation_data} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$7"."$8"."$6"ReMap"}}' >{output.bed}"""
 

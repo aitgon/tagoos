@@ -3,20 +3,19 @@ EENHANCER_DATA_DIR = os.getenv('EENHANCER_DATA_DIR')
 EENHANCER_URL = os.getenv('EENHANCER_URL')
 THREADS = int(os.getenv('THREADS'))
 
-#rule id_bed_h19toGRCh38:
-#    input:
-#        bed=os.path.join(EENHANCER_DATA_DIR, "hg19", "eenhancer_id.bed"),
-#        hg19ToHg38_chain="/cobelix/gonzalez/Software/repositories/tagoos/data/hg19ToHg38.over.chain.gz"
-#    output:
-#        bed=os.path.join(EENHANCER_DATA_DIR, "eenhancer.bed"),
-#    shell:
-#        """/cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/python /cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/CrossMap.py bed {input.hg19ToHg38_chain} {input.bed} {output.bed}"""
+rule proc1:
+    input:
+        bed=os.path.join(EENHANCER_DATA_DIR, "proc1.bed"),
+    output:
+        bed=os.path.join(EENHANCER_DATA_DIR, "eenhancer.bed"),
+    shell:
+        """cat {input.bed} |tr -d '\r' |awk 'NF==4{{print}}{{}}' >{output.bed};"""
 
 rule proc:
     input:
         touched=os.path.join(EENHANCER_DATA_DIR, "download.touched"),
     output:
-        bed=os.path.join(EENHANCER_DATA_DIR, "eenhancer.bed"),
+        bed=os.path.join(EENHANCER_DATA_DIR, "proc1.bed"),
     params:
         raw=os.path.join(EENHANCER_DATA_DIR, "raw"),
     shell:
