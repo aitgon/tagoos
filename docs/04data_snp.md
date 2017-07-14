@@ -124,7 +124,7 @@ time snakemake -s ${TAGOOS}/snakefile/data_snp/dbsnp_region.yml -j 48 -c "qsub -
 Annotate dbsnp variants
 
 ~~~
-export CHROM="$(seq 1 22) X"
+export CHROM="$(seq 1 22)"
 export SNP_OUTDIR=$PWD/out/data/snp/dbsnp/${REGION}
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
 time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -p -j $SNAKEMAKE_J -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $SNP_OUTDIR/stderr.log -o $SNP_OUTDIR/stdout.log" -d $SNP_OUTDIR -pn
