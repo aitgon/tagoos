@@ -3,7 +3,6 @@
 # http://fastml.com/processing-large-files-line-by-line/
 import csv
 import sys
-
 tsv_path=sys.argv[1] #"h.tsv"
 variable_path=sys.argv[2] #"variable.txt"
 instance_path=sys.argv[3] # "instance.txt"
@@ -13,10 +12,10 @@ libsvm_path=sys.argv[4] # "annot.libsvm"
 label = "-1"
 score = "1"
 
-reader = csv.reader(open(tsv_path, 'r'), delimiter="\t")
+reader = csv.reader(open(tsv_path, 'r', encoding='utf-8'), delimiter="\t")
 variable2i={}
-for i,variable in enumerate(csv.reader(open(variable_path, 'r'))):
-    print(i,variable)
+for i,variable in enumerate(csv.reader(open(variable_path, 'r', encoding='utf-8'))):
+    #print(i,variable)
     variable2i[variable[0]]=i+1
 last_variable_index=max(variable2i.values()) # needs for bug in xgboost
 
@@ -60,7 +59,7 @@ with open(instance_path, 'w') as instance_fout, open(libsvm_path, 'w') as libsvm
             try:
                 libsvm_list.append((variable2i[variable], score)) # new tuple to store variable:scores indices
             except KeyError:
-                raise("dfqsdfq")
+                raise("KeyErro")
             if variable2i[variable] == last_variable_index: variable_last_index_visited=True
         #import pdb; pdb.set_trace()
         previous_instance = instance

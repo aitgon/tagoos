@@ -42,8 +42,9 @@ rule ld:
         ld = LD
     output:
         plink_ld_raw = os.path.join(OUTDIR, "ld%s/{chr}/chr{chr}_raw.ld"%LD_SLUG),
+    threads: THREADS
     shell:
-        """plink --bfile {params.plink_bed_prefix} --ld-snp-list {input.chrom_rsid} --ld-window-kb 1000 --ld-window 1000000 --ld-window-r2 {params.ld} --r2 --out {params.plink_ld_prefix}"""
+        """plink --threads {threads} --bfile {params.plink_bed_prefix} --ld-snp-list {input.chrom_rsid} --ld-window-kb 1000 --ld-window 1000000 --ld-window-r2 {params.ld} --r2 --out {params.plink_ld_prefix}"""
 
 rule index3:
     input:

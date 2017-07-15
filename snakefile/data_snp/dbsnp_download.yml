@@ -1,5 +1,7 @@
 CHROM=os.getenv('CHROM').split()
 DBSNP_DIR=os.getenv('DBSNP_DIR')
+REFGENE = os.getenv('REFGENE')
+URL_DBSNP = os.getenv('URL_DBSNP')
 HOME = os.getenv('HOME')
 THREADS = int(os.getenv('THREADS'))
 
@@ -17,27 +19,10 @@ rule cat_rsid2gene:
     shell:
         """sort -u --parallel {threads} {input.rsid2gene_chr} -o {output.rsid2gene}"""
 
-#rule bed_index:
-#    input:
-#        bed = os.path.join(DBSNP_OUT_DIR, "{chr}/chr{chr}.bed"),
-#    output:
-#        bed_idx=os.path.join(DBSNP_OUT_DIR, "{chr}/chr{chr}.bed.f4.idx")
-#    shell:
-#        """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=4 {input.bed} >{output.bed_idx}"""
-
-#rule region_dbsnp:
-#    input:
-#        bed = os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.sorted.bed"),
-#        genomic_region_bed = GENOMIC_REGION_BED,
-#    output:
-#        bed = os.path.join(DBSNP_OUT_DIR, "{chr}/chr{chr}.bed"),
-#    shell:
-#        """bedtools intersect -sorted -a {input.bed} -b {input.genomic_region_bed} | sort -u -k1,1 -k2,2n >{output.bed}"""
-
 rule rsid2gene:
     input:
         bed=os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.sorted.bed"),
-        refgene = os.path.join(HOME, "data/2015_svmgwas/data/var/hg19.refGene.bed"),
+        refgene = REFGENE,
     output:
         rsid2gene_tsv=os.path.join(DBSNP_DIR, "raw_bed/{chr}/rsid2gene_chr{chr}.tsv"),
     shell:
@@ -54,17 +39,17 @@ rule sort_bed:
 
 rule gunzip_bed:
     input:
-        bed_gz=os.path.join(DBSNP_DIR, "raw/bed_chr_{chr}.bed.gz")
+        bed_gz=os.path.join(DBSNP_DIR, "raw/bed_chr{chr}.bed.gz")
     output:
         bed=os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.bed")
     shell:
         """gunzip {input.bed_gz} -c |cut -f1,2,3,4 |awk -F"\t" '$1 ~ /^chr[XY0-9]+$/ && $2 ~ /^[[:digit:]]+$/ && $3 ~ /^[[:digit:]]+$/' > {output.bed}"""
 
-rule download_bed:
+rule download_dbsnp:
     output:
-        bed_gz=os.path.join(DBSNP_DIR, "raw/bed_chr_{chr}.bed.gz")
+        bed_gz=os.path.join(DBSNP_DIR, "raw/bed_chr{chr}.bed.gz")
     params:
-        url="ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b149_GRCh37p13/BED/bed_chr_{chr}.bed.gz"
+        url=URL_DBSNP
     shell:
         """wget {params.url} -O {output.bed_gz}"""
 

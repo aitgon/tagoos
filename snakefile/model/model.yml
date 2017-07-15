@@ -8,9 +8,7 @@ TAG_POS_DIR = os.getenv('TAG_POS_DIR')
 THREADS = int(os.getenv('THREADS'))
 TAG_NEG_DIR = os.getenv('TAG_NEG_DIR')
 SCRIPT_DIR = os.path.join(os.getenv('TAGOOS'), "script")
-#
-from os.path import dirname
-ANNOTATION_DIR = dirname(ANNOTATION_BED)
+VARIABLE_TXT = os.getenv('VARIABLE_TXT')
 
 rule all:
     input:
@@ -81,7 +79,7 @@ rule rsid2chrom:
 rule create_model:
     input:
         libsvm = os.path.join(OUTDIR, "annotation.libsvm"),
-        variable_txt = os.path.join(ANNOTATION_DIR, "variable.txt"),
+        variable_txt = VARIABLE_TXT,
         script = os.path.join(SCRIPT_DIR, "create_model.py")
     output:
         model_pkl = os.path.join(OUTDIR, "model.pkl"),

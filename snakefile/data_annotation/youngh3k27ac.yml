@@ -3,12 +3,20 @@ YOUNGH3K27AC_DATA_DIR = os.getenv('YOUNGH3K27AC_DATA_DIR')
 YOUNGH3K27AC_URL = os.getenv('YOUNGH3K27AC_URL')
 THREADS = int(os.getenv('THREADS'))
 
+rule proc1:
+    input:
+        bed=os.path.join(YOUNGH3K27AC_DATA_DIR, "proc1.bed"),
+    output:
+        bed=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac.bed"),
+    shell:
+        """cat {input.bed} |tr -d '\r' |awk 'NF==4{{print}}{{}}' >{output.bed};"""
+
 rule join_bed_annotation:
     input:
         bed_sortedk4=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac_id_sortedk4.bed"),
         annotation_dic=ANNOTATION_DIC
     output:
-        bed=os.path.join(YOUNGH3K27AC_DATA_DIR, "youngh3k27ac.bed"),
+        bed=os.path.join(YOUNGH3K27AC_DATA_DIR, "proc1.bed"),
     shell:
         """join -1 4 -2 3 {input.bed_sortedk4} {input.annotation_dic} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$7"."$1"."$6}}' >{output.bed}"""
 

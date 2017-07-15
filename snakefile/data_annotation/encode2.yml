@@ -5,12 +5,22 @@ HOME = os.getenv('HOME')
 SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
 THREADS = int(os.getenv('THREADS'))
 
+rule proc1:
+    input:
+        bed=os.path.join(ENCODE2_DATA_DIR, "proc1.bed"),
+    output:
+        bed=os.path.join(ENCODE2_DATA_DIR, "encode2.bed"),
+    shell:
+        """cat {input.bed} |tr -d '\r' |awk 'NF==4{{print}}{{}}' >{output.bed}"""
+
+#"""df qsfqqs qfssfq sdf qscat {input.bed} |tr -d '\r' |awk 'NF==4{{print}}{{}}' >{output.bed};"""
+
 rule join_bed_annotation:
     input:
         bed=os.path.join(ENCODE2_DATA_DIR, "encode2_id_sortedk4.bed"),
         proc2=os.path.join(ENCODE2_DATA_DIR, "proc2.tsv"),
     output:
-        bed=os.path.join(ENCODE2_DATA_DIR, "encode2.bed"),
+        bed=os.path.join(ENCODE2_DATA_DIR, "proc1.bed"),
     shell:
         """join -1 4 -2 2 {input.bed} {input.proc2} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$8"."$7"."$6}}' >{output.bed}"""
 
@@ -112,6 +122,6 @@ rule grep_sort_experiment_list:
         proc1=os.path.join(ENCODE2_DATA_DIR, "proc1.tsv"),
         proc2=os.path.join(ENCODE2_DATA_DIR, "proc2.tsv"),
     shell:
-        """awk 'BEGIN{{FS="\t";OFS="\t"}}{{print "https://www.encodeproject.org/search/?type=file&dataset="$1"&format=json&frame=object&limit=all",$2,"encode2",tolower($7),tolower($5)}}' {input.experiment_list} >{output.proc1};
+        """awk 'BEGIN{{FS="\t";OFS="\t"}}{{if($5!="") {{ print "https://www.encodeproject.org/search/?type=file&dataset="$1"&format=json&frame=object&limit=all",$2,"encode2",tolower($7),tolower($5) }} else {{ print "https://www.encodeproject.org/search/?type=file&dataset="$1"&format=json&frame=object&limit=all",$2,"encode2",tolower($7),tolower($4) }} }}' {input.experiment_list} >{output.proc1};
             cat {output.proc1} |tr -d " " |sed 's/-//g' |sed 's/(/_/g' |sed 's/)/_/g' |sed 's/,/_/g' |sort -k2,2 >{output.proc2}"""
 
