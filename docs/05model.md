@@ -90,7 +90,7 @@ Score DBSNP
 
 ~~~
 export THREADS=16
-export CHROM="$(seq 22) X"
+export CHROM="$(seq 22)"
 #export CHROM=$(cat $PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1/CV/selected_chroms.txt)
 export MODEL_PKL=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}/model.pkl
 #export ANNOTATION_DIR=$PWD/out/data/annotation/${ANNOT_LABEL}
