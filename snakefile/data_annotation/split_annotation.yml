@@ -27,5 +27,5 @@ rule grep:
     output:
         annot_chrom_bed = os.path.join(ANNOTATION_DIR, "chrom/{chr}/%s_nonsorted.bed"%ANNOT_LABEL)
     shell:
-        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.mergedannot_bed_f1_idx} {input.annotation_bed} {params.chr} |tr -d '\r' > {output.annot_chrom_bed}"""
+        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.mergedannot_bed_f1_idx} {input.annotation_bed} {params.chr} |tr -d '\r' |tr '/' '_' > {output.annot_chrom_bed}"""
 

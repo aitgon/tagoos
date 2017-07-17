@@ -11,7 +11,7 @@ rule proc1:
     output:
         bed=os.path.join(ENCODE2_DATA_DIR, "encode2.bed"),
     shell:
-        """cat {input.bed} |tr -d '\r' |awk 'NF==4{{print}}{{}}' >{output.bed}"""
+        """cat {input.bed} |awk 'NF==4{{print}}{{}}' >{output.bed}"""
 
 #"""df qsfqqs qfssfq sdf qscat {input.bed} |tr -d '\r' |awk 'NF==4{{print}}{{}}' >{output.bed};"""
 

@@ -45,5 +45,5 @@ rule cat_sort:
         mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
     threads: THREADS
     shell:
-        """sort -k1,1 -k2,2n --parallel {threads} {input} |grep -P "^chr[XY1-9][0-9]?\t" >{output.mergedannot}"""
+        """sort -k1,1 -k2,2n --parallel {threads} {input} |grep -P "^chr[XY1-9][0-9]?\t" |tr -d '\r' |tr '/' '_' >{output.mergedannot}"""
 
