@@ -58,13 +58,13 @@ export TAG_DIR=$TAG_POS_DIR
 export LABEL=1
 export TAG_RSID=$TAG_POS_RSID
 #
-time snakemake -s   ${TAGOOS}/snakefile/model/rsid2chrom.yml -p -j 1 -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR -p
+time snakemake -s   ${TAGOOS}/snakefile/model/rsid2chrom.yml -p -j 1 -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads}:walltime=48:00:00 -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR -p
 ~~~
 
 POSITIVE 
 
 ~~~
-time snakemake -s ${TAGOOS}/snakefile/model/tag.yml -p -j 32 -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR --latency-wait 60 -pn
+time snakemake -s ${TAGOOS}/snakefile/model/tag.yml -p -j 32 -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads}:walltime=48:00:00 -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR --latency-wait 60 -pn
 ~~~
 
 NEGATIVE
@@ -74,7 +74,7 @@ export TAG_DIR=$TAG_NEG_DIR
 export LABEL=-1
 export TAG_RSID=$TAG_NEG_RSID
 #
-time snakemake -s ${TAGOOS}/snakefile/model/tag.yml -p -j 32 -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR --latency-wait 60 -pn
+time snakemake -s ${TAGOOS}/snakefile/model/tag.yml -p -j 32 -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads}:walltime=48:00:00 -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR --latency-wait 60 -pn
 ~~~
 
 MODEL
@@ -83,7 +83,7 @@ MODEL
 export VARIABLE_TXT=$PWD/out/data/annotation/${ANNOT_LABEL}/variable.txt
 export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}
 #
-time snakemake -s ${TAGOOS}/snakefile/model/model.yml -p -j 32 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
+time snakemake -s ${TAGOOS}/snakefile/model/model.yml -p -j 32 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads}:walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~
 
 SELECT FEATURES FROM ANNOTATION BED
@@ -94,7 +94,7 @@ export FEATURE_IMPORTANCE_TSV=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGIO
 export ANNOTATION_BED_IN=$PWD/out/data/annotation/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
 export ANNOTATION_BED_OUT=$OUTDIR/${ANNOT_LABEL}.bed
 #
-time snakemake -s ${TAGOOS}/snakefile/model/select_features.yml -p -j 32 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
+time snakemake -s ${TAGOOS}/snakefile/model/select_features.yml -p -j 32 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads}:walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~
 
 SPLIT ANNOTATION BED WITH SELECTED FEATURES
@@ -106,7 +106,7 @@ export ANNOTATION_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANN
 export ANNOTATION_DIR=$(dirname ${ANNOTATION_BED})
 #
 export CHROM="$(seq 1 22) X"
-time snakemake -s ${TAGOOS}/snakefile/data_annotation/split_annotation.yml -p -j 32 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $ANNOTATION_DIR/stderr.log -o $ANNOTATION_DIR/stdout.log" -d $ANNOTATION_DIR -pn
+time snakemake -s ${TAGOOS}/snakefile/data_annotation/split_annotation.yml -p -j 32 -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads}:walltime=48:00:00 -e $ANNOTATION_DIR/stderr.log -o $ANNOTATION_DIR/stdout.log" -d $ANNOTATION_DIR -pn
 ~~~
 
 ANNOTATE DBSNP VARIANTS
@@ -122,7 +122,7 @@ export SNP_DIR_OUT=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_
 export VARIABLE_TXT=/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/data/annotation/mergedannot/variable.txt
 #
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
-time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -p -j $SNAKEMAKE_J -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $SNP_DIR_OUT/stderr.log -o $SNP_DIR_OUT/stdout.log" -d $SNP_DIR_OUT -pn
+time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -p -j $SNAKEMAKE_J -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads}:walltime=48:00:00 -e $SNP_DIR_OUT/stderr.log -o $SNP_DIR_OUT/stdout.log" -d $SNP_DIR_OUT -pn
 ~~~
 
 SCORE DBSNP VARIANTS
@@ -138,6 +138,6 @@ export DBSNP_DIR=/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/1
 export SCRIPT_DIR=${TAGOOS}/script
 export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_dbsnp
 
-time snakemake -s ${TAGOOS}/snakefile/model/score.yml -j 32 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
+time snakemake -s ${TAGOOS}/snakefile/model/score.yml -j 32 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads}:walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~
 
