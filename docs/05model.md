@@ -12,7 +12,7 @@ In this example we create a model for
 
 Region variables
 
-$REGION \in {'intronic', 'enhancer'}$
+$REGION \in {'intronic', 'intragenic'}$
 
 ~~~
 export REGION=intronic # default intronic
@@ -112,7 +112,7 @@ time snakemake -s ${TAGOOS}/snakefile/data_annotation/split_annotation.yml -p -j
 ANNOTATE DBSNP VARIANTS
 
 ~~~
-export CHROM="$(seq 1 22) X"
+export CHROM="$(seq 1 22)"
 #
 export ANNOTATION_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_data/annotation/${ANNOT_LABEL}.bed
 #
@@ -122,7 +122,7 @@ export SNP_DIR_OUT=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_
 export VARIABLE_TXT=/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/data/annotation/mergedannot/variable.txt
 #
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
-time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -p -j $SNAKEMAKE_J -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $SNP_OUTDIR/stderr.log -o $SNP_OUTDIR/stdout.log" -d $SNP_OUTDIR -pn
+time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -p -j $SNAKEMAKE_J -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads} -e $SNP_DIR_OUT/stderr.log -o $SNP_DIR_OUT/stdout.log" -d $SNP_DIR_OUT -pn
 ~~~
 
 SCORE DBSNP VARIANTS

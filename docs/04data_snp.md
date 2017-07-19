@@ -8,8 +8,8 @@ export GENOMIC_REGION_BED=$HOME/data/2015_svmgwas/analysis/170412_genome_regions
 ~~~
 
 ~~~
-export REGION=enhancer
-export GENOMIC_REGION_BED=$HOME/data/2015_svmgwas/analysis/170412_genome_regions/hg19_enhancer.bed
+export REGION=intragenic
+export GENOMIC_REGION_BED=$HOME/data/2015_svmgwas/analysis/170412_genome_regions/hg19_intragenic.bed
 ~~~
 
 Data folders
