@@ -1,0 +1,43 @@
+FEATURE_IMPORTANCE_TSV=os.getenv('FEATURE_IMPORTANCE_TSV')
+HOME=os.getenv('HOME')
+ANNOTATION_BED_IN=os.getenv('ANNOTATION_BED_IN')
+ANNOTATION_BED_OUT=os.getenv('ANNOTATION_BED_OUT')
+ANNOT_LABEL=os.getenv('ANNOT_LABEL')
+OUTDIR=os.getenv('OUTDIR')
+THREADS=int(os.getenv('THREADS'))
+
+rule build_index:
+    input:
+        bed = ANNOTATION_BED_OUT,
+    output:
+        bed_f1_idx = "%s_f1.idx"%ANNOTATION_BED_OUT,
+    shell:
+        """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=1 {input.bed} >{output.bed_f1_idx}"""
+
+rule sort_annotation:
+    input:
+        bed = os.path.join(OUTDIR, "%s_nonsorted.bed"%ANNOT_LABEL),
+    output:
+        bed = ANNOTATION_BED_OUT,
+    threads: THREADS
+    shell:
+        """sort --parallel {threads} -k1,1 -k2,2n {input.bed} -o {output.bed}"""
+
+rule get_record:
+    input:
+        feature_selected_txt = os.path.join(OUTDIR, "feature_selected.txt"),
+        in_annotation_bed_f4_idx = "%s_f4.idx"%ANNOTATION_BED_IN,
+        in_annotation_bed = ANNOTATION_BED_IN,
+    output:
+        bed = os.path.join(OUTDIR, "%s_nonsorted.bed"%ANNOT_LABEL),
+    shell:
+        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.in_annotation_bed_f4_idx} {input.in_annotation_bed} -f {input.feature_selected_txt} > {output.bed}"""
+
+rule cut:
+    input:
+        feature_importance_tsv = FEATURE_IMPORTANCE_TSV
+    output:
+        feature_select_txt = os.path.join(OUTDIR, "feature_selected.txt")
+    shell:
+        """cut -f 1 {input.feature_importance_tsv} >{output.feature_select_txt}"""
+
