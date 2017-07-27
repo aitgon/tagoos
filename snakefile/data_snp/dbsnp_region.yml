@@ -11,6 +11,7 @@ rule all:
     input:
         expand(os.path.join(DBSNP_OUT_DIR, "{chr}/chr{chr}.bed.f4.idx"), chr=CHROM),
         os.path.join(DBSNP_DIR, "rsid2gene.tsv"),
+        bed = os.path.join(DBSNP_OUT_DIR, "dbsnp.bed"),
 
 #rule cat_rsid2gene:
 #    input:
@@ -29,6 +30,15 @@ rule bed_index:
     shell:
         """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=4 {input.bed} >{output.bed_idx}"""
 
+rule merged_region_dbsnp:
+    input:
+        bed = expand(os.path.join(DBSNP_OUT_DIR, "{chr}/chr{chr}.bed"), chr=CHROM),
+    output:
+        bed = os.path.join(DBSNP_OUT_DIR, "dbsnp.bed"),
+    threads: THREADS
+    shell:
+        """sort --parallel {threads} -k1,1 -k2,2n {input.bed} -o {output.bed}"""
+
 rule region_dbsnp:
     input:
         bed = os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.sorted.bed"),
@@ -36,7 +46,7 @@ rule region_dbsnp:
     output:
         bed = os.path.join(DBSNP_OUT_DIR, "{chr}/chr{chr}.bed"),
     shell:
-        """bedtools intersect -sorted -a {input.bed} -b {input.genomic_region_bed} | sort -u -k1,1 -k2,2n >{output.bed}"""
+        """bedtools intersect -sorted -a {input.bed} -b {input.genomic_region_bed} | sort -u -k1,1 -k2,2n -k3,3n -k4,4 >{output.bed}"""
 
 #rule rsid2gene:
 #    input:

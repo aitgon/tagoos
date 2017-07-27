@@ -12,10 +12,10 @@ In this example we create a model for
 
 Region variables
 
-$REGION \in {'intronic', 'intragenic'}$
+$REGION \in {'intronic', 'intergenic'}$
 
 ~~~
-export REGION=intragenic # default intronic
+export REGION=intergenic # default intronic
 export CHROM="$(seq 22)"
 ~~~
 

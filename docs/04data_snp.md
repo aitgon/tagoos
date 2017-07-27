@@ -54,7 +54,7 @@ time snakemake -s ${TAGOOS}/snakefile/data_snp/grasp_region.yml -p -j 16 --keep-
 dbSNP (Region-independent)
 
 ~~~
-export CHROM="$(seq 1 22) X"
+export CHROM="$(seq 1 22)"
 export URL_DBSNP=ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b150_GRCh37p13/BED/bed_chr_{chr}.bed.gz
 
 time snakemake -s ${TAGOOS}/snakefile/data_snp/dbsnp_download.yml -j 48 --keep-going --rerun-incomplete -c "qsub -X -V -d $PWD -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $DBSNP_DIR/stderr.log -o $DBSNP_DIR/stdout.log" -d $DBSNP_DIR -pn
@@ -64,7 +64,7 @@ Download 1000 genomes (Region-independent)
 
 
 ~~~
-export CHROM="$(seq 22) X"
+export CHROM="$(seq 22)"
 export URL_GENOME1K_SOMATIC="ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chr{chr}.phase3_shapeit2_mvncall_integrated_v5a.20130502.genotypes.vcf.gz"
 export URL_GENOME1K_X="ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chrX.phase3_shapeit2_mvncall_integrated_v1b.20130502.genotypes.vcf.gz"
 export URL_GENOME1K_Y="ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/ALL.chrY.phase3_integrated_v1b.20130502.genotypes.vcf.gz"
@@ -89,17 +89,16 @@ export CHROM="$(seq 1 22)"
 export GENOME1K_PLINKBED_DIR=$GENOME1K_DIR/$REGION/plink_bed
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
 export OUTDIR=${GENOME1K_DIR}/${REGION}
-export NBCHROM=`python --keep-going --rerun-incomplete -c "import os; print(len(os.getenv('CHROM').split()))"`
-time snakemake -s ${TAGOOS}/snakefile/data_snp/genome1k_ld_index.yml -p -j $NBCHROM --keep-going --rerun-incomplete -c "qsub -X -V -q $QUEUE -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR --latency-wait 60 -pn
+time snakemake -s ${TAGOOS}/snakefile/data_snp/genome1k_ld_index.yml -p -j 256 --keep-going --rerun-incomplete -c "qsub -X -V -q $QUEUE -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR --latency-wait 60 -pn
 ~~~
 
 Intersect/annotate the 1000 genome variants (Region-dependent)
 
 ~~~
 export CHROM="$(seq 1 22)"
-export SNP_OUTDIR=$PWD/out/data/snp/1000genomes/$REGION/peak_bed
+export SNP_DIR_OUT=$PWD/out/data/snp/1000genomes/$REGION/peak_bed
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
-time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -j $SNAKEMAKE_J --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $SNP_OUTDIR/stderr.log -o $SNP_OUTDIR/stdout.log" -d $SNP_OUTDIR -pn
+time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -j 256 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $SNP_DIR_OUT/stderr.log -o $SNP_DIR_OUT/stdout.log" -d $SNP_DIR_OUT -pn
 ~~~
 
 INDEX (Region-dependent)
@@ -115,7 +114,9 @@ Filter region dbsnp (region-dependent)
 
 ~~~
 export CHROM="$(seq 1 22) X"
+export DBSNP_IN_DIR=$DBSNP_DIR
 export DBSNP_OUT_DIR=$PWD/out/data/snp/dbsnp/${REGION}
+export VARIABLE_TXT=$PWD/out/data/annotation/${ANNOT_LABEL}/variable.txt
 export THREADS=16
 export QUEUE=batch # default batch
 time snakemake -s ${TAGOOS}/snakefile/data_snp/dbsnp_region.yml -j 48 --keep-going --rerun-incomplete -c "qsub -X -V -d $PWD -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e stderr.log -o stdout.log" -d $PWD -pn
@@ -124,10 +125,10 @@ time snakemake -s ${TAGOOS}/snakefile/data_snp/dbsnp_region.yml -j 48 --keep-goi
 Annotate dbsnp variants
 
 ~~~
-export CHROM="$(seq 1 22)"
-export SNP_OUTDIR=$PWD/out/data/snp/dbsnp/${REGION}
-export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
-time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -p -j $SNAKEMAKE_J --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $SNP_OUTDIR/stderr.log -o $SNP_OUTDIR/stdout.log" -d $SNP_OUTDIR -pn
+#export CHROM="$(seq 1 22)"
+#export SNP_OUTDIR=$PWD/out/data/snp/dbsnp/${REGION}
+#export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
+#time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -p -j $SNAKEMAKE_J --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $SNP_OUTDIR/stderr.log -o $SNP_OUTDIR/stdout.log" -d $SNP_OUTDIR -pn
 ~~~
 
 
