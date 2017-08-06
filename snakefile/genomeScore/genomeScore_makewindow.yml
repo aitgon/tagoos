@@ -1,0 +1,24 @@
+GENOMIC_REGION_BED = os.getenv('GENOMIC_REGION_BED')
+OUTDIR = os.getenv('OUTDIR')
+HOME = os.getenv('HOME')
+THREADS = int(os.getenv('THREADS'))
+
+GENOME_WINDOW_BED=os.getenv('GENOME_WINDOW_BED')
+GENOME_WINDOW_IDS=os.getenv('GENOME_WINDOW_IDS').split()
+
+GWINDOW_LENGTH=int(os.getenv('GWINDOW_LENGTH'))
+CHROM_SIZES=os.getenv('CHROM_SIZES')
+
+rule all:
+    input:
+        expand(os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow.bed"), gwindow=GENOME_WINDOW_IDS),
+
+rule grep_genome_splitted:
+    input:
+        gwindow_bed=GENOME_WINDOW_BED
+    output:
+        gwindow_bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow.bed")
+    params: gwindow="{gwindow}"
+    shell:
+        """grep -P "{params.gwindow}" {input.gwindow_bed}  >{output.gwindow_bed}"""
+

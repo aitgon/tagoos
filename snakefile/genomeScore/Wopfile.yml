@@ -1,0 +1,19 @@
+rule rule2:
+    tool: 'tagoosdb.wrapper.DBSNP'
+    input:
+        file:
+            dbsnp: '{{DBSNP_TSV}}'
+    output:
+        table:
+            DBSNP: 'tagoosdb.model.DBSNP'
+
+rule rule1:
+    tool: 'tagoosdb.wrapper.AnnotationWindow'
+    input:
+        file:
+            annotation: '{{ANNOTATION_TSV}}'
+    output:
+        table:
+            AnnotationWindow: 'tagoosdb.model.AnnotationWindow'
+
+

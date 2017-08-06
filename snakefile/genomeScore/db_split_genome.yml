@@ -1,0 +1,13 @@
+CHROM_SIZES=os.getenv('CHROM_SIZES')
+GENOME_WINDOW_BED=os.getenv('GENOME_WINDOW_BED')
+DBSIZE=int(os.getenv('DBSIZE'))
+
+rule d01_grep_genome_splitted:
+    input:
+        chrom_sizes=CHROM_SIZES
+    output:
+        genome_window_bed=GENOME_WINDOW_BED
+    params: dbsize=DBSIZE
+    shell:
+        """bedtools makewindows -g ~/MEGA/2015_svmgwas/analysis/170412_genome_regions/hg19.chrom.sizes -w {params.dbsize} |uniq  |awk '{{print $1"\t"$2"\t"$3"\t"$1"_"$2+1"_"$3}}' |sort -k1,1 -k2,2n -k3,3n |grep -P "chr[0-9][0-9]?" > {output.genome_window_bed}"""
+

@@ -1,0 +1,32 @@
+OUTDIR=os.getenv('OUTDIR')
+HOME=os.getenv('HOME')
+TAGOOS=os.getenv('TAGOOS')
+
+DB_ID=os.getenv('DB_ID').split()
+REGION=os.getenv('REGION')
+
+rule d099_all:
+    input:
+        expand(os.path.join(OUTDIR, "rsid_splitted/rsid_{region}_{db_id}.touched"), db_id=sorted(DB_ID), region=REGION),
+
+rule d01_mysql1:
+    input:
+        wopfile=os.path.join(TAGOOS, 'snakefile/genomeScore', "Wopfile.yml"),
+        annotation_tsv=os.path.join(OUTDIR, "rsid_splitted/%s_{db_id}.tsv"%REGION),
+    output:
+        db=os.path.join(OUTDIR, "rsid_splitted/rsid_{region}_{db_id}.touched"),
+    params:
+        db_id="{db_id}",
+        region=REGION,
+    resources: db=1
+    shell:
+        """export DBSNP_TSV={input.annotation_tsv};
+        mysql -h 10.1.1.157 -u root -p'mypass' -e 'drop database if exists rsid_{params.region}_{params.db_id};'
+        mysql -h 10.1.1.157 -u root -p'mypass' -e 'create database if not exists rsid_{params.region}_{params.db_id};'
+        if [[ -s {input.annotation_tsv} ]];
+        then {HOME}/Software/miniconda3/envs/tagoos/bin/wopmars -w {input.wopfile} -D "mysql+pymysql://root:mypass@10.1.1.157/rsid_{params.region}_{params.db_id}?charset=utf8&local_infile=1" -d $PWD -v -p -F -t rule2
+        fi;
+        date;
+        touch {output.db}"""
+
+

@@ -1,0 +1,44 @@
+OUTDIR=os.getenv('OUTDIR')
+HOME=os.getenv('HOME')
+TAGOOS=os.getenv('TAGOOS')
+
+GENOME_WINDOW_IDS=os.getenv('GENOME_WINDOW_IDS').split()
+REGION=os.getenv('REGION')
+
+rule d099_all:
+    input:
+        expand(os.path.join(OUTDIR, "gwindow/{gwindow}/mysql.touched"), gwindow=sorted(GENOME_WINDOW_IDS)),
+        expand(os.path.join(OUTDIR, "%s_{gwindow}.sql.gz"%REGION), gwindow=sorted(GENOME_WINDOW_IDS)),
+
+rule d02_dump:
+    input:
+        db=os.path.join(OUTDIR, "gwindow/{gwindow}/mysql.touched"),
+    output:
+        sql_gz=os.path.join(OUTDIR, "%s_{gwindow}.sql.gz"%REGION),
+    params:
+        gwindow="{gwindow}",
+        region=REGION,
+    shell:
+        """mysqldump -h 10.1.1.157 -u root -p'mypass' {params.region}_{params.gwindow} |gzip >{output.sql_gz};"""
+
+rule d01_mysql1:
+    input:
+        wopfile=os.path.join(TAGOOS, 'snakefile/genomeScore', "Wopfile.yml"),
+        annotation_tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/annotation_score_gene_genedistance_hg19_hg38.tsv"),
+    output:
+        db=os.path.join(OUTDIR, "gwindow/{gwindow}/mysql.touched"),
+    params:
+        gwindow="{gwindow}",
+        region=REGION,
+    resources: db=1
+    shell:
+        """export ANNOTATION_TSV={input.annotation_tsv};
+        mysql -h 10.1.1.157 -u root -p'mypass' -e 'drop database if exists {params.region}_{params.gwindow};'
+        mysql -h 10.1.1.157 -u root -p'mypass' -e 'create database if not exists {params.region}_{params.gwindow};'
+        if [[ -s {input.annotation_tsv} ]];
+        then {HOME}/Software/miniconda3/envs/tagoos/bin/wopmars -w {input.wopfile} -D "mysql+pymysql://root:mypass@10.1.1.157/{params.region}_{params.gwindow}?charset=utf8&local_infile=1" -d $PWD -v -p -F -t rule1
+        fi;
+        date;
+        touch {output.db}"""
+
+
