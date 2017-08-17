@@ -1,13 +1,9 @@
-GENOMIC_REGION_BED = os.getenv('GENOMIC_REGION_BED')
 OUTDIR = os.getenv('OUTDIR')
 HOME = os.getenv('HOME')
-TAGOOS = os.getenv('TAGOOS')
 TAGOOS = os.getenv('TAGOOS')
 THREADS = int(os.getenv('THREADS'))
 VARIABLE_TXT = os.getenv('VARIABLE_TXT')
 MODEL_PKL = os.getenv('MODEL_PKL')
-GWINDOW_1NT_DIR=os.getenv('GWINDOW_1NT_DIR')
-GENOME_WINDOW_BED=os.getenv('GENOME_WINDOW_BED')
 GENOME_WINDOW_IDS=os.getenv('GENOME_WINDOW_IDS').split()
 
 rule gsa99_all:

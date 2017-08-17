@@ -8,6 +8,21 @@ REGION=os.getenv('REGION')
 rule d099_all:
     input:
         expand(os.path.join(OUTDIR, "rsid_splitted/rsid_{region}_{db_id}.touched"), db_id=sorted(DB_ID), region=REGION),
+        expand(os.path.join(OUTDIR, "rsid_splitted/rsid_%s_{db_id}.sql.gz"%REGION), db_id=sorted(DB_ID)),
+
+#    db=os.path.join(OUTDIR, "rsid_splitted/rsid_{region}_{db_id}.touched"),
+#        db=os.path.join(OUTDIR, "gwindow/{gwindow}/mysql.touched"),
+
+rule d02_dump:
+    input:
+        db=os.path.join(OUTDIR, "rsid_splitted/rsid_%s_{db_id}.touched"%REGION),
+    output:
+        sql_gz=os.path.join(OUTDIR, "rsid_splitted/rsid_%s_{db_id}.sql.gz"%REGION),
+    params:
+        db_id="{db_id}",
+        region=REGION,
+    shell:
+        """mysqldump -h 10.1.1.157 -u root -p'mypass' rsid_{params.region}_{params.db_id} |gzip >{output.sql_gz};"""
 
 rule d01_mysql1:
     input:

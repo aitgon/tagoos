@@ -1,0 +1,29 @@
+GENOMIC_REGION_BED = os.getenv('GENOMIC_REGION_BED')
+OUTDIR = os.getenv('OUTDIR')
+THREADS = int(os.getenv('THREADS'))
+
+GWINDOW_1NT_DIR=os.getenv('GWINDOW_1NT_DIR')
+GENOME_WINDOW_IDS=os.getenv('GENOME_WINDOW_IDS').split()
+
+rule all:
+    input:
+        expand(os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region.bed"), gwindow=GENOME_WINDOW_IDS),
+
+rule sort_region:
+    input:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_nonsorted.bed")
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region.bed")
+    threads: THREADS
+    shell:
+        """sort -k1,1 -k2,2n -k3,3n -u --parallel {threads} {input.bed} -o {output.bed}; """
+
+rule intersect_region:
+    input:
+        bed=GENOMIC_REGION_BED,
+        bed2=os.path.join(GWINDOW_1NT_DIR, "gwindow/{gwindow}/gwindow_1nt.bed")
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_nonsorted.bed")
+    shell:
+        """intersectBed -sorted -a {input.bed} -b {input.bed2} | awk '{{print $1"\t"$2"\t"$3}}' >{output.bed}"""
+

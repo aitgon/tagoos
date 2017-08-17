@@ -43,7 +43,7 @@ then mkdir -p ${OUTDIR}_makewindow && bedtools makewindows -g ~/MEGA/2015_svmgwa
 fi
 export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED | sort)
 #export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED | sort|grep -P "^chr10" |head -n110)
-time snakemake -s ${TAGOOS}/snakefile/genomeScore/genomeScore_makewindow.yml -j 64 --keep-going --rerun-incomplete -c "qsub -X -V -d ${OUTDIR}_makewindow -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}_makewindow/stderr.log -o ${OUTDIR}_makewindow/stdout.log" -d ${OUTDIR}_makewindow --latency-wait 60 -pn
+time snakemake -s ${TAGOOS}/snakefile/genomeScore/genomeScore01_makewindow.yml -j 64 --keep-going --rerun-incomplete -c "qsub -X -V -d ${OUTDIR}_makewindow -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}_makewindow/stderr.log -o ${OUTDIR}_makewindow/stdout.log" -d ${OUTDIR}_makewindow --latency-wait 60 -pn
 ~~~
 
 Annotate (Region-dependent)
@@ -52,11 +52,11 @@ Annotate (Region-dependent)
 export ANNOTATION_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_data/annotation/${ANNOT_LABEL}.bed
 export GWINDOW_1NT_DIR=$HOME/data/2015_svmgwas/repositories/tagoos-appli/170712/out/data_snp/gwindow_${GWINDOW_LENGTH}
 export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/score_1nt_${GWINDOW_LENGTH}
-time snakemake -s ${TAGOOS}/snakefile/genomeScore/genomeScore_region.yml -j 64 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" --latency-wait 60 -d $OUTDIR -pn
+time snakemake -s ${TAGOOS}/snakefile/genomeScore/genomeScore02_region.yml -j 64 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" --latency-wait 60 -d $OUTDIR -pn
 #
 export VARIABLE_TXT=$PWD/out/data/annotation/${ANNOT_LABEL}/variable.txt
 export MODEL_PKL=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}/model.pkl
-time snakemake -s ${TAGOOS}/snakefile/genomeScore/genomeScore_annotate.yml -j 64 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -p  -k --rerun-incomplete --latency-wait 60 -n
+time snakemake -s ${TAGOOS}/snakefile/genomeScore/genomeScore03_annotate.yml -j 64 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -p  -k --rerun-incomplete --latency-wait 60 -n
 ~~~
 
 ANNOTATION_BED, SCORE_BED AND DBSNP_BED
