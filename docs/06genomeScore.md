@@ -4,12 +4,12 @@ $REGION \in {'intronic', 'intergenic'}$
 
 ~~~
 export REGION=intronic # default intronic
-export GENOMIC_REGION_BED=$HOME/data/2015_svmgwas/analysis/170412_genome_regions/hg19_5utrExonIntron3utrExon.bed
+export GENOMIC_REGION_BED=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/hg19_5utrExonIntron3utrExon.bed
 ~~~
 
 ~~~
 export REGION=intergenic
-export GENOMIC_REGION_BED=$HOME/data/2015_svmgwas/analysis/170412_genome_regions/ucsc_hg19_RefSeqGenes_intergenic.bed
+export GENOMIC_REGION_BED=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/ucsc_hg19_RefSeqGenes_intergenic.bed
 ~~~
 
 ~~~
@@ -25,11 +25,11 @@ export INDEX_LABEL=index3
 ~~~
 
 ~~~
-export CHROM_SIZES=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/hg19.chrom.sizes
+export CHROM_SIZES=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/raw_hg19.chrom.sizes
 ~~~
 
 ~~~
-#export TAGOOS_APPLI=${HOME}/data/2015_svmgwas/repositories/tagoos-appli
+export TAGOOS_APPLI=${HOME}/data/2015_svmgwas/repositories/tagoos-appli
 ~~~
 
 Make window (Region-independent)
@@ -42,7 +42,7 @@ if [ ! -f $GENOME_WINDOW_BED ];
 then mkdir -p ${OUTDIR}_makewindow && bedtools makewindows -g ~/MEGA/2015_svmgwas/analysis/170412_genome_regions/hg19.chrom.sizes -w $GWINDOW_LENGTH |uniq  |awk '{print $1"\t"$2"\t"$3"\t"$1":"$2+1"-"$3}' |sort -k1,1 -k2,2n -k3,3n |grep -P "chr[0-9][0-9]?" > $GENOME_WINDOW_BED
 fi
 export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED | sort)
-#export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED | sort|grep -P "^chr10" |head -n110)
+#export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED | sort|grep -P "^chr10:" |head -n110)
 time snakemake -s ${TAGOOS}/snakefile/genomeScore/genomeScore01_makewindow.yml -j 64 --keep-going --rerun-incomplete -c "qsub -X -V -d ${OUTDIR}_makewindow -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}_makewindow/stderr.log -o ${OUTDIR}_makewindow/stdout.log" -d ${OUTDIR}_makewindow --latency-wait 60 -pn
 ~~~
 
@@ -62,8 +62,8 @@ time snakemake -s ${TAGOOS}/snakefile/genomeScore/genomeScore03_annotate.yml -j 
 ANNOTATION_BED, SCORE_BED AND DBSNP_BED
 
 ~~~
-export ANNOTATION_BED=/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/score_1nt_30000000/annotation.bed
-export SCORE_BED=/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/score_1nt_30000000/percentile.bed
+export ANNOTATION_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/score_1nt_${GWINDOW_LENGTH}/annotation.bed
+export SCORE_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/score_1nt_${GWINDOW_LENGTH}/percentile.bed
 export DBSNP_BED=$PWD/out/data/snp/dbsnp/${REGION}/dbsnp.bed
 ~~~
 
@@ -77,15 +77,15 @@ export OUTDIR=${HOME}/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${P
 mkdir -p $OUTDIR
 export GENOME_WINDOW_BED=$OUTDIR/genome_splitted.bed
 export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED)
-date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db_split_genome.yml -j 256 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR --latency-wait 60 -pn
+date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db01_split_genome.yml -j 256 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR --latency-wait 60 -pn
 ~~~
 
 ~~~
-export GENE_BED=/cobelix/gonzalez/MEGA/2015_svmgwas/analysis/170412_genome_regions/hg19.refGene.bed
+export GENE_BED=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/ucsc_hg19_RefSeqGenes_geneSymbol.bed
 export GENOME_WINDOW_IDS=chr1_1_249250621
 export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED |sort)
 export DBSNP_BED=$PWD/out/data/snp/dbsnp/${REGION}/dbsnp.bed
-date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db_intersection.yml -j 192 --keep-going -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 -pn
+date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db02_intersection.yml -j 192 --keep-going -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 -pn
 ~~~
 
 # Enter it into the DB
@@ -93,7 +93,7 @@ date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db_intersection.yml -j 1
 AnnotationWindow
 
 ~~~
-date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db_mysql.yml -j 192 --keep-going -c "qsub -N '{rule}_{wildcards.gwindow}' -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 --resources db=1 -pn
+date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db03_mysql.yml -j 192 --keep-going -c "qsub -N '{rule}_{wildcards.gwindow}' -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 --resources db=1 -pn
 ~~~
 
 RSID
@@ -102,7 +102,7 @@ RSID
 export DB_ID=0
 export DB_ID=$(echo {0..19})
 export ASSEMBLY=hg19
-date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db_mysql_rsid.yml -j 192 --keep-going -c "qsub -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 --resources db=1 -pn
+date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db04_mysql_rsid.yml -j 192 --keep-going -c "qsub -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 --resources db=1 -pn
 ~~~
 
 Drop databases

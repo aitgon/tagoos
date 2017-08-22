@@ -20,16 +20,20 @@ with open(output_path, 'w') as fout:
             feature = line[3]
         else:
             sys.exit(1)
-        if feature != previous_feature: # if new feature
+        if feature != previous_feature or start!=previous_end: # if new feature
+            #import pdb; pdb.set_trace()
             if not bin_chrom is None:
                 #print("%s\t%s\t%s\t%s\n"%(bin_chrom, bin_start, bin_end, previous_feature))
                 fout.write("%s\t%s\t%s\t%s\n"%(bin_chrom, bin_start, bin_end, previous_feature))
             bin_chrom=chrom
             bin_start=start
             bin_end=end
-            previous_feature=feature
         else:  # same as previous features
             bin_end=end
+        previous_chrom=chrom
+        previous_start=start
+        previous_end=end
+        previous_feature=feature
 
     if bin_chrom is None:
         fout.write("")

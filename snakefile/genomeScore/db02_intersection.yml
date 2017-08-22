@@ -1,5 +1,4 @@
 OUTDIR = os.getenv('OUTDIR')
-HOME = os.getenv('HOME')
 THREADS = int(os.getenv('THREADS'))
 
 GENOME_WINDOW_BED=os.getenv('GENOME_WINDOW_BED')
@@ -37,10 +36,6 @@ rule d11_merge_rsid:
     threads: THREADS
     shell:
         """sort --parallel {threads} -k4,4n -u {input.tsv} -o {output.tsv}"""
-
-#rule tmp:
-#    input:
-#        expand(os.path.join(OUTDIR, "gwindow/{gwindow}/rsid_annotation_score_gene_genedistance_hg19_hg38.tsv"), gwindow=GENOME_WINDOW_IDS),
 
 rule d10_rsid_join_hg19_hg38:
     input:

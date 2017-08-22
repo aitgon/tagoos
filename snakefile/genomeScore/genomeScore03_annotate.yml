@@ -1,6 +1,7 @@
 OUTDIR = os.getenv('OUTDIR')
 HOME = os.getenv('HOME')
 TAGOOS = os.getenv('TAGOOS')
+REGION = os.getenv('REGION')
 THREADS = int(os.getenv('THREADS'))
 VARIABLE_TXT = os.getenv('VARIABLE_TXT')
 MODEL_PKL = os.getenv('MODEL_PKL')
@@ -8,7 +9,7 @@ GENOME_WINDOW_IDS=os.getenv('GENOME_WINDOW_IDS').split()
 
 rule gsa99_all:
     input:
-        os.path.join(OUTDIR, "percentile.bed"),
+        os.path.join(OUTDIR, "percentile.bg"),
         os.path.join(OUTDIR, "annotation.bed"),
 
 rule gsa11_merge_annotation_bed:
@@ -17,17 +18,20 @@ rule gsa11_merge_annotation_bed:
     output:
         bed = os.path.join(OUTDIR, "annotation.bed")
     threads: THREADS
+    params: region=REGION
     shell:
-        """sort --parallel {threads} -k1,1 -k2,2n {input.bed} -o {output.bed}"""
+        """sort --parallel {threads} -k1,1 -k2,2n {input.bed} >> {output.bed}"""
 
 rule gsa10_sort:
     input:
         bed = os.path.join(OUTDIR, "percentile_nonsorted.bed"),
     output:
-        bed = os.path.join(OUTDIR, "percentile.bed"),
+        bg = os.path.join(OUTDIR, "percentile.bg"),
+    params: region=REGION
     threads: THREADS
     shell:
-        """sort -k1,1 -k2,2n --parallel {threads} {input.bed} -o {output.bed};"""
+        """echo 'track type=bedGraph name=tagoos_{params.region}' >{output.bg};
+            sort -k1,1 -k2,2n --parallel {threads} {input.bed} >> {output.bg};"""
 
 rule gsa09_bed:
     input:
@@ -77,9 +81,13 @@ rule gsa05_tolibsvm:
     shell:
         """python3 {input.script} {input.bed} {input.variable_txt} {output.instance} {output.libsvm}"""
 
-rule gsa04_collapse_peaks:
+rule tmp:
     input:
-        script=os.path.join(TAGOOS, "script/bedtoolsGroupby123_col4_collapse.py"),
+        expand(os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"), gwindow=GENOME_WINDOW_IDS),
+
+rule gsa04_collapse_smallPeaksToLargePeaks:
+    input:
+        script=os.path.join(TAGOOS, "script/collapseSmallToLargePeaks_byCol4.py"),
         bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed.bed"),
     output:
         bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"),
@@ -111,6 +119,7 @@ rule gsa01_annotate:
     output:
         bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
     shell:
-        """intersectBed -sorted -a {input.bed} -b  {input.annotation} -wb | awk '{{print $1"\t"$2"\t"$3"\t"$7}}' |uniq >{output.bed}"""
+        """intersectBed -sorted -a {input.bed} -b  {input.annotation} -wb | awk '{{print $1"\t"$2"\t"$3"\t"$7}}' |uniq >{output.bed};
+            intersectBed -sorted -a {input.bed} -b  {input.annotation} -v | awk '{{print $1"\t"$2"\t"$3"\t."}}' |uniq >>{output.bed}"""
 
 

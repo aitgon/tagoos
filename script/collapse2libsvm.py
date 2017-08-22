@@ -27,7 +27,10 @@ with open(instance_path, 'w') as instance_fout, open(libsvm_path, 'w') as libsvm
         else:
             sys.exit(1)
         instance_fout.write("%s:%s-%s\n"%(chrom, start, end)) # write previous instance
-        feature_vector_str=":1 ".join([str(variable2i[f]) for f in feature_list]) + ":1"
-        if not last_variable in feature_list: feature_vector_str = feature_vector_str + " %d:0"%last_variable_index
+        if feature_list == ["."]:
+            feature_vector_str = "%d:0"%last_variable_index
+        else:
+            feature_vector_str=":1 ".join([str(variable2i[f]) for f in feature_list]) + ":1"
+            if not last_variable in feature_list: feature_vector_str = feature_vector_str + " %d:0"%last_variable_index
         libsvm_fout.write(label + " " + feature_vector_str + "\n")
 
