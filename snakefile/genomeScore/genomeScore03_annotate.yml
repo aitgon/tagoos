@@ -30,8 +30,7 @@ rule gsa10_sort:
     params: region=REGION
     threads: THREADS
     shell:
-        """echo 'track type=bedGraph name=tagoos_{params.region}' >{output.bg};
-            sort -k1,1 -k2,2n --parallel {threads} {input.bed} >> {output.bg};"""
+        """sort -k1,1 -k2,2n --parallel {threads} {input.bed} >> {output.bg};"""
 
 rule gsa09_bed:
     input:

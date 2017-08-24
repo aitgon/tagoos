@@ -29,6 +29,7 @@ export CHROM_SIZES=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/raw_hg
 ~~~
 
 ~~~
+export TAGOOS=${HOME}/Software/repositories/tagoos
 export TAGOOS_APPLI=${HOME}/data/2015_svmgwas/repositories/tagoos-appli
 ~~~
 
@@ -83,6 +84,8 @@ date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db01_split_genome.yml -j
 ~~~
 export GENE_BED=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/ucsc_hg19_RefSeqGenes_geneSymbol.bed
 export GENOME_WINDOW_IDS=chr1_1_249250621
+export GENOME_WINDOW_IDS=chr21_1_48129895
+export GENOME_WINDOW_IDS=chr22_1_51304566
 export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED |sort)
 export DBSNP_BED=$PWD/out/data/snp/dbsnp/${REGION}/dbsnp.bed
 date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db02_intersection.yml -j 192 --keep-going -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 -pn
@@ -92,7 +95,14 @@ date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db02_intersection.yml -j
 
 AnnotationWindow
 
+
 ~~~
+#export DB_SERVER="mysql+pymysql://root:mypass@10.1.1.157"
+
+export DB_HOST="localhost"
+export DB_PORT="3306"
+
+export DB_SERVER="mysql+pymysql://root:mypass@${DB_HOST}:${DB_PORT}"
 date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db03_mysql.yml -j 192 --keep-going -c "qsub -N '{rule}_{wildcards.gwindow}' -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 --resources db=1 -pn
 ~~~
 
@@ -101,9 +111,30 @@ RSID
 ~~~
 export DB_ID=0
 export DB_ID=$(echo {0..19})
-export ASSEMBLY=hg19
+
+export DB_HOST="localhost"
+export DB_PORT="3306"
+
+export DB_SERVER="mysql+pymysql://root:mypass@${DB_HOST}:${DB_PORT}"
 date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db04_mysql_rsid.yml -j 192 --keep-going -c "qsub -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 --resources db=1 -pn
 ~~~
+
+# Some useful commands
+
+rsync DB data from sacapus to milan
+
+AnnotationWindow (170712)
+
+~~~
+rsync  -avzn --progress --exclude "[mr]*" --include "annotation_score_gene_genedistance_hg19_hg38.tsv" --exclude "*.bed*" --exclude "*.tsv" gonzalez@sacapus_ext:/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db_${DBSIZE}/gwindow/ ${HOME}/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db_${DBSIZE}/gwindow/
+~~~
+
+RSID (170712)
+
+~~~
+rsync  -avzn --progress --exclude "r*" --include "+nic_+_.tsv" gonzalez@sacapus_ext:/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db_${DBSIZE}/rsid_splitted/ ${HOME}/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db_${DBSIZE}/rsid_splitted/
+~~~
+
 
 Drop databases
 
