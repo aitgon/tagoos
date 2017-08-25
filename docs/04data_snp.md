@@ -9,7 +9,7 @@ export GENOMIC_REGION_BED=$HOME/data/2015_svmgwas/analysis/170412_genome_regions
 
 ~~~
 export REGION=intergenic
-export GENOMIC_REGION_BED=$HOME/data/2015_svmgwas/analysis/170412_genome_regions/hg19_intergenic.bed
+export GENOMIC_REGION_BED=$HOME/data/2015_svmgwas/analysis/170412_genome_regions/ucsc_hg19_RefSeqGenes_intergenic_subtract_upstream1000.bed
 ~~~
 
 Data folders
