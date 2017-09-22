@@ -6,6 +6,7 @@ THREADS = int(os.getenv('THREADS'))
 VARIABLE_TXT = os.getenv('VARIABLE_TXT')
 MODEL_PKL = os.getenv('MODEL_PKL')
 GENOME_WINDOW_IDS=os.getenv('GENOME_WINDOW_IDS').split()
+ANNOTATION_BED = os.getenv('ANNOTATION_BED')
 
 rule gsa99_all:
     input:
@@ -14,7 +15,7 @@ rule gsa99_all:
 
 rule gsa11_merge_annotation_bed:
     input:
-        bed = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"), gwindow=GENOME_WINDOW_IDS),
+        bed = expand(os.path.join(OUTDIR, "{gwindow}/gwindow_annotation_collapsed2.bed"), gwindow=GENOME_WINDOW_IDS),
     output:
         bed = os.path.join(OUTDIR, "annotation.bed")
     threads: THREADS
@@ -51,7 +52,7 @@ rule gsa08_percentile:
 
 rule gsa07_cat_score:
     input:
-        score_tsv=expand(os.path.join(OUTDIR, "gwindow/{gwindow}/score.tsv"), gwindow=GENOME_WINDOW_IDS),
+        score_tsv=expand(os.path.join(OUTDIR, "{gwindow}/score.tsv"), gwindow=GENOME_WINDOW_IDS),
     output:
         score_tsv=os.path.join(OUTDIR, "score.tsv"),
     threads: THREADS
@@ -61,62 +62,72 @@ rule gsa07_cat_score:
 rule gsa06_score:
     input:
         script=os.path.join(TAGOOS, "script/score2.py"),
-        libsvm=os.path.join(OUTDIR, "gwindow/{gwindow}/collapsed2.libsvm"),
-        instance=os.path.join(OUTDIR, "gwindow/{gwindow}/instance.txt"),
+        libsvm=os.path.join(OUTDIR, "{gwindow}/collapsed2.libsvm"),
+        instance=os.path.join(OUTDIR, "{gwindow}/instance.txt"),
         model_pkl=MODEL_PKL,
     output:
-        score_tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/score.tsv"),
+        score_tsv=os.path.join(OUTDIR, "{gwindow}/score.tsv"),
     shell:
         """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.libsvm} {input.instance} {input.model_pkl} {output.score_tsv}"""
 
 rule gsa05_tolibsvm:
     input:
         script=os.path.join(TAGOOS, "script/collapse2libsvm.py"),
-        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"),
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_annotation_collapsed2.bed"),
         variable_txt=VARIABLE_TXT,
     output:
-        instance=os.path.join(OUTDIR, "gwindow/{gwindow}/instance.txt"),
-        libsvm=os.path.join(OUTDIR, "gwindow/{gwindow}/collapsed2.libsvm"),
+        instance=os.path.join(OUTDIR, "{gwindow}/instance.txt"),
+        libsvm=os.path.join(OUTDIR, "{gwindow}/collapsed2.libsvm"),
     shell:
         """python3 {input.script} {input.bed} {input.variable_txt} {output.instance} {output.libsvm}"""
-
-rule tmp:
-    input:
-        expand(os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"), gwindow=GENOME_WINDOW_IDS),
 
 rule gsa04_collapse_smallPeaksToLargePeaks:
     input:
         script=os.path.join(TAGOOS, "script/collapseSmallToLargePeaks_byCol4.py"),
-        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed.bed"),
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_annotation_collapsed.bed"),
     output:
-        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"),
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_annotation_collapsed2.bed"),
     shell:
-        """python3 {input.script} {input.bed} {output.bed}"""
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.bed} {output.bed}"""
 
 rule gsa03_collapse_annotations:
     input:
         script=os.path.join(TAGOOS, "script/groupby123cols_collapse4col.py"),
-        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation.bed"),
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_1nt_region_annotation.bed"),
     output:
-        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed.bed"),
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_annotation_collapsed.bed"),
     shell:
-        """python3 {input.script} {input.bed} {output.bed}"""
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.bed} {output.bed}"""
 
 rule gsa02_sort_annotated:
     input:
-        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
     output:
-        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation.bed"),
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_1nt_region_annotation.bed"),
     threads: THREADS
     shell:
         """sort --parallel {threads} -k1,1 -k2,2n -k3,3n -k4,4 -u {input.bed} -o {output.bed}"""
 
 rule gsa01_annotate:
+    """This rule crosses the annotation bed of the model with the genome windows in the region
+
+    Parameters
+    ----------
+    annotation : Bed file path
+        Bed file path to the model annotation
+    os.path.join(OUTDIR, "{gwindow}/gwindow.bed") : str
+        The specified region in the given genome window
+        $ head /cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intergenic/1kg1000000intergenic_mergedannot_index3_analysis/genome_score/chr1:1-30000000/gwindow_region.bed
+        chr1    0       11868
+        chr1    29370   30365
+        chr1    30503   34610
+        chr1    36081   69090
+    """
     input:
-        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region.bed"),
-        annotation="/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_data/annotation/mergedannot.bed",
+        annotation=ANNOTATION_BED,
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_1nt_region.bed"),
     output:
-        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
     shell:
         """intersectBed -sorted -a {input.bed} -b  {input.annotation} -wb | awk '{{print $1"\t"$2"\t"$3"\t"$7}}' |uniq >{output.bed};
             intersectBed -sorted -a {input.bed} -b  {input.annotation} -v | awk '{{print $1"\t"$2"\t"$3"\t."}}' |uniq >>{output.bed}"""
