@@ -1,0 +1,200 @@
+ANNOTATION_BED = os.getenv('ANNOTATION_BED')
+HOME = os.getenv('HOME')
+OUTDIR = os.getenv('OUTDIR')
+"""
+$PWD/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score
+"""
+RANDOM_BED = os.getenv('RANDOM_BED')
+TAGOOS = os.getenv('TAGOOS')
+THREADS = int(os.getenv('THREADS'))
+VARIABLE_TXT = os.getenv('VARIABLE_TXT')
+MODEL_PKL = os.getenv('MODEL_PKL')
+GENOMIC_REGION_BED = os.getenv('GENOMIC_REGION_BED')
+REGION = os.getenv('REGION')
+
+rule all:
+    input:
+        eps=os.path.join(OUTDIR, "ecdf_score.eps"),
+
+rule pval06_ecdf:
+    """
+library(data.table)
+dt=fread("/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/random/score.tsv")
+F10=ecdf(dt$V2)
+save(F10, file="/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/random/ecdf.Rda")
+setEPS()
+postscript("/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/hist_score.eps")
+hist(dt$V2, breaks=40, xlim=c(-1,1), main="Intronic", xlab="XGBOOST Scores")
+garb=dev.off()
+setEPS()
+postscript("/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/ecdf_score.eps")
+plot(F10, verticals = TRUE, do.p = FALSE, main="Intronic", xlab="XGBOOST Scores", ylab="Cumulative Probability")
+garb=dev.off()
+    """
+    input:
+        tsv=os.path.join(OUTDIR, "random/score.tsv"),
+    output:
+        eps=os.path.join(OUTDIR, "ecdf_score.eps"),
+    shell:
+        """Rscript -e 'library(data.table); dt=fread("/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/random/score.tsv"); F10=ecdf(dt$V2); save(F10, file="/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/random/ecdf.Rda"); setEPS(); postscript("/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/hist_score.eps"); hist(dt$V2, breaks=40, xlim=c(-1,1), main="Intronic", xlab="XGBOOST Scores"); garb=dev.off(); setEPS(); postscript("/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/ecdf_score.eps"); plot(F10, verticals = TRUE, do.p = FALSE, main="Intronic", xlab="XGBOOST Scores", ylab="Cumulative Probability"); garb=dev.off();'"""
+
+rule pval05_score:
+    """
+    This rule carries out the xgboost scoring
+
+    Returns
+    -------
+    file path
+        $ head -n10  $OUTDIR/random/instance.txt | grep -f - $OUTDIR/random/score.tsv
+    chr1:11962-11962	-0.568
+    chr1:12125-12125	-0.568
+    chr1:13108-13108	-0.568
+    chr1:13135-13135	-0.568
+    chr1:13192-13192	-0.568
+    chr1:13288-13288	-0.568
+    chr1:13411-13411	-0.568
+    chr1:13518-13518	-0.568
+    chr1:13620-13620	-0.568
+    chr1:14853-14853	-0.495
+    """
+    input:
+        script=os.path.join(TAGOOS, "script/score2.py"),
+        libsvm=os.path.join(OUTDIR, "random/annotation.libsvm"),
+        instance=os.path.join(OUTDIR, "random/instance.txt"),
+        model_pkl=MODEL_PKL,
+    output:
+        tsv=os.path.join(OUTDIR, "random/score.tsv"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.libsvm} {input.instance} {input.model_pkl} {output.tsv}"""
+
+rule pval04_tolibsvm:
+    """
+    This rule converts a bed file path with annotations to libsvm for xgboost scoring
+
+    Parameters
+    ----------
+    script : file path
+        Python script to convert annotation bed file to libsvm
+    bed : File path.
+        Annotation bed file with collapsed annotations
+
+    Returns
+    -------
+    file path
+        $ less $OUTDIR/random/instance.txt
+        chr1:11962-11962
+        chr1:12125-12125
+        chr1:13108-13108
+        chr1:13135-13135
+        chr1:13192-13192
+        chr1:13288-13288
+        chr1:13411-13411
+        chr1:13518-13518
+        chr1:13620-13620
+        chr1:14853-14853
+    file path
+        $ less $OUTDIR/random/instance.txt
+        -1 4684:0
+        -1 4684:0
+        -1 2820:1 4684:0
+        -1 2820:1 4684:0
+        -1 2820:1 4684:0
+        -1 4684:0
+        -1 4684:0
+        -1 4684:0
+        -1 4684:0
+        -1 2425:1 2480:1 2820:1 4684:0
+    """
+    input:
+        script=os.path.join(TAGOOS, "script/collapse2libsvm.py"),
+        bed=os.path.join(OUTDIR, "random/annotation_collapsed.bed"),
+        variable_txt=VARIABLE_TXT,
+    output:
+        instance=os.path.join(OUTDIR, "random/instance.txt"),
+        libsvm=os.path.join(OUTDIR, "random/annotation.libsvm"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.bed} {input.variable_txt} {output.instance} {output.libsvm}"""
+
+rule pval04_collapse_annotations:
+    """
+    This rule collpases several annotations falling in the same nucleotide
+
+    Parameters
+    ----------
+    script : file path
+        Python script to collapse annotations
+    bed : File path.
+        Bed file path of random genomic positions in a given region
+
+    Returns
+    -------
+    file path
+        $ less $OUTDIR/random/annotation_collapsed.bed
+        chr1    11961   11962   .
+        chr1    12124   12125   .
+        chr1    13107   13108   h3k4me1.mus_trnk_fet.roadmap
+        chr1    13134   13135   h3k4me1.mus_trnk_fet.roadmap
+        chr1    13191   13192   h3k4me1.mus_trnk_fet.roadmap
+        chr1    13287   13288   .
+        chr1    13410   13411   .
+        chr1    13517   13518   .
+        chr1    13619   13620   .
+        chr1    14852   14853   h3k36me3.foreskinkeratinocytemalenewborn.encode2,h3k36me3.ipsc_df_19_11.roadmap,h3k4me1.mus_trnk_fet.roadmap
+    """
+    input:
+        script=os.path.join(TAGOOS, "script/groupby123cols_collapse4col.py"),
+        bed=os.path.join(OUTDIR, "random/annotation.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "random/annotation_collapsed.bed"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.bed} {output.bed}"""
+
+rule pval03_sort_annotated_random:
+    """This rule intersects the annotated random genomic random positions
+    """
+    input:
+        bed=os.path.join(OUTDIR, "random/annotation_nonsorted.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "random/annotation.bed"),
+    threads: THREADS
+    shell:
+        """sort --parallel {threads} -k1,1 -k2,2n -k3,3n -k4,4 -u {input.bed} -o {output.bed}"""
+
+rule pval02_annotated_random:
+    """This rule intersects the bed file of the selected features of the model with random genomic positions in a given region
+
+    Parameters
+    ----------
+    annotation : Bed file path
+        Bed file path of the selected features of the model
+    bed : File path.
+        Bed file path of random genomic positions in a given region
+    """
+    input:
+        annotation=ANNOTATION_BED,
+        bed=os.path.join(OUTDIR, "random/%s.bed"%REGION),
+    output:
+        bed=os.path.join(OUTDIR, "random/annotation_nonsorted.bed"),
+    shell:
+        """intersectBed -sorted -a {input.bed} -b  {input.annotation} -wb | awk '{{print $1"\t"$2"\t"$3"\t"$7}}' |uniq >{output.bed};
+            intersectBed -sorted -a {input.bed} -b  {input.annotation} -v | awk '{{print $1"\t"$2"\t"$3"\t."}}' |uniq >>{output.bed}"""
+
+rule pval01_random_region:
+    """This rule intersects the bed file of the random genomic positions with the region bed file
+
+    Parameters
+    ----------
+    region : Bed file path
+        bed file path of random genomic positions
+    random : Bed file path.
+        bed file path of random genomic positions
+    """
+    input:
+        region=GENOMIC_REGION_BED,
+        random=RANDOM_BED,
+    output:
+        bed=os.path.join(OUTDIR, "random/%s.bed"%REGION),
+    threads: THREADS
+    shell:
+        """intersectBed -sorted -a {input.random} -b  {input.region} |sort --parallel {threads} -u -k1,1 -k2,2n -k3,3n >{output.bed}"""
+

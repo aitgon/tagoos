@@ -2,7 +2,7 @@ OUTDIR = os.getenv('OUTDIR')
 THREADS = int(os.getenv('THREADS'))
 
 GENOME_WINDOW_BED=os.getenv('GENOME_WINDOW_BED')
-CHROM=os.getenv('GENOME_WINDOW_IDS').split()
+CHROM=os.getenv('CHROM').split()
 ANNOTATION_BED=os.getenv('ANNOTATION_BED')
 SCORE_BED=os.getenv('SCORE_BED')
 GENE_BED=os.getenv('GENE_BED')
@@ -12,10 +12,9 @@ REGION=os.getenv('REGION')
 
 TAGOOS=os.getenv('TAGOOS')
 
-
 rule all:
     input:
-        expand(os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance_hg19_hg38.tsv"), chr=CHROM),
+        expand(os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_hg19_hg38.tsv"), chr=CHROM),
         tsv=os.path.join(OUTDIR, "rsid_annotation_score_gene_genedistance.tsv"),
         txt=os.path.join(OUTDIR, "rsid_splitted.txt")
 
@@ -47,7 +46,7 @@ rule d10_rsid_join_hg19_hg38:
     output:
         bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance_hg19_hg38.tsv"),
     shell:
-        """join -1 4 -2 4 {input.bed} {input.bed2} |awk 'BEGIN{{OFS="\t"}}{{sub("chr","",$2);sub("rs","",$1); print $2,$3+1,$11+1,$1,$5,$6,$8,$9}}'  >{output.bed}"""
+        """join -1 4 -2 4 {input.bed} {input.bed2} |awk 'BEGIN{{OFS="\t"}}{{sub("chr","",$2);sub("rs","",$1); print $2,$3+1,$11+1,$1,$5,$6,$7,$8,$9}}'  >{output.bed}"""
 
 rule sort_rsid_hg38:
     input:
@@ -80,62 +79,62 @@ rule d10_rsid_hg38:
 rule d10_rsid:
     input:
         bed=DBSNP_BED,
-        bed2=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance.bed"),
+        bed2=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance.bed"),
     output:
         bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance.bed"),
     shell:
-        """intersectBed -sorted  -a {input.bed} -b  {input.bed2}  -wb |cut -f1-4,9-13 |tr " " "\t" >{output.bed}"""
+        """intersectBed -sorted  -a {input.bed} -b  {input.bed2}  -wb |cut -f1-4,9-14 |tr " " "\t" >{output.bed}"""
 
 rule d10_tsv:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance_hg19_hg38.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_hg19_hg38.bed"),
     output:
-        tsv=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance_hg19_hg38.tsv"),
+        tsv=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_hg19_hg38.tsv"),
     shell:
-        """awk 'BEGIN{{OFS="\t"}}{{sub(/chr/, "", $1); sub(/chr/, "", $5); print $1,$2+1,$3,$6+1,$7,$8,$9,$10,$11}}' {input.bed} >{output.tsv}"""
+        """awk 'BEGIN{{OFS="\t"}}{{sub(/chr/, "", $1); sub(/chr/, "", $5); print $1,$2+1,$3,$6+1,$7,$8,$9,$10,$11,$12}}' {input.bed} >{output.tsv}"""
 
 rule d10_join_hg19_hg38:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance_sortedk4.bed"),
-        bed2=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance_hg38.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_sortedk4.bed"),
+        bed2=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_hg38.bed"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance_hg19_hg38.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_hg19_hg38.bed"),
     shell:
-        """join -1 4 -2 4 -o1.1,1.2,1.3,1.4,2.1,2.2,2.3,1.5,1.6,1.8,1.9 {input.bed} {input.bed2} |tr " " "\t" >{output.bed}"""
+        """join -1 4 -2 4 -o1.1,1.2,1.3,1.4,2.1,2.2,2.3,1.5,1.6,1.7,1.8,1.9 {input.bed} {input.bed2} |tr " " "\t" >{output.bed}"""
 
 rule d10_hg38:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance_sortedk4.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_sortedk4.bed"),
         liftover=os.path.join(TAGOOS, "script/downloaded/liftOver"),
         chain_file=os.path.join(TAGOOS, "script/downloaded/hg19ToHg38.over.chain.gz"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance_hg38.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_hg38.bed"),
     shell:
         """{input.liftover} {input.bed} {input.chain_file} {output.bed} unMapped -bedPlus=3"""
 
 rule d10_sort_f4:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance.bed"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance_sortedk4.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_sortedk4.bed"),
     threads: THREADS
     shell:
         """sort -u -k4,4 --parallel {threads} {input.bed} -o {output.bed}"""
 
 rule d08_gene:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval.bed"),
         bed2=GENE_BED,
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_gene_genedistance.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance.bed"),
     shell:
-        """bedtools closest -a {input.bed} -b {input.bed2} -d |cut -f1,2,3,4,5,6,7,10,11 >{output.bed}"""
+        """bedtools closest -a {input.bed} -b {input.bed2} -d |cut -f1,2,3,4,5,6,7,11,12 >{output.bed}"""
 
 rule d07_sort_annotation_score:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_nonsorted.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_nonsorted.bed"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval.bed"),
     threads: THREADS
     shell:
         """sort -k1,1 -k2,2n --parallel {threads} {input.bed} -o {output.bed}"""
@@ -143,17 +142,17 @@ rule d07_sort_annotation_score:
 rule d06_join_annotation_score:
     input:
         bed=os.path.join(OUTDIR, "chrom/{chr}/annotation.bed"),
-        bed2=os.path.join(OUTDIR, "chrom/{chr}/score.bed"),
+        bed2=os.path.join(OUTDIR, "chrom/{chr}/pval_neglogpval.bed"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_nonsorted.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_nonsorted.bed"),
     shell:
-        """intersectBed -sorted -a {input.bed} -b {input.bed2} -wb |cut -f1,2,3,4,5,10 >{output.bed}"""
+        """intersectBed -sorted -a {input.bed} -b {input.bed2} -wb |cut -f1,2,3,4,5,10,11 >{output.bed}"""
 
 rule d05_s_score:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/score_nonsorted.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/pval_neglogpval_nonsorted.bed"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/score.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/pval_neglogpval.bed"),
     threads: THREADS
     shell:
         """sort --parallel {threads} -u -k1,1 -k2,2n {input.bed} -o {output.bed}"""
@@ -163,9 +162,9 @@ rule d04_score:
         bed=os.path.join(OUTDIR, "chrom/{chr}/chrom.bed"),
         score_bed = SCORE_BED,
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/score_nonsorted.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/pval_neglogpval_nonsorted.bed"),
     shell:
-        """intersectBed -sorted -a {input.score_bed} -b {input.bed} |awk '{{print $1"\t"$2"\t"$3"\t"$1":"$2+1"-"$3"\t"$4}}' > {output.bed}"""
+        """intersectBed -sorted -a {input.score_bed} -b {input.bed} |grep -v gwindow |awk '{{print $1"\t"$2"\t"$3"\t"$1":"$2+1"-"$3"\t"$5"\t"$6}}' > {output.bed}"""
 
 rule d03_s_annotation:
     input:
@@ -185,16 +184,12 @@ rule d02_annotation:
     shell:
         """intersectBed -sorted -a {input.annotation_bed} -b {input.bed} |awk '{{print $1"\t"$2"\t"$3"\t"$1":"$2+1"-"$3"\t"$4}}' > {output.bed}"""
 
-rule tmp:
-    input:
-        expand(os.path.join(OUTDIR, "chrom/{chr}/chrom.bed"), chr=CHROM)
-
 rule d01_grep_genome_splitted:
     input:
         gwindow_bed=GENOME_WINDOW_BED
     output:
         gwindow_bed=os.path.join(OUTDIR, "chrom/{chr}/chrom.bed")
-    params: chr="{chr}"
+    params: chr="chr{chr}"
     shell:
-        """grep -P '^{params.chr}\t' {input.gwindow_bed}  >{output.gwindow_bed}"""
+        """grep -P '^{params.chr}\t' {input.gwindow_bed} >{output.gwindow_bed}"""
 
