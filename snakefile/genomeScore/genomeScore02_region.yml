@@ -30,7 +30,7 @@ rule all:
     ----------
     GENOME_WINDOW_IDS : Environment variable
         Variable  with genome intervals in the form: chr10:1-30000000 chr10:120000001-135534747 ...
-    os.path.join(OUTDIR, "{gwindow}/gwindow.bed") : str
+    os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow.bed") : str
         The specified region in the given genome window
         $ head /cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intergenic/1kg1000000intergenic_mergedannot_index3_analysis/genome_score/chr1:1-30000000/gwindow_1nt_region.bed
         chr1    0       11868
@@ -39,13 +39,13 @@ rule all:
         chr1    36081   69090
     """
     input:
-        expand(os.path.join(OUTDIR, "{gwindow}/gwindow_1nt_region.bed"), gwindow=GENOME_WINDOW_IDS),
+        expand(os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region.bed"), gwindow=GENOME_WINDOW_IDS),
 
 rule sort_region:
     input:
-        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_1nt_region_nonsorted.bed")
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_nonsorted.bed")
     output:
-        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_1nt_region.bed")
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region.bed")
     threads: THREADS
     shell:
         """sort -k1,1 -k2,2n -k3,3n -u --parallel {threads} {input.bed} -o {output.bed}; """
@@ -55,7 +55,7 @@ rule intersect_region:
         bed=GENOMIC_REGION_BED,
         bed2=os.path.join(GWINDOW_DIR, "{gwindow}/gwindow_1nt.bed")
     output:
-        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_1nt_region_nonsorted.bed")
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_nonsorted.bed")
     shell:
         """intersectBed -sorted -a {input.bed} -b {input.bed2} | awk '{{print $1"\t"$2"\t"$3}}' >{output.bed}"""
 
