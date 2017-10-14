@@ -23,23 +23,27 @@ rule gsa09_annotation_bed:
     shell:
         """sort --parallel {threads} -k1,1 -k2,2n {input.bed} >> {output.bed}"""
 
-rule gsa08_neglogpval:
+rule tmp:
     input:
-        tsv = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_score_pval_neglogpval.tsv"), gwindow=GENOME_WINDOW_IDS)
+        bg = os.path.join(OUTDIR, "score_pval_neglogpval.bg"),
+
+rule gsa08_cat_score_pval_neglogpval:
+    input:
+        bg = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/score_pval_neglogpval.bg"), gwindow=GENOME_WINDOW_IDS)
     output:
         bg = os.path.join(OUTDIR, "score_pval_neglogpval.bg"),
     threads: THREADS
     shell:
-        """awk -F'[-:\t]' 'BEGIN{{OFS="\t"}}{{print $1,$2-1,$3,$5,$6,$7}}' {input.tsv} |sort --parallel {threads} -k1,1 -k2,2n >{output.bg};"""
+        """sort --parallel {threads} -k1,1 -k2,2n {input.bg} |tr -d ' ' > {output.bg};"""
 
-rule gsa07_pval:
+rule gsa07_score_pval_neglogpval:
     input:
         tsv = os.path.join(OUTDIR, "gwindow/{gwindow}/score.tsv"),
         rda = os.path.join(OUTDIR, "random/ecdf.Rda"),
     output:
-        tsv = os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_score_pval_neglogpval.tsv")
+        bg = os.path.join(OUTDIR, "gwindow/{gwindow}/score_pval_neglogpval.bg")
     shell:
-        """Rscript -e 'library("data.table"); dt=fread("{input.tsv}"); F10=get(load("{input.rda}")); dt$V3=F10(dt$V2); dt$V4=-log10(dt$V3); write.table(dt, file="{output.tsv}", sep="\\t", row.names=F, col.names=F, quote=F)'"""
+        """Rscript -e 'library("data.table"); library(stringr); dt=fread("{input.tsv}", col.names=c("gwindow", "score")); dt = cbind(dt, str_split_fixed(dt$gwindow, "[:]", 2)); dt[,gwindow:=NULL]; dt = cbind(dt, str_split_fixed(dt$V2, "[-]", 2)); dt <- dt[, -c(3), with =F]; dt <- dt[, c(2,3,4,1), with =F]; colnames(dt) = c("chrom", "start", "end", "score"); F10=get(load("{input.rda}")); dt$pval=1-F10(dt$score); dt$neglogpval=-log10(dt$pval); dt$start = as.numeric(dt$start)-1; dt=dt[order(chrom, start)]; dt$start = format(dt$start, scientific=F); dt$end = format(dt$end, scientific=F); dt$pval = format(dt$pval, scientific=F); dt$neglogpval = format(dt$neglogpval, scientific=F); write.table(dt, file="{output.bg}", sep="\\t", row.names=F, col.names=F, quote=F)';"""
 
 rule gsa06_score:
     input:
