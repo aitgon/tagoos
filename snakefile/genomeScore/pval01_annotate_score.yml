@@ -34,9 +34,11 @@ garb=dev.off()
     input:
         tsv=os.path.join(OUTDIR, "random/score.tsv"),
     output:
-        eps=os.path.join(OUTDIR, "ecdf_score.eps"),
+        ecdf_rda=os.path.join(OUTDIR, "ecdf.rda"),
+        hist=os.path.join(OUTDIR, "hist_score.eps"),
+        ecdf_eps=os.path.join(OUTDIR, "ecdf_score.eps"),
     shell:
-        """Rscript -e 'library(data.table); dt=fread("/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/random/score.tsv"); F10=ecdf(dt$V2); save(F10, file="/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/random/ecdf.Rda"); setEPS(); postscript("/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/hist_score.eps"); hist(dt$V2, breaks=40, xlim=c(-1,1), main="Intronic", xlab="XGBOOST Scores"); garb=dev.off(); setEPS(); postscript("/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score/ecdf_score.eps"); plot(F10, verticals = TRUE, do.p = FALSE, main="Intronic", xlab="XGBOOST Scores", ylab="Cumulative Probability"); garb=dev.off();'"""
+        """Rscript -e 'library(data.table); dt=fread("{input.tsv}"); F10=ecdf(dt$V2); save(F10, file="{output.ecdf_rda}"); setEPS(); postscript("{output.hist}"); hist(dt$V2, breaks=40, xlim=c(-1,1), main="Intronic", xlab="XGBOOST Scores"); garb=dev.off(); setEPS(); postscript("{output.ecdf_eps}"); plot(F10, verticals = TRUE, do.p = FALSE, main="Intronic", xlab="XGBOOST Scores", ylab="Cumulative Probability"); garb=dev.off();'"""
 
 rule pval05_score:
     """
