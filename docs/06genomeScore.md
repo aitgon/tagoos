@@ -123,10 +123,6 @@ date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db01_split_genome.yml -j
 
 ~~~
 export GENE_BED=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/ucsc_hg19_RefSeqGenes_geneSymbol.bed
-#export GENOME_WINDOW_IDS=chr1_1_249250621
-#export GENOME_WINDOW_IDS=chr21_1_48129895
-#export GENOME_WINDOW_IDS=chr22_1_51304566
-#export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED |sort)
 export CHROM="22"
 export CHROM="$(seq 1 22)"
 export DBSNP_BED=$PWD/out/data/snp/dbsnp/${REGION}/dbsnp.bed
@@ -136,7 +132,6 @@ date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db02_intersection.yml -j
 # Enter it into the DB
 
 AnnotationWindow
-
 
 ~~~
 #export DB_SERVER="mysql+pymysql://root:mypass@10.1.1.157"
