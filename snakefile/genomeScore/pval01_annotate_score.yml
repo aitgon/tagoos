@@ -14,7 +14,7 @@ REGION = os.getenv('REGION')
 
 rule all:
     input:
-        eps=os.path.join(OUTDIR, "ecdf_score.eps"),
+        eps=os.path.join(OUTDIR, "random/ecdf_score.eps"),
 
 rule pval06_ecdf:
     """
@@ -34,9 +34,9 @@ garb=dev.off()
     input:
         tsv=os.path.join(OUTDIR, "random/score.tsv"),
     output:
-        ecdf_rda=os.path.join(OUTDIR, "ecdf.rda"),
-        hist=os.path.join(OUTDIR, "hist_score.eps"),
-        ecdf_eps=os.path.join(OUTDIR, "ecdf_score.eps"),
+        ecdf_rda=os.path.join(OUTDIR, "random/ecdf.rda"),
+        hist=os.path.join(OUTDIR, "random/hist_score.eps"),
+        ecdf_eps=os.path.join(OUTDIR, "random/ecdf_score.eps"),
     shell:
         """Rscript -e 'library(data.table); dt=fread("{input.tsv}"); F10=ecdf(dt$V2); save(F10, file="{output.ecdf_rda}"); setEPS(); postscript("{output.hist}"); hist(dt$V2, breaks=40, xlim=c(-1,1), main="Intronic", xlab="XGBOOST Scores"); garb=dev.off(); setEPS(); postscript("{output.ecdf_eps}"); plot(F10, verticals = TRUE, do.p = FALSE, main="Intronic", xlab="XGBOOST Scores", ylab="Cumulative Probability"); garb=dev.off();'"""
 

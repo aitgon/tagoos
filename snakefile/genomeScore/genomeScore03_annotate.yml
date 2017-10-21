@@ -39,7 +39,7 @@ rule gsa08_cat_score_pval_neglogpval:
 rule gsa07_score_pval_neglogpval:
     input:
         tsv = os.path.join(OUTDIR, "gwindow/{gwindow}/score.tsv"),
-        rda = os.path.join(OUTDIR, "random/ecdf.Rda"),
+        rda = os.path.join(OUTDIR, "random/ecdf.rda"),
     output:
         bg = os.path.join(OUTDIR, "gwindow/{gwindow}/score_pval_neglogpval.bg")
     shell:
