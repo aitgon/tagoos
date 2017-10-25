@@ -158,29 +158,3 @@ export DB_SERVER="mysql+pymysql://root:mypass@${DB_HOST}:${DB_PORT}"
 date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db04_mysql_rsid.yml -j 192 --keep-going -c "qsub -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 --resources db=1 -pn
 ~~~
 
-# Some useful commands
-
-rsync DB data from sacapus to milan
-
-AnnotationWindow (170712)
-
-~~~
-rsync  -avzn --progress --exclude "[mr]*" --include "annotation_score_gene_genedistance_hg19_hg38.tsv" --exclude "*.bed*" --exclude "*.tsv" gonzalez@sacapus_ext:/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db/gwindow/ ${HOME}/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db_${DBSIZE}/gwindow/
-~~~
-
-RSID (170712)
-
-~~~
-rsync  -avzn --progress --exclude "r*" --include "+nic_+_.tsv" gonzalez@sacapus_ext:/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db_${DBSIZE}/rsid_splitted/ ${HOME}/data/2015_svmgwas/repositories/tagoos-appli/170712/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db_${DBSIZE}/rsid_splitted/
-~~~
-
-
-Drop databases
-
-~~~
-cut -f4 $GENOME_WINDOW_BED | sort |while read GW; do DBSUFFIX=$(echo $GW |tr ":" "_"| tr "-" "_"); export DB=intronic_$DBSUFFIX; echo "drop database if exists ${DB};"; done >out/drop.sql
-mysql -u root -p'mypass' -h 10.1.1.157 < out/drop.sql
-~~~
-
-
-

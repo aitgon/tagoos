@@ -15,12 +15,12 @@ TAGOOS=os.getenv('TAGOOS')
 rule all:
     input:
         expand(os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance_hg19_hg38.tsv"), chr=CHROM),
-        tsv=os.path.join(OUTDIR, "rsid_annotation_score_gene_genedistance.tsv"),
+        tsv=os.path.join(OUTDIR, "rsid_annotation_pval_neglogpval_gene_genedistance.tsv"),
         txt=os.path.join(OUTDIR, "rsid_splitted.txt")
 
 rule d11_split_rsid:
     input:
-        tsv=os.path.join(OUTDIR, "rsid_annotation_score_gene_genedistance.tsv")
+        tsv=os.path.join(OUTDIR, "rsid_annotation_pval_neglogpval_gene_genedistance.tsv")
     output:
         txt=os.path.join(OUTDIR, "rsid_splitted.txt")
     params:
@@ -32,47 +32,47 @@ rule d11_split_rsid:
 
 rule d11_merge_rsid:
     input:
-        tsv=expand(os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance_hg19_hg38.tsv"), chr=CHROM),
+        tsv=expand(os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance_hg19_hg38.tsv"), chr=CHROM),
     output:
-        tsv=os.path.join(OUTDIR, "rsid_annotation_score_gene_genedistance.tsv")
+        tsv=os.path.join(OUTDIR, "rsid_annotation_pval_neglogpval_gene_genedistance.tsv")
     threads: THREADS
     shell:
         """sort --parallel {threads} -k4,4n -u {input.tsv} -o {output.tsv}"""
 
 rule d10_rsid_join_hg19_hg38:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance_sortedk3.bed"),
-        bed2=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance_hg38_sortedk3.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance_sortedk3.bed"),
+        bed2=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance_hg38_sortedk3.bed"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance_hg19_hg38.tsv"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance_hg19_hg38.tsv"),
     shell:
         """join -1 4 -2 4 {input.bed} {input.bed2} |awk 'BEGIN{{OFS="\t"}}{{sub("chr","",$2);sub("rs","",$1); print $2,$3+1,$11+1,$1,$5,$6,$7,$8,$9}}'  >{output.bed}"""
 
 rule sort_rsid_hg38:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance_hg38.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance_hg38.bed"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance_hg38_sortedk3.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance_hg38_sortedk3.bed"),
     threads: THREADS
     shell:
         """sort -k4 -u --parallel {threads} {input.bed} -o {output.bed}"""
 
 rule sort_rsid_hg19:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance.bed"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance_sortedk3.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance_sortedk3.bed"),
     threads: THREADS
     shell:
         """sort -k4 -u --parallel {threads} {input.bed} -o {output.bed}"""
 
 rule d10_rsid_hg38:
     input:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance.bed"),
         liftover=os.path.join(TAGOOS, "script/downloaded/liftOver"),
         chain_file=os.path.join(TAGOOS, "script/downloaded/hg19ToHg38.over.chain.gz"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance_hg38.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance_hg38.bed"),
     shell:
         """{input.liftover} {input.bed} {input.chain_file} {output.bed} unMapped -bedPlus=3"""
 
@@ -81,7 +81,7 @@ rule d10_rsid:
         bed=DBSNP_BED,
         bed2=os.path.join(OUTDIR, "chrom/{chr}/annotation_pval_neglogpval_gene_genedistance.bed"),
     output:
-        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_score_gene_genedistance.bed"),
+        bed=os.path.join(OUTDIR, "chrom/{chr}/rsid_annotation_pval_neglogpval_gene_genedistance.bed"),
     shell:
         """intersectBed -sorted  -a {input.bed} -b  {input.bed2}  -wb |cut -f1-4,9-14 |tr " " "\t" >{output.bed}"""
 
