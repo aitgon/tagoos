@@ -23,10 +23,6 @@ rule gsa09_annotation_bed:
     shell:
         """sort --parallel {threads} -k1,1 -k2,2n {input.bed} >> {output.bed}"""
 
-rule tmp:
-    input:
-        bg = os.path.join(OUTDIR, "score_pval_neglogpval.bg"),
-
 rule gsa08_cat_score_pval_neglogpval:
     input:
         bg = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/score_pval_neglogpval.bg"), gwindow=GENOME_WINDOW_IDS)
@@ -38,7 +34,7 @@ rule gsa08_cat_score_pval_neglogpval:
 
 rule gsa07_score_pval_neglogpval:
     input:
-        tsv = os.path.join(OUTDIR, "gwindow/{gwindow}/score.tsv"),
+        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/score.tsv"),
         rda = os.path.join(OUTDIR, "random/ecdf.rda"),
     output:
         bg = os.path.join(OUTDIR, "gwindow/{gwindow}/score_pval_neglogpval.bg")
@@ -52,9 +48,9 @@ rule gsa06_score:
         instance=os.path.join(OUTDIR, "gwindow/{gwindow}/instance.txt"),
         model_pkl=MODEL_PKL,
     output:
-        score_tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/score.tsv"),
+        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/score.tsv"),
     shell:
-        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.libsvm} {input.instance} {input.model_pkl} {output.score_tsv}"""
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.libsvm} {input.instance} {input.model_pkl} {output.tsv}"""
 
 rule gsa05_tolibsvm:
     input:
@@ -62,8 +58,8 @@ rule gsa05_tolibsvm:
         bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"),
         variable_txt=VARIABLE_TXT,
     output:
-        instance=os.path.join(OUTDIR, "gwindow/{gwindow}/instance.txt"),
         libsvm=os.path.join(OUTDIR, "gwindow/{gwindow}/collapsed2.libsvm"),
+        instance=os.path.join(OUTDIR, "gwindow/{gwindow}/instance.txt"),
     shell:
         """python3 {input.script} {input.bed} {input.variable_txt} {output.instance} {output.libsvm}"""
 

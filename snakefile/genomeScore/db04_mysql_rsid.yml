@@ -51,7 +51,7 @@ rule d01_mysql1:
         {HOME}/Software/miniconda3/envs/tagoos/bin/wopmars -w {input.wopfile} -D "{params.db_server}/rsid_{params.region}_{params.db_id}?charset=utf8&local_infile=1" -d $PWD -v -p -F -t rule2 -n
         if [[ -s {input.annotation_tsv} ]];
         then
-        mysql -h {params.db_host} -P {params.db_port} -u root -p'mypass' -D rsid_{params.region}_{params.db_id} -e 'LOAD DATA LOCAL INFILE "{input.annotation_tsv}" INTO TABLE DBSNP (chrom, start_hg19, start_hg38, rsid, annotation, pval, neglogpval, gene, gene_distance);'
+        mysql -h {params.db_host} -P {params.db_port} -u root -p'mypass' -D rsid_{params.region}_{params.db_id} -e 'LOAD DATA LOCAL INFILE "{input.annotation_tsv}" INTO TABLE DBSNP (chrom, start_hg19, start_hg38, rsid, annotation, score, pval, gene, gene_distance);'
         fi;
         date;
         touch {output.db}"""
