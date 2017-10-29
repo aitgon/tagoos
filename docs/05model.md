@@ -15,7 +15,7 @@ Region variables
 $REGION \in {'intronic', 'intergenic'}$
 
 ~~~
-export REGION=intergenic # default intronic
+export REGION=intronic # default intronic
 export CHROM="$(seq 22)"
 ~~~
 
@@ -50,7 +50,7 @@ export ANNOTATION_DIR=$PWD/out/data/annotation/${ANNOT_LABEL}
 export GENOME1K_DIR=$PWD/out/data/snp/1000genomes
 export GENOME1K_PEAKBED_DIR=$GENOME1K_DIR/${REGION}/peak_bed
 export PYTHONBIN=$(which python)
-export INDEX_DIR=$PWD/out/${INDEX_LABEL}
+export INDEX_DIR=${GENOME1K_DIR}/${REGION}/index3
 ~~~
 
 ~~~
