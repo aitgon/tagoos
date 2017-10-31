@@ -14,7 +14,7 @@ THREADS = int(os.getenv('THREADS'))
 rule all:
     input:
         plink_ld = expand(os.path.join(LD_DIR, "chrom/{chr}/chr{chr}.ld"), chr=CHROM),
-        prune_in = expand(os.path.join(OUTDIR, "index3/{chr}/chr{chr}_index3.prune.in"), chr=CHROM),
+        prune_in = expand(os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.prune.in"), chr=CHROM),
 
 rule sort_ldproc:
     input:
@@ -52,9 +52,9 @@ rule index3:
         plink_bed = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink.bed"),
     params:
         plink_bed_prefix = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink"),
-        plink_index_prune_prefix = os.path.join(OUTDIR, "index3/{chr}/chr{chr}_index3"),
+        plink_index_prune_prefix = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3"),
     output:
-        prune_in = os.path.join(OUTDIR, "index3/{chr}/chr{chr}_index3.prune.in"),
+        prune_in = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.prune.in"),
     shell:
         """mkdir -p $(dirname {output.prune_in}); plink --bfile {params.plink_bed_prefix} --indep 5 1 100 --out {params.plink_index_prune_prefix}"""
 

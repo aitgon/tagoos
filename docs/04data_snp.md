@@ -104,7 +104,7 @@ export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
 time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -j 256 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $SNP_DIR_OUT/stderr.log -o $SNP_DIR_OUT/stdout.log" -d $SNP_DIR_OUT -pn
 ~~~
 
-TRASH??? INDEX (Region-dependent) TRASH???
+INDEX (Region-dependent)
 Create index
 
 ~~~

@@ -15,9 +15,13 @@ Region variables
 $REGION \in {'intronic', 'intergenic'}$
 
 ~~~
-export REGION=intronic # default intronic
+export REGION=intergenic # default intronic
 export CHROM="$(seq 22)"
 ~~~
+
+
+export GENOME1K_DIR=$PWD/out/data/snp/1000genomes
+export LD_DIR=${GENOME1K_DIR}/${REGION}/ld08
 
 Positive
 
@@ -58,7 +62,7 @@ export TAG_DIR=$TAG_POS_DIR
 export LABEL=1
 export TAG_RSID=$TAG_POS_RSID
 #
-time snakemake -s   ${TAGOOS}/snakefile/model/rsid2chrom.yml -p -j 1 --keep-going --rerun-incomplete -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR -p
+time snakemake -s   ${TAGOOS}/snakefile/model/rsid2chrom.yml -p -j 1 --keep-going --rerun-incomplete -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR -pn
 ~~~
 
 POSITIVE 
@@ -105,7 +109,7 @@ export ANNOT_LABEL=mergedannot
 export ANNOTATION_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_data/annotation/${ANNOT_LABEL}.bed
 export ANNOTATION_DIR=$(dirname ${ANNOTATION_BED})
 #
-export CHROM="$(seq 1 22) X"
+export CHROM="$(seq 1 22)"
 time snakemake -s ${TAGOOS}/snakefile/data_annotation/split_annotation.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $ANNOTATION_DIR/stderr.log -o $ANNOTATION_DIR/stdout.log" -d $ANNOTATION_DIR -pn
 ~~~
 
@@ -119,25 +123,25 @@ export ANNOTATION_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANN
 export ANNOTATION_DIR=$(dirname ${ANNOTATION_BED})
 export SNP_DIR_IN=$PWD/out/data/snp/dbsnp/${REGION}
 export SNP_DIR_OUT=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_data/dbsnp_annotation
-export VARIABLE_TXT=/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/data/annotation/mergedannot/variable.txt
+export VARIABLE_TXT=$PWD/out/data/annotation/mergedannot/variable.txt
 #
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
 time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -p -j $SNAKEMAKE_J --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $SNP_DIR_OUT/stderr.log -o $SNP_DIR_OUT/stdout.log" -d $SNP_DIR_OUT -pn
 ~~~
 
-SCORE DBSNP VARIANTS
+SCORE DBSNP VARIANTS (TRASH)
 
 ~~~
-export THREADS=16
-export CHROM="$(seq 22)"
+#export THREADS=16
+#export CHROM="$(seq 22)"
 #export CHROM=$(cat $PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1/CV/selected_chroms.txt)
-export MODEL_PKL=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}/model.pkl
+#export MODEL_PKL=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}/model.pkl
 #export ANNOTATION_DIR=$PWD/out/data/annotation/${ANNOT_LABEL}
 #
-export DBSNP_DIR=/cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_data/dbsnp_annotation
-export SCRIPT_DIR=${TAGOOS}/script
-export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_dbsnp
+#export DBSNP_DIR=$PWD/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_data/dbsnp_annotation
+#export SCRIPT_DIR=${TAGOOS}/script
+#export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_dbsnp
 
-time snakemake -s ${TAGOOS}/snakefile/model/score.yml -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
+#time snakemake -s ${TAGOOS}/snakefile/model/score.yml -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~
 
