@@ -8,15 +8,26 @@ SCORE_BED=os.getenv('SCORE_BED')
 GENE_BED=os.getenv('GENE_BED')
 DBSNP_BED=os.getenv('DBSNP_BED')
 
+CHROM_WINDOW=os.getenv('CHROM_WINDOW')
+
 REGION=os.getenv('REGION')
 
 TAGOOS=os.getenv('TAGOOS')
 
 rule all:
     input:
-        expand(os.path.join(OUTDIR, "chrom/{chr}/annotation_score_pval_gene_genedistance_hg19_hg38.tsv"), chr=CHROM),
+        expand(os.path.join(OUTDIR, "chrom/{chr}/annotation_score_pval_gene_genedistance_hg19_hg38_chrom_window.tsv"), chr=CHROM),
         tsv=os.path.join(OUTDIR, "rsid_annotation_score_pval_gene_genedistance.tsv"),
-        txt=os.path.join(OUTDIR, "rsid_splitted.txt")
+
+rule d12_add_start_chromosome_window:
+    input:
+        tsv=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_pval_gene_genedistance_hg19_hg38.tsv")
+    output:
+        tsv=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_pval_gene_genedistance_hg19_hg38_chrom_window.tsv")
+    params:
+        chrom_window = CHROM_WINDOW,
+    shell:
+        """awk  '{{print $0"\t"int($2/{params.chrom_window})"\t"int($4/{params.chrom_window})}}' {input.tsv} >{output.tsv}"""
 
 rule d11_split_rsid:
     input:

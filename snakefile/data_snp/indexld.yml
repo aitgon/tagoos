@@ -2,26 +2,25 @@ CHROM=os.getenv('CHROM').split()
 GENOME1K_DIR = os.getenv('GENOME1K_DIR')
 HOME = os.getenv('HOME')
 INDEX_DIR = os.getenv('INDEX_DIR')
-INDEX_LABEL = os.getenv('INDEX_LABEL')
 LABEL = os.getenv('LABEL')
 LD=os.getenv('LD')
+LD_DIR=os.getenv('LD_DIR')
 REGION = os.getenv('REGION')
 THREADS = int(os.getenv('THREADS'))
 
 from os.path import basename
 
 from os.path import dirname
-LD_SLUG="ld" + LD.replace(".", "")
 
 rule all:
     input:
-        expand(os.path.join(INDEX_DIR, REGION, "chrom/{chr}/index_ld_sortedk2.tsv"), chr=CHROM),
+        expand(os.path.join(INDEX_DIR, "chrom/{chr}/index_ld_sortedk2.tsv"), chr=CHROM),
 
 rule sort_indexld_k2:
     input:
-        indexld = os.path.join(INDEX_DIR, REGION, "chrom/{chr}/index_ld.tsv"),
+        indexld = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld.tsv"),
     output:
-        indexld_sortedk2 = os.path.join(INDEX_DIR, REGION, "chrom/{chr}/index_ld_sortedk2.tsv"),
+        indexld_sortedk2 = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
     threads: THREADS
     shell:
         """LC_ALL=C sort -u --parallel {threads} {input.indexld} -o {output.indexld_sortedk2};
@@ -29,18 +28,18 @@ rule sort_indexld_k2:
 
 rule indexld:
     input:
-        index_rsid_sorted = os.path.join(INDEX_DIR, REGION, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),
-        plink_ld = os.path.join(GENOME1K_DIR, REGION, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
+        index_rsid_sorted = os.path.join(INDEX_DIR, "chrom/{chr}/chr{chr}_index3.prune_sorted.in"),
+        plink_ld = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}.ld"),
     output:
-        indexld = os.path.join(INDEX_DIR, REGION, "chrom/{chr}/index_ld.tsv"),
+        indexld = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld.tsv"),
     shell:
         """LC_ALL=C join -1 1 -2 1 -o 2.1,2.2,2.3 {input.index_rsid_sorted} {input.plink_ld} >{output.indexld}"""
 
 rule sort_index_rsid:
     input:
-        index_rsid = os.path.join(GENOME1K_DIR, REGION, "%s/{chr}/chr{chr}_%s.prune.in"%(INDEX_LABEL,INDEX_LABEL) ),
+        index_rsid = os.path.join(INDEX_DIR, "chrom/{chr}/chr{chr}_index3.prune.in"),
     output:
-        index_rsid_sorted = os.path.join(INDEX_DIR, REGION, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),  
+        index_rsid_sorted = os.path.join(INDEX_DIR, "chrom/{chr}/chr{chr}_index3.prune_sorted.in"),  
     threads: THREADS
     shell:
         """LC_ALL=C sort --parallel {threads} -u {input.index_rsid} -o {output.index_rsid_sorted}"""

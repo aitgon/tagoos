@@ -7,7 +7,8 @@ GENOME1K_PEAKBED_DIR = os.getenv('GENOME1K_PEAKBED_DIR')
 HOME = os.getenv('HOME')
 INDEX_DIR = os.getenv('INDEX_DIR')
 LABEL = os.getenv('LABEL')
-LD=os.getenv('LD')
+#LD=os.getenv('LD')
+LD_DIR=os.getenv('LD_DIR')
 PYTHONBIN = os.getenv('PYTHONBIN')
 REGION = os.getenv('REGION')
 THREADS = int(os.getenv('THREADS'))
@@ -18,7 +19,7 @@ TAG_RSID = os.getenv('TAG_RSID')
 from os.path import basename
 
 from os.path import dirname
-LD_SLUG="ld" + LD.replace(".", "")
+#LD_SLUG="ld" + LD.replace(".", "")
 
 rule all:
     input:
@@ -79,7 +80,7 @@ rule sort_index2corr:
 rule index2tag2corr_r2_tsv2:
     input:
         index2tagcorr_sortedk2_tsv = os.path.join(TAG_DIR, "chrom/{chr}/index2tagcorr_sortedk2.tsv"),
-        indexld_sortedk2 = os.path.join(INDEX_DIR, REGION, "chrom/{chr}/index_ld_sortedk2.tsv"),
+        indexld_sortedk2 = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
     output:
         index2corr_r2 = os.path.join(TAG_DIR, "chrom/{chr}/index2corr_r2.tsv")
     shell:
@@ -96,7 +97,7 @@ rule sortk2_index2tagcorr_r2:
 
 rule index2tagcorr_r2:
     input:
-        indexld_sortedk2 = os.path.join(INDEX_DIR, REGION, "chrom/{chr}/index_ld_sortedk2.tsv"),
+        indexld_sortedk2 = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
         tagld_sortedk1 = os.path.join(TAG_DIR, "chrom/{chr}/tag_ld_sortedk1.tsv"),
     output:
         index2tagcorr_tsv = os.path.join(TAG_DIR, "chrom/{chr}/index2tagcorr.tsv")
@@ -115,7 +116,7 @@ rule sort_tagld_k1:
 rule tagld:
     input:
         tag_rsid_sorted = os.path.join(TAG_DIR, "%s.sorted.rsid"%TAG_RSID),
-        plink_ld = os.path.join(GENOME1K_DIR, REGION, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
+        plink_ld = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}.ld"),
     output:
         tagld = os.path.join(TAG_DIR, "chrom/{chr}/tag_ld.tsv"),
     shell:
