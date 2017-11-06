@@ -32,7 +32,7 @@ rule d02_dump:
 rule d01_mysql1:
     input:
         wopfile=os.path.join(TAGOOS, 'snakefile/genomeScore', "Wopfile.yml"),
-        annotation_tsv=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_pval_gene_genedistance_hg19_hg38.tsv"),
+        annotation_tsv=os.path.join(OUTDIR, "chrom/{chr}/annotation_score_pval_gene_genedistance_hg19_hg38_chrom_window.tsv"),
     output:
         db=os.path.join(OUTDIR, "chrom/{chr}/mysql.touched"),
     params:
@@ -49,7 +49,8 @@ rule d01_mysql1:
         {HOME}/Software/miniconda3/envs/tagoos/bin/wopmars -w {input.wopfile} -D "{params.db_server}/{params.region}_{params.chr}?charset=utf8&local_infile=1" -d $PWD -v -p -F -t rule1 -n
         if [[ -s {input.annotation_tsv} ]];
         then 
-        mysql -h {params.db_host} -P {params.db_port} -u root -p'mypass' -D {params.region}_{params.chr} -e 'LOAD DATA LOCAL INFILE "{input.annotation_tsv}" INTO TABLE AnnotationWindow (chrom, start_hg19, end_hg19, start_hg38, end_hg38, annotation, score, pval, gene, gene_distance)'
+        mysql -h {params.db_host} -P {params.db_port} -u root -p'mypass' -D {params.region}_{params.chr} -e 'LOAD DATA LOCAL INFILE "{input.annotation_tsv}" INTO TABLE AnnotationWindow (chrom, start_hg19, end_hg19, start_hg38, end_hg38, annotation, score, pval, gene, gene_distance, start_hg19_chromosome_window, start_hg38_chromosome_window)'
+        python {TAGOOS}/script/partition.py {params.chr} |mysql -uroot -pmypass  -h 10.1.1.157 intronic_22
         fi;
         date;
         touch {output.db}"""

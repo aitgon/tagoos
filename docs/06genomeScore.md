@@ -125,6 +125,7 @@ date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db01_split_genome.yml -j
 export GENE_BED=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/ucsc_hg19_RefSeqGenes_geneSymbol.bed
 export CHROM="22"
 export CHROM="$(seq 1 22)"
+export CHROM_WINDOW=2000000 # size of the partitions in the DB
 export DBSNP_BED=$PWD/out/data/snp/dbsnp/${REGION}/dbsnp.bed
 date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db02_intersection.yml -j 192 --keep-going -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 -pn
 ~~~

@@ -17,7 +17,7 @@ rule join_bed_annotation:
     output:
         bed=os.path.join(GTEX_DATA_DIR, "proc1.bed"),
     shell:
-        """join -1 4 -2 1 {input.id_bed} {input.annotation_dic} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$7"."$6"."$5}}' >{output.bed}"""
+        """join -1 5 -2 1 {input.id_bed} {input.annotation_dic} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$8"."$7"."$6}}' >{output.bed}"""
 
 rule sort_id_bed:
     input:
@@ -26,16 +26,7 @@ rule sort_id_bed:
         id_bed=os.path.join(GTEX_DATA_DIR, "gtex_id_sortedk4.bed"),
     threads: THREADS
     shell:
-        """sort --parallel {THREADS} -k4,4 {input.id_bed} -o {output.id_bed}"""
-
-#rule id_bed_h19toGRCh38:
-#    input:
-#        id_bed=os.path.join(GTEX_DATA_DIR, "gtex_id_hg19.bed"),
-#        hg19ToHg38_chain="/cobelix/gonzalez/Software/repositories/tagoos/data/hg19ToHg38.over.chain.gz"
-#    output:
-#        bed=os.path.join(GTEX_DATA_DIR, "roadmap_id.bed"),
-#    shell:
-#        """/cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/python /cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/CrossMap.py bed {input.hg19ToHg38_chain} {input.bed} {output.bed}"""
+        """sort --parallel {THREADS} -k5,5 {input.id_bed} -o {output.id_bed}"""
 
 rule gunzip:
     input:
@@ -46,7 +37,7 @@ rule gunzip:
     params:
         GTEx_Analysis_v6p_eQTL_dir=os.path.join(GTEX_DATA_DIR, "GTEx_Analysis_v6p_eQTL"),
     shell:
-        """cat {input.annotation_dic} |cut -f3,3 |while read LABEL; do FN=$LABEL; gunzip -c {params.GTEx_Analysis_v6p_eQTL_dir}/${{LABEL}}_Analysis.v6p.signif_snpgene_pairs.txt.gz |awk -v LABEL="$LABEL" 'BEGIN{{OFS="\t";FS="_"}}NR>1{{print "chr"$1,$2-1,$2,LABEL"_Analysis.v6p.signif_snpgene_pairs.txt.gz"}}'; done >{output.id_bed}"""
+        """cat {input.annotation_dic} |cut -f3,3 |while read LABEL; do FN=$LABEL; gunzip -c {params.GTEx_Analysis_v6p_eQTL_dir}/${{LABEL}}_Analysis.v6p.signif_snpgene_pairs.txt.gz |awk -F'[\t_]' -v LABEL="$LABEL" 'BEGIN{{OFS=" ";}}NR>1{{print "chr"$1,$2-1,$2,$15,LABEL"_Analysis.v6p.signif_snpgene_pairs.txt.gz"}}'; done >{output.id_bed}"""
 
 rule untar:
     input:
