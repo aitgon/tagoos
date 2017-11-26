@@ -108,26 +108,13 @@ export SCORE_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LA
 export DBSNP_BED=$PWD/out/data/snp/dbsnp/${REGION}/dbsnp.bed
 ~~~
 
-# DB.md ----------------------------
-
-Make window (Region-dependent)
-
 ~~~
-export DBSIZE=300000000 # larger than largest chromosome
-export OUTDIR=${PWD}/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db
-#mkdir -p $OUTDIR
-export GENOME_WINDOW_BED=$OUTDIR/genome_splitted.bed
-#export GENOME_WINDOW_IDS=$(cut -f4 $GENOME_WINDOW_BED)
-date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db01_split_genome.yml -j 256 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR --latency-wait 60 -pn
-~~~
-
-~~~
-export GENE_BED=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/ucsc_hg19_RefSeqGenes_geneSymbol.bed
+export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/genome_score
 export CHROM="22"
 export CHROM="$(seq 1 22)"
 #export CHROM_WINDOW=2000000 # size of the partitions in the DB
 export DBSNP_BED=$PWD/out/data/snp/dbsnp/${REGION}/dbsnp.bed
-date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db02_intersection.yml -j 192 --keep-going -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 -pn
+date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/genomeScore04_output_tbi_files.yml -j 192 --keep-going -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 -pn
 ~~~
 
 # Send it to file server 
@@ -135,37 +122,6 @@ date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db02_intersection.yml -j
 Pedagogix
 
 ~~~
-rsync -avz --progress ${PWD}/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/db/tagoos gonzalez@pedagogix:/home/gonzalez/public_html
-~~~
-
-# OLD
-
-Enter it into the DB
-
-AnnotationWindow
-
-~~~
-#export DB_SERVER="mysql+pymysql://root:mypass@10.1.1.157"
-
-export DB_HOST="localhost"
-export DB_HOST="10.1.1.157"
-export DB_PORT="3306"
-
-export DB_SERVER="mysql+pymysql://root:mypass@${DB_HOST}:${DB_PORT}"
-date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db03_mysql.yml -j 192 --keep-going -c "qsub -N '{rule}_{wildcards.chr}' -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 --resources db=1 -pn
-~~~
-
-RSID
-
-~~~
-export DB_ID=0
-export DB_ID=$(echo {0..19})
-
-export DB_HOST="localhost"
-export DB_HOST="10.1.1.157"
-export DB_PORT="3306"
-
-export DB_SERVER="mysql+pymysql://root:mypass@${DB_HOST}:${DB_PORT}"
-date; time snakemake -s ${TAGOOS}/snakefile/genomeScore/db04_mysql_rsid.yml -j 192 --keep-going -c "qsub -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d $OUTDIR --latency-wait 60 --resources db=1 -pn
+rsync -avzn --progress ${PWD}/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_analysis/genome_score/tagoos gonzalez@pedagogix:/home/gonzalez/public_html
 ~~~
 
