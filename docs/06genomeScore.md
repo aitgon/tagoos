@@ -30,7 +30,7 @@ export CHROM_SIZES=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions/raw_hg
 
 ~~~
 export TAGOOS=${HOME}/Software/repositories/tagoos
-export TAGOOS_APPLI=${HOME}/data/2015_svmgwas/repositories/tagoos-appli
+export TAGOOS_APPLI=${HOME}/Data/2015_svmgwas/repositories/tagoos-appli
 ~~~
 
 # Random and p-value from ecdf
