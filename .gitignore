@@ -1,0 +1,4 @@
+out*
+archive
+.snakemake/
+docs/manual.html

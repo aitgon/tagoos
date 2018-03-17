@@ -1,0 +1,186 @@
+CHROM=os.getenv('CHROM').split()
+GENOME1K_DIR=os.getenv('GENOME1K_DIR')
+DBSNP_DIR=os.getenv('DBSNP_DIR')
+OUTDIR=os.getenv('OUTDIR')
+HOME = os.getenv('HOME')
+THREADS = int(os.getenv('THREADS'))
+URL = os.getenv('URL')
+GENOMIC_REGION_BED = os.getenv('GENOMIC_REGION_BED')
+
+rule all:
+    input:
+        regional_peak_bed = expand(os.path.join(OUTDIR, "peak_bed/{chr}/chr{chr}.bed"), chr=CHROM),
+        regional_rsid = expand(os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}.rsid"), chr=CHROM),
+        regional_plink_bed = expand(os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
+
+rule exclude_dupvar:
+    input:
+        regional_dupvar_plink_bim = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
+        regional_dupvar_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
+    params:
+        regional_dupvar_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink"),
+        regional_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_plink"),
+    output:
+        regional_dupvar_rsid = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar.rsid"),
+        regional_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
+    shell:
+        """LC_ALL=C sort -k2,2 {input.regional_dupvar_plink_bim} |cut -f2,2 |uniq -d >{output.regional_dupvar_rsid};
+            plink --exclude {output.regional_dupvar_rsid} --bfile {params.regional_dupvar_plink_bed} --make-bed --out {params.regional_plink_bed}"""
+
+rule regional_plink_bed:
+    input:
+        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
+        regional_rsid = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}.rsid"),
+    params:
+        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink"),
+        regional_dupvar_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink"),
+    output:
+        regional_dupvar_plink_bed = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bed"),
+        regional_dupvar_plink_bim = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}_dupvar_plink.bim"),
+    shell:
+        """plink --extract {input.regional_rsid} --bfile {params.plink_bed} --make-bed --out {params.regional_dupvar_plink_bed}"""
+
+rule regional_rsid:
+    input:
+        regional_peak_bed = os.path.join(OUTDIR, "peak_bed/{chr}/chr{chr}.bed"),
+    output:
+        regional_rsid = os.path.join(OUTDIR, "plink_bed/{chr}/chr{chr}.rsid"),
+    shell:
+        """cut -f4,4 {input.regional_peak_bed} >{output.regional_rsid}"""
+
+rule regional_peak_bed:
+    input:
+        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"),
+        genomic_region_bed = GENOMIC_REGION_BED,
+    output:
+        regional_peak_bed = os.path.join(OUTDIR, "peak_bed/{chr}/chr{chr}.bed"),
+    shell:
+        """bedtools intersect -sorted -a {input.peak_bed} -b {input.genomic_region_bed} -g {HOME}/data/2015_svmgwas/data/var/hg19.sizes | sort -u -k1,1 -k2,2n >{output.regional_peak_bed}"""
+
+
+#rule all:
+#    input:
+#        plink_bed = expand(os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"), chr=CHROM),
+#        peak_bed = expand(os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"), chr=CHROM),
+
+#rule sort_peak_bed:
+#    input:
+#        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak_nonsorted.bed"),
+#    output:
+#        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"),
+#    threads: THREADS
+#    shell:
+#        """sort -k1,1 -k2,2n --parallel {threads} {input.peak_bed} -o {output.peak_bed}"""
+
+#rule create_peak_bed:
+#    input:
+#        plink_bim = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bim"),
+#    output:
+#        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak_nonsorted.bed"),
+#    shell:
+#        """awk '{{if ($1==24) {{print "chrY\t"$4-1"\t"$4"\t"$2}} else if ($1==23) {{print "chrX\t"$4-1"\t"$4"\t"$2}} else {{print "chr"$1"\t"$4-1"\t"$4"\t"$2}} }}' {input.plink_bim} > {output.peak_bed}"""
+
+#rule filter_eur_convert_bed_maf_snps_only:
+#    input:
+#        eur_ped_list = os.path.join(GENOME1K_DIR, "eur.ped"),
+#        vcf_gz = os.path.join(GENOME1K_DIR, "crossed_dbsnp/chr{chr}.vcf"),
+#    params:
+#        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink"),
+#    output:
+#        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
+#        plink_bim = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bim"),
+#    shell:
+#        """plink --keep {input.eur_ped_list} --vcf {input.vcf_gz} --maf --snps-only --make-bed --out {params.plink_bed};
+#        plink --bfile  {params.plink_bed} --list-duplicate-vars ids-only suppress-first --make-bed --out {params.plink_bed}"""
+
+#rule list_eur_pop:
+#    output:
+#        eur_txt = os.path.join(GENOME1K_DIR, "eur.txt"),
+#        eur_ped_list = os.path.join(GENOME1K_DIR, "eur.ped"),
+#    shell:
+#        """wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_male_samples_v3.20130502.ALL.panel -q -O - |grep EUR |cut -f2,2 |sort -u >{output.eur_txt};
+#        wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_samples.20130502.ALL.ped -q -O - |grep -f {output.eur_txt} >{output.eur_ped_list}"""
+
+#rule merge2_dbsnp_1kgenome_snps:
+#    input:
+#        vcf_gz = os.path.join(GENOME1K_DIR, "raw/chr{chr}.vcf.gz"),
+#        genome1k_withdbsnpid = os.path.join(GENOME1K_DIR, "crossed_dbsnp/duplirsid_noheader_chr{chr}.vcf"),
+#    output:
+#        genome1k_withdbsnpid = os.path.join(GENOME1K_DIR, "crossed_dbsnp/chr{chr}.vcf"),
+#    threads: THREADS
+#    shell:
+#        """gunzip -c {input.vcf_gz} |awk '{{if ($0~/#/) {{print $0}} else {{exit}} }}'  >{output.genome1k_withdbsnpid} || true;
+#         sort -u --parallel {threads} -k1,1 -k2,2n -k3,3 {input.genome1k_withdbsnpid} >>{output.genome1k_withdbsnpid}"""
+
+#rule merge_dbsnp_1kgenome_snps:
+#    input:
+#        pos2rsid = os.path.join(GENOME1K_DIR, "crossed_dbsnp/dbsnp_chr{chr}_pos2rsid.tsv"),
+#        positionid = os.path.join(GENOME1K_DIR, "crossed_dbsnp/raw_chr{chr}.vcf_positionid.tsv"),
+#    output:
+#        genome1k_withdbsnpid = os.path.join(GENOME1K_DIR, "crossed_dbsnp/duplirsid_noheader_chr{chr}.vcf"),
+#    shell:
+#        """join -1 1 -2 1 {input.pos2rsid} {input.positionid} >{output.genome1k_withdbsnpid}"""
+
+##join -1 1 -2 1 /cobelix/gonzalez/data/2015_svmgwas/data/variant/1000genomes/crossed_dbsnp/dbsnp_chr1_pos2rsid.tsv /cobelix/gonzalez/data/2015_svmgwas/data/variant/1000genomes/crossed_dbsnp/raw_chr1.vcf_positionid.tsv >/cobelix/gonzalez/data/2015_svmgwas/data/variant/1000genomes/crossed_dbsnp/duplirsid_noheader_chr1.vcf
+
+##        """join -1 1 -2 1 {input.pos2rsid} {input.positionid} |awk 'BEGIN{{OFS="\t"}}{{printf $3"\t"$4"\t"$2; for(i=6;i<NF+6;i++){{printf "\t%s", $i}} printf "\\n"}}' >{output.genome1k_withdbsnpid}"""
+
+#rule sort_genome1k_position_vcf:
+#    input:
+#        positionid=os.path.join(GENOME1K_DIR, "crossed_dbsnp/raw_chr{chr}.vcf_positionid_nonsorted.tsv"),
+#    output:
+#        positionid=os.path.join(GENOME1K_DIR, "crossed_dbsnp/raw_chr{chr}.vcf_positionid.tsv"),
+#    threads: THREADS
+#    shell:
+#        """sort --parallel {threads} -u {input.positionid} -o {output.positionid}"""
+
+#rule genome1k_position_vcf:
+#    input:
+#        vcf_gz = os.path.join(GENOME1K_DIR, "raw/chr{chr}.vcf.gz"),
+#    output:
+#        positionid=os.path.join(GENOME1K_DIR, "crossed_dbsnp/raw_chr{chr}.vcf_positionid_nonsorted.tsv"),
+#    shell:
+#        """gunzip {input.vcf_gz} -c |awk '$1!~/^#/{{print "chr"$1":"$2"\t"$0}}' >{output.positionid}"""
+
+#rule sort_dbsnp_pos2rsid:
+#    input:
+#        pos2rsid=os.path.join(GENOME1K_DIR, "crossed_dbsnp/dbsnp_chr{chr}_pos2rsid_nonsorted.tsv"),
+#    output:
+#        pos2rsid=os.path.join(GENOME1K_DIR, "crossed_dbsnp/dbsnp_chr{chr}_pos2rsid.tsv"),
+#    threads: THREADS
+#    shell:
+#        """sort --parallel {threads} -u {input.pos2rsid} -o {output.pos2rsid}"""
+
+#rule download_genome1k:
+#    params:
+#        chr = "{chr}",
+#        url = URL,
+#    output:
+#        vcf_gz = os.path.join(GENOME1K_DIR, "raw/chr{chr}.vcf.gz"),
+#    shell:
+#        """wget {params.url} -O {output.vcf_gz}"""
+
+##python /cobelix/gonzalez/Software/repositories/tagoos/script/replace_rsid_in_1kggenome_vcf.py /cobelix/gonzalez/data/2015_svmgwas/data/variant/dbsnp/proc/posid2rsid_chrY.tsv /cobelix/gonzalez/data/2015_svmgwas/data/variant/1000genomes/raw/chrY.vcf
+##time gunzip  /cobelix/gonzalez/data/2015_svmgwas/data/variant/1000genomes/raw/chrY.vcf.gz -c |python /cobelix/gonzalez/Software/repositories/tagoos/script/replace_rsid_in_1kggenome_vcf.py /cobelix/gonzalez/data/2015_svmgwas/data/variant/dbsnp/proc/posid2rsid_chrY.tsv t.vcf
+##time gunzip  /cobelix/gonzalez/data/2015_svmgwas/data/variant/1000genomes/raw/chr1.vcf.gz -c |python /cobelix/gonzalez/Software/repositories/tagoos/script/replace_rsid_in_1kggenome_vcf.py /cobelix/gonzalez/data/2015_svmgwas/data/variant/dbsnp/proc/posid2rsid_chr1.tsv tchr1.vcf
+
+#rule tmp:
+#    input:
+#        expand(os.path.join(DBSNP_DIR, "proc/posid2rsid_chr{chr}.tsv"), chr=CHROM)
+
+#rule dbsnp_posid2rsid:
+#    input:
+#        bed_gz=os.path.join(DBSNP_DIR, "raw/bed_chr{chr}.bed.gz"),
+#    output:
+#        posid2rsid=os.path.join(DBSNP_DIR, "proc/posid2rsid_chr{chr}.tsv"),
+#    shell:
+#        """gunzip {input.bed_gz} -c |awk 'FNR > 1{{print $1":"$2+1"\t"$4}}' >{output.posid2rsid}"""
+
+#rule download_dbsnp:
+#    output:
+#        bed_gz=os.path.join(DBSNP_DIR, "raw/bed_chr{chr}.bed.gz")
+#    params:
+#        url="ftp://ftp.ncbi.nih.gov/snp/organisms/human_9606_b149_GRCh37p13/BED/bed_chr{chr}.bed.gz"
+#    shell:
+#        """wget {params.url} -O {output.bed_gz}"""
+

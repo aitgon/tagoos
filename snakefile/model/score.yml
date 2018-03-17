@@ -1,0 +1,63 @@
+ANNOT_LABEL = os.getenv('ANNOT_LABEL')
+CHROM=os.getenv('CHROM').split()
+DBSNP_DIR = os.getenv('DBSNP_DIR')
+HOME = os.getenv('HOME')
+MODEL_PKL = os.getenv('MODEL_PKL')
+OUTDIR = os.getenv('OUTDIR')
+SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
+THREADS = int(os.getenv('THREADS'))
+
+from os.path import dirname
+# public dir is in the dir with the model
+MODEL_PKL_DIR = os.path.join(dirname(MODEL_PKL))
+MODEL_PKL_DIR_BASENAME = os.path.basename(MODEL_PKL_DIR)
+PUBLIC_DIR = os.path.join(MODEL_PKL_DIR, "../%s_public")%MODEL_PKL_DIR_BASENAME
+
+rule all:
+    input:
+        score_percentile_idx = os.path.join(OUTDIR, "percentile.tsv.idx"),
+
+rule score_index:
+    input:
+        score_tsv = os.path.join(OUTDIR, "score.tsv")
+    output:
+        score_tsv_idx = os.path.join(OUTDIR, "score.tsv.idx")
+    shell:
+        """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=1 {input.score_tsv}  > {output.score_tsv_idx}"""
+
+rule percentile_index:
+    input:
+        score_percentile = os.path.join(OUTDIR, "percentile.tsv")
+    output:
+        score_percentile_idx = os.path.join(OUTDIR, "percentile.tsv.idx")
+    shell:
+        """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=1 {input.score_percentile}  > {output.score_percentile_idx}"""
+
+rule percentile:
+    input:
+        score_tsv_merged = os.path.join(OUTDIR, "score.tsv"),
+        script = os.path.join(SCRIPTDIR, "percentile.py"),
+    output:
+        score_percentile = os.path.join(OUTDIR, "percentile.tsv")
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.score_tsv_merged} {output.score_percentile};"""
+
+rule score:
+    input:
+        score_tsv = expand(os.path.join(OUTDIR, "chrom/{chr}/score.tsv"), chr=CHROM)
+    output:
+        score_tsv_merged = os.path.join(OUTDIR, "score.tsv")
+    threads: THREADS
+    shell:
+        """LC_ALL=C sort -u -k2,2nr -k1,1 --parallel {threads} {input.score_tsv} > {output.score_tsv_merged}"""
+
+rule chrom_score_tsv:
+    input:
+        libsvm = os.path.join(DBSNP_DIR, "{chr}", ANNOT_LABEL, "annotation.libsvm"),
+        model_pkl = MODEL_PKL,
+        script = os.path.join(SCRIPTDIR, "score.py"),
+    output:
+        score_tsv = os.path.join(OUTDIR, "chrom/{chr}/score.tsv"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {input.libsvm} {input.model_pkl} {output.score_tsv};"""
+

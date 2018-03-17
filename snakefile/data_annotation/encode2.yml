@@ -1,0 +1,88 @@
+ANNOTATION_DATA=os.getenv('ANNOTATION_DATA')
+ENCODE2_EXPERIMENT_LIST=os.getenv('ENCODE2_EXPERIMENT_LIST')
+ENCODE2_DATA_DIR = os.getenv('ENCODE2_DATA_DIR')
+HOME = os.getenv('HOME')
+SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
+THREADS = int(os.getenv('THREADS'))
+
+rule sort_bed:
+    input:
+        bed_unsorted=os.path.join(ENCODE2_DATA_DIR, "encode2_unsorted.bed"),
+    output:
+        bed=os.path.join(ENCODE2_DATA_DIR, "encode2.bed"),
+    threads: THREADS
+    shell:
+        """sort -k1,1 -k2,2n --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
+
+rule join_bed_annotation:
+    input:
+        id_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_id.bed"),
+        annotation_data_sortedk3=os.path.join(ENCODE2_DATA_DIR, "annotation_data_sortedk3.tsv"),
+    output:
+        bed_unsorted=os.path.join(ENCODE2_DATA_DIR, "encode2_unsorted.bed"),
+    shell:
+        """join -1 4 -2 3 {input.id_bed} {input.annotation_data_sortedk3} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$8"."$7"-"$9"."$6}}' >{output.bed_unsorted}"""
+
+rule sort_id_bed:
+    input:
+        id_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_id.bed"),
+    output:
+        id_bed_sortedk4=os.path.join(ENCODE2_DATA_DIR, "encode2_id_sortedk4.bed"),
+    threads: THREADS
+    shell:
+        """sort --parallel {THREADS} -k4,4 {input.id_bed} -o {output.id_bed_sortedk4}"""
+
+rule id_bed:
+    input:
+        bed_gz_downloaded=os.path.join(ENCODE2_DATA_DIR, "bed_gz.downloaded"),
+    output:
+        id_bed=os.path.join(ENCODE2_DATA_DIR, "encode2_id.bed"),
+    params:
+        bed_gz_dir=os.path.join(ENCODE2_DATA_DIR, "bed_gz"),
+    shell:
+        """ls {params.bed_gz_dir} |while read F; do export FN=$F; export ID="${{FN%.bed.gz}}"; gunzip -c {params.bed_gz_dir}/$FN |awk -v ID="${{ID}}" 'BEGIN{{OFS="\t"}}{{print $1,$2,$3,ID}}'; done >{output.id_bed}"""
+
+rule download_bed_gz:
+    input:
+        experiment2file_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2file.tsv"),
+    output:
+        bed_gz_downloaded=os.path.join(ENCODE2_DATA_DIR, "bed_gz.downloaded"),
+    params: encode2_bed_data_dir=os.path.join(ENCODE2_DATA_DIR, "bed_gz")
+    threads: THREADS
+    shell:
+        """cat /cobelix/gonzalez/data/2015_svmgwas/data/annotation_ngs_based/encode2/experiment2file.tsv |cut -f1,2 |awk 'NR>1{{print $0}}' |xargs -n2 -P{threads} sh -c 'wget "https://www.encodeproject.org$1" -O {params.encode2_bed_data_dir}/"$0".bed.gz';
+            touch {output.bed_gz_downloaded}"""
+
+rule create_experiment2file:
+    input:
+        json_downloaded=os.path.join(ENCODE2_DATA_DIR, "json.downloaded"),
+        script = os.path.join(SCRIPTDIR, "annotation/process_encode2_experiment_json.py"),
+    output:
+        experiment2file_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2file.tsv"),
+    params:
+        experiment_json_dir=os.path.join(ENCODE2_DATA_DIR, "json")
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} {params.experiment_json_dir} {output.experiment2file_tsv};"""
+
+rule download_experiment_json:
+    input:
+        annotation_data_sortedk3=os.path.join(ENCODE2_DATA_DIR, "annotation_data_sortedk3.tsv"),
+    params: encode_json_data_dir=os.path.join(ENCODE2_DATA_DIR, "json")
+    threads: THREADS
+    output:
+        json_downloaded=os.path.join(ENCODE2_DATA_DIR, "json.downloaded"),
+    shell:
+        """cat {input.annotation_data_sortedk3} |cut -f3 | xargs -n1 -P{threads} -I@ sh -c "wget 'https://www.encodeproject.org/search/?type=file&dataset=/experiments/@/&format=json&frame=object&limit=all' -O {params.encode_json_data_dir}/json/@.json || true"; touch {output.json_downloaded}"""
+
+#rule grep_sort_experiment_list:
+#    input:
+#        annotation_data=ANNOTATION_DATA
+#    output:
+#        annotation_data_sortedk3=os.path.join(ENCODE2_DATA_DIR, "annotation_data_sortedk3.tsv"),
+#    params: encode_json_data_dir=os.path.join(ENCODE2_DATA_DIR, "json")
+#    threads: THREADS
+#    output:
+#        json_downloaded=os.path.join(ENCODE2_DATA_DIR, "json.downloaded"),
+#    shell:
+#        """grep encodeproject {input.annotation_data} |sort -u -k3,3 -o {output.annotation_data_sortedk3}"""
+
