@@ -1,5 +1,5 @@
 ANNOT_LABEL = os.getenv('ANNOT_LABEL')
-ANNOTATION_BED=os.getenv('ANNOTATION_BED')
+ANNOTATION_DIR=os.getenv('ANNOTATION_DIR')
 INDEX_LABEL = os.getenv('INDEX_LABEL')
 CHROM=sorted(os.getenv('CHROM').split())
 GENOME1K_DIR = os.getenv('GENOME1K_DIR')
@@ -7,7 +7,8 @@ GENOME1K_PEAKBED_DIR = os.getenv('GENOME1K_PEAKBED_DIR')
 HOME = os.getenv('HOME')
 INDEX_DIR = os.getenv('INDEX_DIR')
 LABEL = os.getenv('LABEL')
-LD=os.getenv('LD')
+#LD=os.getenv('LD')
+LD_DIR=os.getenv('LD_DIR')
 PYTHONBIN = os.getenv('PYTHONBIN')
 REGION = os.getenv('REGION')
 THREADS = int(os.getenv('THREADS'))
@@ -18,8 +19,7 @@ TAG_RSID = os.getenv('TAG_RSID')
 from os.path import basename
 
 from os.path import dirname
-ANNOTATION_DIR = dirname(ANNOTATION_BED)
-LD_SLUG="ld" + LD.replace(".", "")
+#LD_SLUG="ld" + LD.replace(".", "")
 
 rule all:
     input:
@@ -43,7 +43,7 @@ rule to_libsvm:
         libsvm = os.path.join(TAG_DIR, "chrom/{chr}/annotation.libsvm"),
         instance = os.path.join(TAG_DIR, "chrom/{chr}/instance.txt"),
     shell:
-        """python {input.script} {input.index2annot_r2_label} {input.variable_txt} {output.instance} {output.libsvm}"""
+        """{PYTHONBIN} {input.script} {input.index2annot_r2_label} {input.variable_txt} {output.instance} {output.libsvm}"""
 
 rule sort_label:
     input:
@@ -116,7 +116,7 @@ rule sort_tagld_k1:
 rule tagld:
     input:
         tag_rsid_sorted = os.path.join(TAG_DIR, "%s.sorted.rsid"%TAG_RSID),
-        plink_ld = os.path.join(GENOME1K_DIR, REGION, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
+        plink_ld = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}.ld"),
     output:
         tagld = os.path.join(TAG_DIR, "chrom/{chr}/tag_ld.tsv"),
     shell:
@@ -130,32 +130,4 @@ rule sort_tag_rsid:
     threads: THREADS
     shell:
         """LC_ALL=C sort --parallel {threads} -u {input.tag_rsid} -o {output.tag_rsid_sorted}"""
-
-rule sort_indexld_k2:
-    input:
-        indexld = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld.tsv"),
-    output:
-        indexld_sortedk2 = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld_sortedk2.tsv"),
-    threads: THREADS
-    shell:
-        """LC_ALL=C sort -u --parallel {threads} {input.indexld} -o {output.indexld_sortedk2};
-         LC_ALL=C sort --parallel {threads} -k2,2 {output.indexld_sortedk2} -o {output.indexld_sortedk2}"""
-
-rule indexld:
-    input:
-        index_rsid_sorted = os.path.join(INDEX_DIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),
-        plink_ld = os.path.join(GENOME1K_DIR, REGION, "%s/{chr}/chr{chr}.ld"%LD_SLUG),
-    output:
-        indexld = os.path.join(INDEX_DIR, "chrom/{chr}/index_ld.tsv"),
-    shell:
-        """LC_ALL=C join -1 1 -2 1 -o 2.1,2.2,2.3 {input.index_rsid_sorted} {input.plink_ld} >{output.indexld}"""
-
-rule sort_index_rsid:
-    input:
-        index_rsid = os.path.join(GENOME1K_DIR, REGION, "%s/{chr}/chr{chr}_%s.prune.in"%(INDEX_LABEL,INDEX_LABEL) ),
-    output:
-        index_rsid_sorted = os.path.join(INDEX_DIR, "chrom/{chr}/chr{chr}_%s.prune_sorted.in"%INDEX_LABEL),  
-    threads: THREADS
-    shell:
-        """LC_ALL=C sort --parallel {threads} -u {input.index_rsid} -o {output.index_rsid_sorted}"""
 

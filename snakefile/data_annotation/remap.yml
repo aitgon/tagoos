@@ -1,24 +1,24 @@
-ANNOTATION_DATA=os.getenv('ANNOTATION_DATA')
+ANNOTATION_DIC=os.getenv('ANNOTATION_DIC')
 REMAP_DATA_DIR = os.getenv('REMAP_DATA_DIR')
+REMAP_URL = os.getenv('REMAP_URL')
 THREADS = int(os.getenv('THREADS'))
 
-rule sort_bed:
+rule proc1:
     input:
-        bed_unsorted=os.path.join(REMAP_DATA_DIR, "remap_unsorted.bed"),
+        bed=os.path.join(REMAP_DATA_DIR, "proc1.bed"),
     output:
         bed=os.path.join(REMAP_DATA_DIR, "remap.bed"),
-    threads: THREADS
     shell:
-        """sort -k1,1 -k2,2n -k3,3n -k4,4 --parallel {threads} {input.bed_unsorted} -o {output.bed}"""
+        """cat {input.bed} |tr -d '\r' |awk 'NF==4{{print}}{{}}' >{output.bed};"""
 
 rule join_bed_annotation:
     input:
         bed_sortedk4=os.path.join(REMAP_DATA_DIR, "filPeaks_all_sortedk4.bed"),
-        annotation_data=os.path.join(REMAP_DATA_DIR, "annotation_data.tsv"),
+        annotation_data=ANNOTATION_DIC,
     output:
-        bed_unsorted=os.path.join(REMAP_DATA_DIR, "remap_unsorted.bed"),
+        bed=os.path.join(REMAP_DATA_DIR, "proc1.bed"),
     shell:
-        """join -1 4 -2 1 {input.bed_sortedk4} {input.annotation_data} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$8"."$7"-"$9"."$6"ReMap"}}' >{output.bed_unsorted}"""
+        """join -1 4 -2 1 {input.bed_sortedk4} {input.annotation_data} |awk 'BEGIN{{OFS="\t"}}{{print $2,$3,$4,$7"."$8"."$6"ReMap"}}' >{output.bed}"""
 
 rule sort_id_bed:
     input:
@@ -29,6 +29,15 @@ rule sort_id_bed:
     shell:
         """sort --parallel {THREADS} -k4,4 {input.bed} -o {output.bed_sortedk4}"""
 
+#rule id_bed_h19toGRCh38:
+#    input:
+#        bed=os.path.join(REMAP_DATA_DIR, "filPeaks_all_hg19.bed"),
+#        hg19ToHg38_chain="/cobelix/gonzalez/Software/repositories/tagoos/data/hg19ToHg38.over.chain.gz"
+#    output:
+#        bed=os.path.join(REMAP_DATA_DIR, "filPeaks_all.bed"),
+#    shell:
+#        """/cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/python /cobelix/gonzalez/Software/miniconda3/envs/tagoos_py27/bin/CrossMap.py bed {input.hg19ToHg38_chain} {input.bed} {output.bed}"""
+
 rule gunzip_bed_gz:
     input:
         bed_gz=os.path.join(REMAP_DATA_DIR, "filPeaks_all.bed.gz"),
@@ -38,19 +47,9 @@ rule gunzip_bed_gz:
         """gunzip -c {input.bed_gz} |awk 'BEGIN{{OFS="\t"}}{{print $1,$2,$3,$4}}' >{output.bed}"""
 
 rule download_bed_gz:
-    input:
-        annotation_data_sortedk3=os.path.join(REMAP_DATA_DIR, "annotation_data_sortedk3.tsv"),
     params: remap_data_dir=REMAP_DATA_DIR
     output:
         bed_gz=os.path.join(REMAP_DATA_DIR, "filPeaks_all.bed.gz"),
     shell:
-        """wget http://tagc.univ-mrs.fr/remap/download/All/filPeaks_all.bed.gz --directory-prefix={params.remap_data_dir};"""
-
-rule grep_sort_experiment_list:
-    input:
-        annotation_data=ANNOTATION_DATA
-    output:
-        annotation_data=os.path.join(REMAP_DATA_DIR, "annotation_data.tsv"),
-    shell:
-        """grep remap {input.annotation_data} |sort -u -k1,1 -o {output.annotation_data}"""
+        """wget {REMAP_URL} --directory-prefix={params.remap_data_dir};"""
 

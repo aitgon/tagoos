@@ -1,0 +1,91 @@
+"""
+This snakefile with get a list of genome intervals from an environment variable
+and will create beds in different output files with a one line interval inside
+
+    Parameters
+    ----------
+    OUTDIR : Directory path
+        Example for intergenic: /cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/data/snp/gwindow_30000000
+    GENOME_WINDOW_BED : Bed file path
+        A bed file generated with bedtools makewindow with all intervals
+        $ head $GENOME_WINDOW_BED
+        chr1    0       30000000        chr1:1-30000000
+        chr1    30000000        60000000        chr1:30000001-60000000
+        chr1    60000000        90000000        chr1:60000001-90000000
+    GENOME_WINDOW_IDS : Environment variable
+        Variable  with genome intervals in the form: chr10:1-30000000 chr10:120000001-135534747 ...
+"""
+
+OUTDIR = os.getenv('OUTDIR')
+
+GENOME_WINDOW_BED=os.getenv('GENOME_WINDOW_BED')
+GENOME_WINDOW_IDS=os.getenv('GENOME_WINDOW_IDS').split()
+
+rule all:
+    """
+    Summary line.
+
+    Extended description of function.
+
+    Parameters
+    ----------
+    GENOME_WINDOW_IDS : Environment variable
+        Variable  with genome intervals in the form: chr10:1-30000000 chr10:120000001-135534747 ...
+    os.path.join(OUTDIR, "{gwindow}/gwindow.bed") : str
+        Expanded one line bed file in different directories with a genome interval:
+        head /cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/data/snp/gwindow_30000000/chr9:90000001-120000000/gwindow.bed
+chr9    90000000        120000000       chr9:90000001-120000000
+    """
+    input:
+        expand(os.path.join(OUTDIR, "{gwindow}/gwindow_1nt.bed"), gwindow=GENOME_WINDOW_IDS),
+
+rule expand_1nt:
+    """
+    Summary line.
+
+    Extended description of function.
+
+    Parameters
+    ----------
+    bed : bed file path
+        Bed file with this genome window in one line
+
+    Returns
+    -------
+    bed : bed file path
+        Bed file with this genome window in one nucleotide per line
+    """
+    input:
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "{gwindow}/gwindow_1nt.bed")
+    shell:
+        """bedtools makewindows -b {input.bed} -w 1 >{output.bed}"""
+
+
+rule grep_genome_splitted:
+    """
+    Summary line.
+
+    Extended description of function.
+
+    Parameters
+    ----------
+    arg1 : gwindow_bed
+        Description of arg1
+    arg2 : str
+        Description of arg2
+
+    Returns
+    -------
+    int
+        Description of return value
+    """
+    input:
+        gwindow_bed=GENOME_WINDOW_BED
+    output:
+        gwindow_bed=os.path.join(OUTDIR, "{gwindow}/gwindow.bed")
+    params: gwindow="{gwindow}"
+    shell:
+        """grep -P "{params.gwindow}" {input.gwindow_bed}  >{output.gwindow_bed}"""
+

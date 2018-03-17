@@ -5,22 +5,9 @@ ANNOT_LABEL=os.getenv('ANNOT_LABEL')
 HOME=os.getenv('HOME')
 THREADS=int(os.getenv('THREADS'))
 
-from os.path import dirname
-ANNOTATION_DIR = dirname(ANNOTATION_BED)
-
 rule all:
     input:
-        variable_txt = os.path.join(ANNOTATION_DIR, "variable.txt"),
         annot_chrom_bed = expand(os.path.join(ANNOTATION_DIR, "chrom/{chr}/%s.bed"%ANNOT_LABEL), chr=CHROM),
-
-rule variable_txt:
-    input:
-        annotation_bed = ANNOTATION_BED
-    output:
-        variable_txt = os.path.join(ANNOTATION_DIR, "variable.txt")
-    threads: THREADS
-    shell:
-        """cut -f4,4 {input.annotation_bed} | sort --parallel {threads} -u -o {output.variable_txt}"""
 
 rule sort:
     input:
@@ -40,5 +27,5 @@ rule grep:
     output:
         annot_chrom_bed = os.path.join(ANNOTATION_DIR, "chrom/{chr}/%s_nonsorted.bed"%ANNOT_LABEL)
     shell:
-        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.mergedannot_bed_f1_idx} {input.annotation_bed} {params.chr} >{output.annot_chrom_bed}"""
+        """{HOME}/data/2015_svmgwas/data/hcomp/get_record {input.mergedannot_bed_f1_idx} {input.annotation_bed} {params.chr} |tr -d '\r' |tr '/' '_' > {output.annot_chrom_bed}"""
 

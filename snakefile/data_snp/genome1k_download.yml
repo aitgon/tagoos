@@ -1,0 +1,88 @@
+CHROM=os.getenv('CHROM').split()
+GENOME1K_DIR=os.getenv('GENOME1K_DIR')
+DBSNP_DIR=os.getenv('DBSNP_DIR')
+HOME = os.getenv('HOME')
+THREADS = int(os.getenv('THREADS'))
+URL_GENOME1K_SOMATIC = os.getenv('URL_GENOME1K_SOMATIC')
+URL_GENOME1K_X = os.getenv('URL_GENOME1K_X')
+URL_GENOME1K_Y = os.getenv('URL_GENOME1K_Y')
+SCRIPT_DIR = os.path.join(os.getenv('TAGOOS'), "script")
+
+
+rule all:
+    input:
+        peak_bed = expand(os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"), chr=CHROM),
+
+rule sort_peak_bed:
+    input:
+        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak_nonsorted.bed"),
+    output:
+        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak.bed"),
+    threads: THREADS
+    shell:
+        """sort -k1,1 -k2,2n --parallel {threads} {input.peak_bed} -o {output.peak_bed}"""
+
+rule create_peak_bed:
+    input:
+        plink_bim = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bim"),
+    output:
+        peak_bed = os.path.join(GENOME1K_DIR, "peak_bed/{chr}/chr{chr}_peak_nonsorted.bed"),
+    shell:
+        """awk '{{if ($1==24) {{print "chrY\t"$4-1"\t"$4"\t"$2}} else if ($1==23) {{print "chrX\t"$4-1"\t"$4"\t"$2}} else {{print "chr"$1"\t"$4-1"\t"$4"\t"$2}} }}' {input.plink_bim} > {output.peak_bed}"""
+
+
+rule plink_eur_convert_bed_maf_snps_only:
+    input:
+        eur_ped_list = os.path.join(GENOME1K_DIR, "eur.ped"),
+        vcf_gz = os.path.join(GENOME1K_DIR, "crossed_dbsnp/chr{chr}.vcf"),
+    params:
+        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink"),
+    output:
+        plink_bed = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bed"),
+        plink_bim = os.path.join(GENOME1K_DIR, "plink_bed/{chr}/chr{chr}_plink.bim"),
+    shell:
+        """plink --keep {input.eur_ped_list} --vcf {input.vcf_gz} --vcf-half-call missing --maf --snps-only --list-duplicate-vars ids-only suppress-first --make-bed --out {params.plink_bed}"""
+
+rule list_eur_pop:
+    output:
+        eur_txt = os.path.join(GENOME1K_DIR, "eur.txt"),
+        eur_ped_list = os.path.join(GENOME1K_DIR, "eur.ped"),
+    shell:
+        """wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_male_samples_v3.20130502.ALL.panel -q -O - |grep EUR |cut -f2,2 |sort -u >{output.eur_txt};
+        wget ftp://ftp-trace.ncbi.nih.gov/1000genomes/ftp/release/20130502/integrated_call_samples.20130502.ALL.ped -q -O - |grep -f {output.eur_txt} >{output.eur_ped_list}"""
+
+rule replace_rsid_in_1kggenome_vcf:
+    input:
+        vcf_gz = os.path.join(GENOME1K_DIR, "raw/chr{chr}.vcf.gz"),
+        posid2rsid=os.path.join(DBSNP_DIR, "proc/posid2rsid_chr{chr}.tsv"),
+        script = os.path.join(SCRIPT_DIR, "replace_rsid_in_1kggenome_vcf.py"),
+    output:
+        vcf=os.path.join(GENOME1K_DIR, "crossed_dbsnp/chr{chr}.vcf"),
+    shell:
+        """gunzip {input.vcf_gz} -c |python {input.script} {input.posid2rsid} {output.vcf}"""
+
+rule download_genome1k:
+    params:
+        chr = "{chr}",
+        url_genome1k_somatic = URL_GENOME1K_SOMATIC,
+        url_genome1k_x = URL_GENOME1K_X,
+        url_genome1k_y = URL_GENOME1K_Y,
+    output:
+        vcf_gz = os.path.join(GENOME1K_DIR, "raw/chr{chr}.vcf.gz"),
+    shell:
+        """if [[ "{params.chr}" == "Y" ]];
+            then wget {params.url_genome1k_y} -O {output.vcf_gz};
+        elif [[ "{params.chr}" == "X" ]];
+            then wget {params.url_genome1k_x} -O {output.vcf_gz};
+        else 
+            wget {params.url_genome1k_somatic} -O {output.vcf_gz};
+        fi"""
+
+rule dbsnp_posid2rsid:
+    input:
+        bed_gz=os.path.join(DBSNP_DIR, "raw/bed_chr{chr}.bed.gz"),
+    output:
+        posid2rsid=os.path.join(DBSNP_DIR, "proc/posid2rsid_chr{chr}.tsv"),
+    shell:
+        """gunzip {input.bed_gz} -c |awk 'FNR > 1{{print $1":"$2+1"\t"$4}}' >{output.posid2rsid}"""
+

@@ -12,16 +12,21 @@ In this example we create a model for
 
 Region variables
 
-$REGION \in {'genomic', 'intronic', 'intergenprox', 'intergendistal'}$
+$REGION \in {'intronic', 'intergenic'}$
 
 ~~~
-export REGION=genomic # values: genomic, intronic, intergenprox, intergendistal
+export REGION=intergenic # default intronic
+export CHROM="$(seq 22)"
 ~~~
+
+
+export GENOME1K_DIR=$PWD/out/data/snp/1000genomes
+export LD_DIR=${GENOME1K_DIR}/${REGION}/ld08
 
 Positive
 
 ~~~
-export TAG_POS_RSID=$HOME/data/2015_svmgwas/data/variant/grasp/${REGION}/grasp108.rsid
+export TAG_POS_RSID=$PWD/out/data/snp/grasp/${REGION}/grasp108.rsid
 export POS_LABEL=GRASP108
 export ANNOT_LABEL=mergedannot
 export INDEX_LABEL=index3
@@ -45,11 +50,11 @@ export TAG_POS_DIR=$PWD/out/${POS_LABEL}${REGION}/pos/${ANNOT_LABEL}_${INDEX_LAB
 export TAG_NEG_DIR=$PWD/out/neg/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}
 
 #
-export ANNOTATION_BED=$HOME/data/2015_svmgwas/data/annotation_ngs_based/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
-export GENOME1K_DIR=$HOME/data/2015_svmgwas/data/variant/1000genomes
+export ANNOTATION_DIR=$PWD/out/data/annotation/${ANNOT_LABEL}
+export GENOME1K_DIR=$PWD/out/data/snp/1000genomes
 export GENOME1K_PEAKBED_DIR=$GENOME1K_DIR/${REGION}/peak_bed
-export INDEX_DIR=$PWD/out/${INDEX_LABEL}
 export PYTHONBIN=$(which python)
+export INDEX_DIR=${GENOME1K_DIR}/${REGION}/index3
 ~~~
 
 ~~~
@@ -57,15 +62,13 @@ export TAG_DIR=$TAG_POS_DIR
 export LABEL=1
 export TAG_RSID=$TAG_POS_RSID
 #
-time snakemake -s   ${TAGOOS}/snakefile/model/rsid2chrom.yml -p -j 1 -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR -p
+time snakemake -s   ${TAGOOS}/snakefile/model/rsid2chrom.yml -p -j 1 --keep-going --rerun-incomplete -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR -pn
 ~~~
 
 POSITIVE 
 
 ~~~
-export CHROM="$(seq 22)"
-export NBCHROM=$(python -c "import os; print(2*len(os.getenv('CHROM').split()))")
-time snakemake -s ${TAGOOS}/snakefile/model/tag.yml -p -j 32 -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR --latency-wait 60 -pn
+time snakemake -s ${TAGOOS}/snakefile/model/tag.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR --latency-wait 60 -pn
 ~~~
 
 NEGATIVE
@@ -75,33 +78,70 @@ export TAG_DIR=$TAG_NEG_DIR
 export LABEL=-1
 export TAG_RSID=$TAG_NEG_RSID
 #
-export CHROM="$(seq 22)"
-time snakemake -s ${TAGOOS}/snakefile/model/tag.yml -p -j 32 -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR --latency-wait 60 -pn
+time snakemake -s ${TAGOOS}/snakefile/model/tag.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $TAG_DIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $TAG_DIR/stderr.log -o $TAG_DIR/stdout.log" -d $TAG_DIR --latency-wait 60 -pn
 ~~~
 
 MODEL
 
-First get chroms as a function of AUCs
-
 ~~~
-export CHROM="$(seq 22)"
+export VARIABLE_TXT=$PWD/out/data/annotation/${ANNOT_LABEL}/variable.txt
 export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}
 #
-time snakemake -s ${TAGOOS}/snakefile/model/model.yml -p -j $NBCHROM -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
+time snakemake -s ${TAGOOS}/snakefile/model/model.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~
 
-Score DBSNP
+SELECT FEATURES FROM ANNOTATION BED
 
 ~~~
-export THREADS=16
-export CHROM="$(seq 22) X Y"
-#export CHROM=$(cat $PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1/CV/selected_chroms.txt)
-export MODEL_PKL=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}/model.pkl
+export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_data/annotation
+export FEATURE_IMPORTANCE_TSV=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_public/feature_importance.tsv
+export ANNOTATION_BED_IN=$PWD/out/data/annotation/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
+export ANNOTATION_BED_OUT=$OUTDIR/${ANNOT_LABEL}.bed
 #
-export DBSNP_DIR=$HOME/data/2015_svmgwas/data/variant/dbsnp/${REGION}
-export SCRIPT_DIR=${TAGOOS}/script
-export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_dbsnp
+time snakemake -s ${TAGOOS}/snakefile/model/select_features.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
+~~~
 
-time snakemake -s ${TAGOOS}/snakefile/model/score.yml -j 32 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads} -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
+SPLIT ANNOTATION BED WITH SELECTED FEATURES
+
+~~~
+export ANNOT_LABEL=mergedannot
+#
+export ANNOTATION_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_data/annotation/${ANNOT_LABEL}.bed
+export ANNOTATION_DIR=$(dirname ${ANNOTATION_BED})
+#
+export CHROM="$(seq 1 22)"
+time snakemake -s ${TAGOOS}/snakefile/data_annotation/split_annotation.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $ANNOTATION_DIR/stderr.log -o $ANNOTATION_DIR/stdout.log" -d $ANNOTATION_DIR -pn
+~~~
+
+ANNOTATE DBSNP VARIANTS
+
+~~~
+export CHROM="$(seq 1 22)"
+#
+export ANNOTATION_BED=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_data/annotation/${ANNOT_LABEL}.bed
+#
+export ANNOTATION_DIR=$(dirname ${ANNOTATION_BED})
+export SNP_DIR_IN=$PWD/out/data/snp/dbsnp/${REGION}
+export SNP_DIR_OUT=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_data/dbsnp_annotation
+export VARIABLE_TXT=$PWD/out/data/annotation/mergedannot/variable.txt
+#
+export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
+time snakemake -s ${TAGOOS}/snakefile/data_snp/annotate.yml -p -j $SNAKEMAKE_J --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $SNP_DIR_OUT/stderr.log -o $SNP_DIR_OUT/stdout.log" -d $SNP_DIR_OUT -pn
+~~~
+
+SCORE DBSNP VARIANTS (TRASH)
+
+~~~
+#export THREADS=16
+#export CHROM="$(seq 22)"
+#export CHROM=$(cat $PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_model1/CV/selected_chroms.txt)
+#export MODEL_PKL=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}/model.pkl
+#export ANNOTATION_DIR=$PWD/out/data/annotation/${ANNOT_LABEL}
+#
+#export DBSNP_DIR=$PWD/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_data/dbsnp_annotation
+#export SCRIPT_DIR=${TAGOOS}/script
+#export OUTDIR=$PWD/out/${POS_LABEL}${REGION}/${NEG_LABEL}${REGION}_${ANNOT_LABEL}_${INDEX_LABEL}_dbsnp
+
+#time snakemake -s ${TAGOOS}/snakefile/model/score.yml -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~
 
