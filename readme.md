@@ -1,8 +1,11 @@
 # Build the documentation
 
-Run this command and open __$PWD/docs/manual.html__ in a browser
+It is better to create a conda environment:
 
 ~~~
-pandoc -s -S --toc -c buttondown.css $PWD/docs/*.md >$PWD/docs/manual.html
+conda create --name tagoos python=3.5
+pip install sphinx sphinx_rtd_theme recommonmark
 ~~~
+
+Then run _make html_ in the _docs_ folder
 
