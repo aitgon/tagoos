@@ -1,3 +1,5 @@
+
+
 # -*- coding: utf-8 -*-
 #
 # Configuration file for the Sphinx documentation builder.
@@ -19,7 +21,7 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'TAGOOS'
+project = 'TAGOOS: associated tag SNP boosting '
 copyright = '2018, Aitor GONZALEZ'
 author = 'Aitor GONZALEZ'
 
@@ -48,7 +50,7 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 source_suffix = ['.rst', '.md']
-# source_suffix = '.rst'
+# source_suffix = '.rst'
 
 # The master toctree document.
 master_doc = 'index'
@@ -75,12 +77,19 @@ pygments_style = 'sphinx'
 # a list of builtin themes.
 #
 html_theme = 'sphinx_rtd_theme'
+#html_theme = 'classic' 
+#html_theme = 'sphinxdoc' 
+#html_theme = 'bizstyle' 
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
 # html_theme_options = {}
+#html_theme_options = {
+#    "leftsidebar": "true",
+#    "relbarbgcolor": "black"
+#}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -158,4 +167,6 @@ source_parsers = {
    '.md': 'recommonmark.parser.CommonMarkParser',
 }
 
+html_show_copyright = True
+html_show_sphinx = True
 

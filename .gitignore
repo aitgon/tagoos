@@ -3,6 +3,3 @@ archive
 .snakemake/
 docs/manual.html
 docs/_build
-docs/Makefile
-docs/make.bat
-docs/buttondown.css
