@@ -98,6 +98,13 @@ export MERGED_DATA_DIR=$PWD/out/data/annotation/${ANNOT_LABEL}
 time snakemake -s ${TAGOOS}/snakefile/data_annotation/merge_annotations.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $MERGED_DATA_DIR/stderr.log -o $MERGED_DATA_DIR/stdout.log" -d $MERGED_DATA_DIR -pn
 ~~~
 
+At the end of this code, we have these important files:
+
+- out/data/annotation/mergedannot/mergedannot.bed
+- out/data/annotation/mergedannot/mergedannot.bed_f1.idx
+- out/data/annotation/mergedannot/mergedannot.bed_f4.idx
+- out/data/annotation/mergedannot/variable.txt
+
 # Split annotations by chromosoms
 
 ~~~
@@ -110,4 +117,17 @@ export CHROM="$(seq 1 22)"
 time snakemake -s ${TAGOOS}/snakefile/data_annotation/split_annotation.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $ANNOTATION_DIR/stderr.log -o $ANNOTATION_DIR/stdout.log" -d $ANNOTATION_DIR -pn
 ~~~
 
+At the end of this code, we have these important files:
+
+~~~
+$ ls out/data/annotation/mergedannot/chrom/
+1  10  11  12  13  14  15  16  17  18  19  2  20  21  22  3  4  5  6  7  8  9  X
+~~~
+
+with
+
+~~~
+$ ls out/data/annotation/mergedannot/chrom/1
+mergedannot.bed  mergedannot_nonsorted.bed
+~~~
 
