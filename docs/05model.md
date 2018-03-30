@@ -15,7 +15,7 @@ Region variables
 $REGION \in {'intronic', 'intergenic'}$
 
 ~~~
-export REGION=intergenic # default intronic
+export REGION=intronic # default intronic intergenic
 export CHROM="$(seq 22)"
 ~~~
 
