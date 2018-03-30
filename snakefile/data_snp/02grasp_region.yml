@@ -14,11 +14,9 @@ rule grasp108:
     output:
         rsid = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.rsid"),
         bed = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.bed"),
-        bed_idx = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.bed.idx"),
     params: pvaluemax = 0.00000005
     shell:
-        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", delim_whitespace=True, header=None, dtype={{5: numpy.float64}}); df=df.ix[df[4]<={params.pvaluemax}]; df.to_csv("{output.bed}", sep="\t", header=False, index=False); df[3].to_csv("{output.rsid}", sep="\t", header=False, index=False)';
-        {HOME}/Software/IGVTools/igvtools index {output.bed}"""
+        """python -c 'import numpy; import pandas; df=pandas.read_csv("{input.bed}", delim_whitespace=True, header=None, dtype={{5: numpy.float64}}); df=df.ix[df[4]<={params.pvaluemax}]; df.to_csv("{output.bed}", sep="\t", header=False, index=False); df[3].to_csv("{output.rsid}", sep="\t", header=False, index=False)'"""
 
 rule filter_region:
     input:

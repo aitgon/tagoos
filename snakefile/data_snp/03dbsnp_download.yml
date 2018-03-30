@@ -5,11 +5,6 @@ URL_DBSNP = os.getenv('URL_DBSNP')
 HOME = os.getenv('HOME')
 THREADS = int(os.getenv('THREADS'))
 
-#rule all:
-#    input:
-#        expand(os.path.join(DBSNP_OUT_DIR, "{chr}/chr{chr}.bed.f4.idx"), chr=CHROM),
-#        os.path.join(DBSNP_DIR, "rsid2gene.tsv"),
-
 rule cat_rsid2gene:
     input:
         rsid2gene_chr = expand(os.path.join(DBSNP_DIR, "raw_bed/{chr}/rsid2gene_chr{chr}.tsv"), chr=CHROM),

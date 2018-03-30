@@ -56,6 +56,6 @@ rule regional_peak_bed:
     output:
         regional_peak_bed = os.path.join(OUTDIR, "peak_bed/{chr}/chr{chr}.bed"),
     shell:
-        """bedtools intersect -sorted -a {input.peak_bed} -b {input.genomic_region_bed} -g {CHROM_SIZES} | sort -u -k1,1 -k2,2n >{output.regional_peak_bed}"""
+        """bedtools intersect -sorted -a {input.peak_bed} -b {input.genomic_region_bed} |sort -u |sort -k1,1 -k2,2n >{output.regional_peak_bed}"""
 
 

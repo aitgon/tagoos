@@ -35,7 +35,7 @@ rule proc4:
     output:
         tsv=os.path.join(GRASP_DATA_DIR, "proc/GraspFullDataset2_4.tsv")
     shell:
-        """awk -F"\t"  '$4!~/_/ {{print}}' {input.tsv} > {output.tsv}"""
+        """awk -F"\t"  '$5!~/_/ {{print}}' {input.tsv} > {output.tsv}"""
 
 # Remove empty p-values
 rule proc3:
