@@ -32,6 +32,7 @@ export FIN_ID2VARIABLE_TSV=${PWD}/out/data/annotation/mergedannot/id2variable.ts
 export ANNOTATION_ID_MAX=$(sort -k1,1nr ${FIN_ID2VARIABLE_TSV} |head -n1 |cut -f 1)
 export GENOME1K_PEAK_BED_DIR=${PWD}/out/data/snp/1000genomes/${REGION}/peak_bed
 export POS_RSID=${PWD}/out/data/snp/grasp/${REGION}/grasp108.int.rsid
+export VARIABLE_TXT=$PWD/out/data/annotation/${ANNOT_LABEL}/variable.txt
 #
 export OUTDIR=${PWD}/out/intronic/model/chrom
 mkdir -p ${OUTDIR}

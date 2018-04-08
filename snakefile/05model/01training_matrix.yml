@@ -11,6 +11,24 @@ GENOME1K_PEAK_BED_DIR = os.getenv('GENOME1K_PEAK_BED_DIR')
 POS_RSID = os.getenv('POS_RSID')
 TAGOOS = os.getenv('TAGOOS')
 PYTHONBIN = os.getenv('PYTHONBIN')
+VARIABLE_TXT = os.getenv('VARIABLE_TXT')
+
+rule all:
+    input:
+        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+        feature_importance_png = os.path.join(OUTDIR, "feature_importance.png"),
+
+rule create_model:
+    input:
+        libsvm = os.path.join(OUTDIR, 'annotation.libsvm')
+        variable_txt = VARIABLE_TXT,
+        script = os.path.join(TAGOOS, "script/create_model.py"),
+    output:
+        model_pkl = os.path.join(OUTDIR, "model.pkl"),
+        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+        feature_importance_png = os.path.join(OUTDIR, "feature_importance.png"),
+    shell:
+        """{PYTHONBIN} {input.script} {input.libsvm} {input.variable_txt} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""
 
 rule merge_instance:
     input:
