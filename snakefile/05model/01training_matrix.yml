@@ -1,0 +1,243 @@
+CHROM=sorted(os.getenv('CHROM').split())
+PWD = os.getenv('PWD')
+REGION = os.getenv('REGION')
+OUTDIR = os.getenv('OUTDIR')
+HOME = os.getenv('HOME')
+LD_DIR = os.getenv('LD_DIR')
+INDEX_DIR = os.getenv('INDEX_DIR')
+FIN_ID2VARIABLE_TSV = os.getenv('FIN_ID2VARIABLE_TSV')
+ANNOTATION_ID_MAX = os.getenv('ANNOTATION_ID_MAX')
+GENOME1K_PEAK_BED_DIR = os.getenv('GENOME1K_PEAK_BED_DIR')
+POS_RSID = os.getenv('POS_RSID')
+TAGOOS = os.getenv('TAGOOS')
+PYTHONBIN = os.getenv('PYTHONBIN')
+
+rule merge_instance:
+    input:
+        instance = expand(os.path.join(OUTDIR, "{chr}", 'instance.txt'), chr=CHROM),
+    output:
+        instance = os.path.join(OUTDIR, 'instance.txt')
+    shell:
+        """
+        cat {input.instance} >{output.instance}
+        """
+
+rule merge_libsvm:
+    input:
+        libsvm = expand(os.path.join(OUTDIR, "{chr}", 'annotation.libsvm'), chr=CHROM),
+    output:
+        libsvm = os.path.join(OUTDIR, 'annotation.libsvm')
+    shell:
+        """
+        cat {input.libsvm} >{output.libsvm}
+        """
+
+rule to_libsvm:
+    input: 
+        tsv = os.path.join(OUTDIR, "{chr}", 'index2label2annotationid2r2.tsv'),
+        script = os.path.join(TAGOOS, "script/tsv2libsvm.py"),
+    output:
+        instance = os.path.join(OUTDIR, "{chr}", 'instance.txt'),
+        libsvm = os.path.join(OUTDIR, "{chr}", 'annotation.libsvm'),
+    shell:
+        """
+        {PYTHONBIN} {input.script} --tsv {input.tsv} --instance {output.instance} --libsvm {output.libsvm}
+        """
+
+rule to_tsv:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_3'),
+    output:
+        tsv = os.path.join(OUTDIR, "{chr}", 'index2label2annotationid2r2.tsv'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "index2label2annotationid2r2",
+    shell:
+        """
+        sqlite3 -column {params.db} 'select * from {params.table} order by index_rsid,annotationid' >{output.tsv};
+        """
+
+rule index2label2annotationid2r2_3:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag2ld'),
+        genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_3'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "index2label2annotationid2r2",
+        input_table = "pos_tag2ld",
+    shell:
+        """
+        sqlite3 {params.db} 'update {params.table} set label=1 where {params.table}.index_rsid in (select rsid_b from {params.input_table})';
+        touch {output.touched_table};
+        """
+
+
+rule pos_tag2ld:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag'),
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag2ld'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "pos_tag2ld"
+    shell:
+        """
+        sqlite3 -column -header {params.db} 'drop table if exists {params.table}';
+        sqlite3 {params.db} 'create table if not exists {params.table} (rsid_a integer, rsid_b integer, unique(rsid_a,rsid_b) on conflict ignore)';
+        sqlite3 {params.db} 'insert into {params.table} select distinct pos_tag.rsid,ld.rsid_b from ld inner join pos_tag on pos_tag.rsid=ld.rsid_a';
+        touch {output.touched_table};
+        """
+
+rule pos_tag:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_2'),
+        pos_rsid = POS_RSID,
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "pos_tag"
+    shell:
+        """
+        sqlite3 -column -header {params.db} 'drop table if exists {params.table}';
+        sqlite3 {params.db} 'create table if not exists {params.table} (rsid integer primary key)';
+        echo -e '.separator "\t"\n.import {input.pos_rsid} {params.table}' | sqlite3 {params.db};
+        touch {output.touched_table};
+        """
+
+rule index2label2annotationid2r2_2:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2ld'),
+        genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_2'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "index2label2annotationid2r2"
+    shell:
+        """
+    sqlite3 {params.db} 'insert or replace into {params.table} select distinct index2ld.rsid_a, 0, genome1k_rsid2annotationid.annotationid, index2ld.r2 from index2ld , genome1k_rsid2annotationid where index2ld.rsid_b = genome1k_rsid2annotationid.rsid';
+        touch {output.touched_table};
+        """
+
+rule index2ld:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotationid'),
+        genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2ld'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "index2ld"
+    shell:
+        """
+        sqlite3 {params.db} 'drop table if exists {params.table}';
+        sqlite3 {params.db} 'create table if not exists {params.table} (rsid_a integer, rsid_b integer, r2 numeric, unique(rsid_a,rsid_b) on conflict replace)';
+    sqlite3 {params.db} 'insert into {params.table} select distinct rsid_a,rsid_b,ld.r2 from ld inner join index0 on index0.rsid=ld.rsid_a';
+        touch {output.touched_table};
+        """
+
+
+rule genome1k_rsid2annotationid:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotation'),
+        genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotationid'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "genome1k_rsid2annotationid"
+    shell:
+        """
+        sqlite3 {params.db} 'drop table if exists {params.table}';
+        sqlite3 {params.db} 'create table if not exists {params.table} (rsid integer, annotationid integer, unique(rsid,annotationid) on conflict ignore)';
+    sqlite3 {params.db} 'insert into {params.table} select genome1k_rsid2annotation.rsid, variableid.id from genome1k_rsid2annotation, variableid where genome1k_rsid2annotation.annotation = variableid.annotation';
+        touch {output.touched_table};"""
+
+rule genome1k_rsid2annotation:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'variableid'),
+        genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotation'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "genome1k_rsid2annotation"
+    shell:
+        """
+        sqlite3 -column -header {params.db} 'drop table if exists {params.table}';
+        sqlite3 {params.db} 'create table if not exists {params.table} (rsid integer, annotation text, unique(rsid,annotation) on conflict ignore)';
+        echo -e '.separator "\t"\n.import {input.genome1k_rsid2annotation} {params.table}' | sqlite3 {params.db};
+        touch {output.touched_table}"""
+
+rule variableid:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2'),
+        fin_id2variable_tsv = FIN_ID2VARIABLE_TSV,
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'variableid'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "variableid"
+    shell:
+        """
+        sqlite3 -column -header {params.db} 'drop table if exists {params.table}';
+        sqlite3 {params.db} 'create table IF NOT EXISTS {params.table} (id integer primary key, annotation text)';
+        echo -e '.separator "\t"\n.import {input.fin_id2variable_tsv} {params.table}' | sqlite3 {params.db};
+        touch {output.touched_table};"""
+
+#rule tmp:
+#    input:
+#        expand(os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2'), chr=CHROM)
+
+rule init_index2label2annotationid2r2:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index0'),
+        index_rsid = os.path.join(INDEX_DIR, "{chr}", "chr{chr}_index3.int.rsid"),
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        input_table = "index0",
+        table = "index2label2annotationid2r2",
+    shell:
+        """
+        sqlite3 -column -header {params.db} 'drop table if exists {params.table}';
+        sqlite3 {params.db} 'create table IF NOT EXISTS {params.table} (index_rsid integer, label integer default 0, annotationid integer, r2 numeric, unique(index_rsid, annotationid) on conflict replace)';
+        sqlite3 {params.db} 'insert or replace into {params.table} select rsid,0,{ANNOTATION_ID_MAX},0 from {params.input_table}';
+        touch {output.touched_table}"""
+
+rule index:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'ld'),
+        index_rsid = os.path.join(INDEX_DIR, "{chr}", "chr{chr}_index3.int.rsid"),
+    output:
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index0'),
+    params:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        table = "index0"
+    shell:
+        """sqlite3 -column -header {params.db} 'drop table if exists {params.table}';
+        sqlite3 {params.db} 'create table IF NOT EXISTS {params.table} (rsid integer primary key)';
+        echo -e '.import {input.index_rsid} {params.table}' | sqlite3 {params.db};
+        touch {output.touched_table}"""
+
+
+rule init_db_and_import_ld:
+    input: 
+        ld_tsv = os.path.join(LD_DIR, "{chr}", "chr{chr}_ld.tsv"),
+    output:
+        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'ld'),
+    params:
+        table = "ld"
+    shell:
+        """rm -f {output.db};
+        sqlite3 {output.db} 'create table IF NOT EXISTS {params.table} (rsid_a integer, rsid_b integer, r2 numeric, UNIQUE(rsid_a, rsid_b) ON CONFLICT IGNORE)';
+        echo -e '.separator "\t"\n.import {input.ld_tsv} {params.table}' | sqlite3 {output.db};
+        touch {output.touched_table}"""
+
+
+

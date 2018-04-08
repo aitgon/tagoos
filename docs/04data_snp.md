@@ -98,11 +98,6 @@ export OUTDIR=${GENOME1K_DIR}/${REGION}
 time snakemake -s ${TAGOOS}/snakefile/04data_snp/06genome1k_ld_index.yml -p -j 256 --keep-going --rerun-incomplete -c "qsub -X -V -q $QUEUE -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR --latency-wait 60 -pn
 ~~~
 
-Then outputs to
-
-- ${GENOME1K_DIR}/${REGION}/index3
-- ${GENOME1K_DIR}/${REGION}/ld08
-
 ## Intersect/annotate the 1000 genome variants (Region-dependent)
 
 This snakefile (data_snp/07annotate.yml) takes 1000 genomes SNPs (EUR and intronic/intergenic) and annotate them with _mergedannot_ to TSV and LIBSVM files
@@ -114,13 +109,6 @@ export SNP_DIR_IN=$PWD/out/data/snp/1000genomes/$REGION/peak_bed
 export SNP_DIR_OUT=$PWD/out/data/snp/1000genomes/$REGION/peak_bed
 export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
 time snakemake -s ${TAGOOS}/snakefile/04data_snp/07annotate.yml -j 256 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $SNP_DIR_OUT/stderr.log -o $SNP_DIR_OUT/stdout.log" -d $SNP_DIR_OUT -pn
-~~~
-
-Then outputs to 
-
-~~~
-$ ls /cobelix/gonzalez/Data/2015_svmgwas/repositories/tagoos-appli/171028/out/data/snp/1000genomes/intronic/peak_bed/1/mergedannot/
-annotation.libsvm  instance.txt  intersect.tsv  nonsorted_intersect.tsv
 ~~~
 
 # INDEX (Region-dependent) (PROBABLY TRASH)

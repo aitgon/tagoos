@@ -1,84 +1,66 @@
-# sort input file first: sort 
-# https://github.com/zygmuntz/phraug/blob/master/csv2libsvm.py
-# http://fastml.com/processing-large-files-line-by-line/
-import csv
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+
+
+def tsv2libsvm(args):
+    variable_max = 0
+    with open(args.tsv) as fin:
+        for line in fin:
+            variable = int(line.split()[2])
+            if variable > variable_max:
+                variable_max = variable
+
+    previous_instance, previous_label = None, None
+    variable_list = []
+    variable_level_list = []
+    with open(args.tsv) as fin:
+        for line in fin:
+            instance = int(line.strip().split()[0])
+            if not previous_instance is None and previous_instance > instance:
+                raise AssertionError("Error: Instances %d and %d are not sorted"%(previous_instance,instance))
+            label = int(line.strip().split()[1])
+            variable = int(line.strip().split()[2])
+            variable_level = float(line.strip().split()[3])
+            # Finished this instance
+            if instance != previous_instance and variable_list != []:
+                if not variable_max in variable_list:
+                    variable_list.append(variable_max)
+                    variable_level_list.append(0)
+                out_line = "%s "%str(previous_label) + " ".join([":".join(str(x) for x in item) for item in zip(variable_list, variable_level_list)])
+                args.instance.write(str(previous_instance) + "\n")
+                args.libsvm.write(out_line + "\n")
+                variable_list = []
+                variable_level_list = []
+            # Raise error if a variable is duplicated for one instance
+            if variable in variable_list:
+                raise AssertionError("Error: Duplicated variable %d for instance %d"%(variable,instance))
+            variable_list.append(variable)
+            variable_level_list.append(variable_level)
+            previous_instance, previous_label = instance, label
+
+        # After last line
+        if not variable_max in variable_list:
+            variable_list.append(variable_max)
+            variable_level_list.append(0)
+        out_line = "%s "%str(previous_label) + " ".join([":".join(str(x) for x in item) for item in zip(variable_list, variable_level_list)])
+        args.instance.write(str(previous_instance) + "\n")
+        args.libsvm.write(out_line + "\n")
+
+import argparse
 import sys
-tsv_path=sys.argv[1] #"h.tsv"
-variable_path=sys.argv[2] #"variable.txt"
-instance_path=sys.argv[3] # "instance.txt"
-libsvm_path=sys.argv[4] # "annot.libsvm"
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--tsv', dest='tsv', default=sys.stdin)
+    parser.add_argument('--instance', dest='instance', type=argparse.FileType('w'))
+    parser.add_argument('--libsvm', dest='libsvm', type=argparse.FileType('w'))
+    args = parser.parse_args()
+    # ... do something with args.input ...
+    tsv2libsvm(args)
+
+if __name__ == '__main__':
+    main()
 
 
-label = "-1"
-score = "1"
-
-reader = csv.reader(open(tsv_path, 'r', encoding='utf-8'), delimiter="\t")
-variable2i={}
-for i,variable in enumerate(csv.reader(open(variable_path, 'r', encoding='utf-8'))):
-    #print(i,variable)
-    variable2i[variable[0]]=i+1
-last_variable_index=max(variable2i.values()) # needs for bug in xgboost
-
-previous_instance = None
-previous_label = None
-libsvm_line = None
-libsvm_list = None
-variable_last_index_visited = False
-
-
-#import pdb; pdb.set_trace()
-
-with open(instance_path, 'w') as instance_fout, open(libsvm_path, 'w') as libsvm_fout:
-    for line in reader:
-        if len(line)==2: # there is only instance and variable, score=1 and label=-1
-            instance = line[0]
-            variable = line[1]
-        elif len(line)==4:
-            instance = line[0]
-            score = line[2]
-            variable = line[1]
-            label = line[3]
-        else:
-            sys.exit(1)
-        if instance != previous_instance: # if is a NEW instance, init libsvm_list
-            #libsvm_fout.write(" ".join(sorted(libsvm_list)) + "\n") #write to stdout
-            if not libsvm_list is None: # libsvm_list is not empty as for first line
-                if not variable_last_index_visited: libsvm_list.append((last_variable_index, '0'))
-                #import pdb; pdb.set_trace()
-                libsvm_fout.write(label + " " + " ".join([":".join(str(x) for x in sublist) for sublist in sorted(libsvm_list)]) + "\n")
-                instance_fout.write(previous_instance + "\n") # write previous instance
-                variable_last_index_visited=False
-            if variable=='':
-                import pdb; pdb.set_trace()
-            libsvm_list = [(variable2i[variable], score)] # new tuple to store variable:scores indices
-            if variable2i[variable] == last_variable_index: variable_last_index_visited=True
-        else:  # if is NOT A NEW instance
-            if label != previous_label:
-                raise Exception('One instance with two different labels -> check your TSV!. Quitting...')
-                sys.quit() #
-            try:
-                libsvm_list.append((variable2i[variable], score)) # new tuple to store variable:scores indices
-            except KeyError:
-                raise("KeyErro")
-            if variable2i[variable] == last_variable_index: variable_last_index_visited=True
-        #import pdb; pdb.set_trace()
-        previous_instance = instance
-        previous_label = label
-    if not variable_last_index_visited: libsvm_list.append((last_variable_index, '0'))
-    libsvm_fout.write(label + " " + " ".join([":".join(str(x) for x in sublist) for sublist in sorted(libsvm_list)]) + "\n")
-    instance_fout.write(previous_instance + "\n") # write previous instance
-
-#            import pdb; pdb.set_trace()
-#            if not libsvm_line is None: # libsvm_line was initiated
-#                if not variable_last_index_visited: libsvm_line += " %d:0"%(last_variable_index)
-#                instance_fout.write(previous_instance + "\n") # write previous instance
-#                libsvm_fout.write(libsvm_line + "\n") # write previous line
-#            libsvm_line = "%s %s:%s"%(label, variable2i[variable], score)
-#            if variable2i[variable] == last_variable_index: variable_last_index_visited=True
-#        else:  # if is NOT A NEW instance
-#            libsvm_line += " %s:%s"%(variable2i[variable], score)
-#    if not libsvm_line is None:
-#        if not variable_last_index_visited: libsvm_line += " %d:0"%(last_variable_index)
-#        instance_fout.write(previous_instance + "\n")
-#        libsvm_fout.write(libsvm_line + "\n")
 

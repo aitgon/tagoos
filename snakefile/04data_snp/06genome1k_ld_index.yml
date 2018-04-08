@@ -13,27 +13,36 @@ THREADS = int(os.getenv('THREADS'))
 
 rule all:
     input:
-        plink_ld = expand(os.path.join(LD_DIR, "chrom/{chr}/chr{chr}.ld"), chr=CHROM),
-        prune_in = expand(os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.prune.in"), chr=CHROM),
+        plink_ld_sqlite = expand(os.path.join(OUTDIR, "sqlite/chrom/{chr}/chr{chr}.sqlite"), chr=CHROM),
 
-rule sort_ldproc:
+rule index_and_ld2sqlite:
     input:
-        plink_ld_nonsorted = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_nonsorted.ld")
+        plink_ld_tsv = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_ld.tsv"),
+        int_rsid = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.int.rsid"),
     output:
-        plink_ld = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}.ld")
-    threads: THREADS
+#        plink_ld_nonsorted = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_nonsorted.ld")
+        sqlite = os.path.join(OUTDIR, "sqlite/chrom/{chr}/chr{chr}.sqlite")
     shell:
-        """LC_ALL=C sort -u --parallel {threads}  {input.plink_ld_nonsorted} -o {output.plink_ld}"""
+        """
+    sqlite3 {output.sqlite} 'create table IF NOT EXISTS ld (rsid_a integer, rsid_b integer, r2 numeric, UNIQUE(rsid_a, rsid_b) ON CONFLICT IGNORE)';
+        echo -e '.separator "\t"\n.import {input.plink_ld_tsv} ld' | sqlite3 {output.sqlite};
+        sqlite3 {output.sqlite} 'create table IF NOT EXISTS index0 (rsid integer primary key)';
+        echo -e '.separator "\t"\n.import {input.int_rsid} index0' | sqlite3 {output.sqlite};
+        sqlite3 {output.sqlite} 'create table if not exists index2ld (rsid_a integer, rsid_b integer, unique(rsid_a,rsid_b) on conflict ignore)';
+        sqlite3 {output.sqlite} 'insert into index2ld select distinct rsid_a,rsid_b from ld inner join index0 on index0.rsid=ld.rsid_a';
+    """
 
-rule ldproc:
+#
+rule ld_processed:
     input:
         plink_ld_raw = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_raw.ld"),
     output:
-        plink_ld_nonsorted = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_nonsorted.ld")
+#        plink_ld_nonsorted = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_nonsorted.ld")
+        plink_ld_tsv = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_ld.tsv")
     shell:
-        """LC_ALL=C awk '{{print $3"\t"$6"\t"$7}}' {input.plink_ld_raw} > {output.plink_ld_nonsorted}"""
+        """LC_ALL=C awk '{{print $3"\t"$6"\t"$7}}' {input.plink_ld_raw} |tail -n +2 |tr -d "rs" |sort -u --parallel {threads}  |tr ' ' '\t' > {output.plink_ld_tsv}"""
 
-rule ld:
+rule create_ld_relationships_for_eur_pop:
     input:
         plink_bed = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink.bed"),
         chrom_rsid = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}.rsid"),
@@ -47,7 +56,15 @@ rule ld:
     shell:
         """plink --threads {threads} --bfile {params.plink_bed_prefix} --ld-snp-list {input.chrom_rsid} --ld-window-kb 1000 --ld-window 1000000 --ld-window-r2 {params.ld} --r2 --out {params.plink_ld_prefix}"""
 
-rule index3:
+rule index2integer_rsid:
+    input:
+        prune_in = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.prune.in"),
+    output:
+        int_rsid = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.int.rsid"),
+    shell:
+        """cat {input.prune_in} |tr -d 'rs' >{output.int_rsid}"""
+
+rule create_index_for_eur_pop:
     input:
         plink_bed = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink.bed"),
     params:
