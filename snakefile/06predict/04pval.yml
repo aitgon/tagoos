@@ -1,9 +1,6 @@
 ANNOTATION_BED = os.getenv('ANNOTATION_BED')
 HOME = os.getenv('HOME')
 OUTDIR = os.getenv('OUTDIR')
-"""
-$PWD/out/GRASP108intronic/1kg1000000intronic_mergedannot_index3_analysis/genome_score
-"""
 RANDOM_BED = os.getenv('RANDOM_BED')
 TAGOOS = os.getenv('TAGOOS')
 THREADS = int(os.getenv('THREADS'))
@@ -12,25 +9,15 @@ MODEL_PKL = os.getenv('MODEL_PKL')
 PREDICTION_BED = os.getenv('PREDICTION_BED')
 REGION = os.getenv('REGION')
 
-rule p03_annotation:
-    input:
-        bed=os.path.join(OUTDIR, "prediction_pval.bed"),
-        annotation=ANNOTATION_BED,
-    output:
-        bed=os.path.join(OUTDIR, "prediction_annot_pval.bed"),
-    threads: THREADS
-    shell:
-        """bedtools intersect -sorted -a {input.bed} -b {input.annotation} -wb |cut -f1-5,9 |sort --parallel {threads} -u |bedtools groupby -g 1,2,3,4,5 -c 6 -o distinct >{output.bed}"""
-
 rule p02_pval:
     input:
         random=os.path.join(OUTDIR, "random/predicted.bed"),
-        prediction=os.path.join(OUTDIR, "prediction.bed"),
+        prediction=os.path.join(OUTDIR, "prediction_annotation.bed"),
     output:
         ecdf_rda=os.path.join(OUTDIR, "random/ecdf.rda"),
         prediction_pval=os.path.join(OUTDIR, "prediction_pval.bed"),
     shell:
-        """Rscript -e 'library(data.table);dt=fread("{input.random}");F10=ecdf(dt$V4);save(F10,file="{output.ecdf_rda}");dt2=fread("{input.prediction}");dt2$V5=1-F10(dt2$V4);fwrite(dt2,file="{output.prediction_pval}",row.names=FALSE,quote=FALSE,col.names=F,sep="\\t");'"""
+        """Rscript -e 'library(data.table);dt=fread("{input.random}");F10=ecdf(dt$V4);save(F10,file="{output.ecdf_rda}");dt2=fread("{input.prediction}");dt2$V6=1-F10(dt2$V4); setcolorder(dt2, c("V1", "V2", "V3", "V4", "V6", "V5")); fwrite(dt2,file="{output.prediction_pval}",row.names=FALSE,quote=FALSE,col.names=F,sep="\\t");'"""
 
 rule p01_random:
     """This rule intersects the bed file of the random genomic positions with the region bed file
@@ -47,8 +34,7 @@ rule p01_random:
         prediction=PREDICTION_BED,
     output:
         bed=os.path.join(OUTDIR, "random/predicted.bed"),
-    threads: THREADS
     shell:
-        """intersectBed -sorted -a {input.random} -b  {input.prediction} -wb |cut -f1-3,7 |sort --parallel {threads} -u -k1,1 -k2,2n -k3,3n -k4,4n >{output.bed}"""
+        """intersectBed -sorted -a {input.random} -b  {input.prediction} -wb |cut -f1-3,7 |sort -u -k1,1 -k2,2n -k3,3n -k4,4n >{output.bed}"""
 
 

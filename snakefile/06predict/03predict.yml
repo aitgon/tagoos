@@ -11,17 +11,28 @@ PYTHONBIN = os.getenv('PYTHONBIN')
 
 rule all:
     input:
-        bed = os.path.join(OUTDIR, 'prediction.bed')
+        bed = os.path.join(OUTDIR, 'prediction_annotation.bed')
 
 rule p09_merge_preds:
     input:
-        tsv = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"), gwindow=GENOME_WINDOW_IDS),
+        bed = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"), gwindow=GENOME_WINDOW_IDS),
     output:
-        tsv = os.path.join(OUTDIR, 'prediction.bed')
+        bed = os.path.join(OUTDIR, 'prediction_annotation.bed')
     threads: THREADS
     shell:
         """
-        sort -k1,1 -k2,2n -k3,3n -k4,4n -u --parallel {threads} {input.tsv} -o {output.tsv}
+        sort -k1,1 -k2,2n -k3,3n -k4,4n -u --parallel {threads} {input.bed} -o {output.bed}
+        """
+
+rule p10_annotation:
+    input:
+        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
+        annotation=ANNOTATION_BED,
+    output:
+        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"),
+    shell:
+        """
+        bedtools intersect -sorted -a {input.bed} -b {input.annotation} -wb |cut -f1-4,8 |sort -u |bedtools groupby -g 1,2,3,4 -c 5 -o distinct >{output.bed}
         """
 
 rule p08_preds:
@@ -33,7 +44,8 @@ rule p08_preds:
     output:
         tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
     shell:
-        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} --libsvm {input.libsvm} --instance {input.instance} --model_bst {input.model_bst} -o {output.tsv}"""
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} --libsvm {input.libsvm} --instance {input.instance} --model_bst {input.model_bst} -o {output.tsv};
+           sort -k1,1 -k2,2n -k3,3n {output.tsv} -o {output.tsv}"""
 
 rule p07_to_libsvm:
     input: 

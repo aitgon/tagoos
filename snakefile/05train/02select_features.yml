@@ -8,7 +8,7 @@ THREADS=int(os.getenv('THREADS'))
 
 rule all:
     input:
-        mergedannot_bed = os.path.join(OUTDIR, "mergedannot.bed")
+        mergedannot_bed = os.path.join(OUTDIR, "mergedannot_selected.bed")
 
 rule m02_selected:
     input:
@@ -17,7 +17,7 @@ rule m02_selected:
         mergedannot_sqlite = os.path.join(OUTDIR, "mergedannot_selected.sqlite"),
         genomic_region_bed = GENOMIC_REGION_BED,
     output:
-        mergedannot_bed = os.path.join(OUTDIR, "mergedannot.bed")
+        mergedannot_bed = os.path.join(OUTDIR, "mergedannot_selected.bed")
     threads: THREADS
     shell:
         """

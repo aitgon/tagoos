@@ -72,7 +72,7 @@ time snakemake -s ${TAGOOS}/snakefile/06predict/02region.yml -j 64 --keep-going 
 - Collapse single nucleotides with same annotation combinations
 
 ~~~
-export ANNOTATION_BED=${PWD}/out/${REGION}/train/mergedannot.bed
+export ANNOTATION_BED=${PWD}/out/${REGION}/train/mergedannot_selected.bed
 export MAX_ANNOTATION_ID=$(tail -n1 /cobelix/gonzalez/Data/2015_svmgwas/repositories/tagoos-appli/180328/out/data/annotation/mergedannot/variableid2variable.tsv |cut -f 1);
 export MODEL_BST=${PWD}/out/${REGION}/train/model.bst
 time snakemake -s ${TAGOOS}/snakefile/06predict/03predict.yml -j 64 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -p  -k --rerun-incomplete --latency-wait 60 -n
@@ -96,18 +96,10 @@ fi
 ~~~
 
 ~~~
-export PREDICTION_BED=${PWD}/out/${REGION}/predict/prediction.bed
+export PREDICTION_BED=${PWD}/out/${REGION}/predict/prediction_annotation.bed
 export RANDOM_BED=$PWD/out/data/snp/random.bed
-time snakemake -s ${TAGOOS}/snakefile/06predict/04pval.yml -j 64 --keep-going --rerun-incomplete -c "qsub -X -V -d ${OUTDIR} -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d ${OUTDIR} --latency-wait 60 -pn
-~~~
-
-# Append annotation
-
-export ANNOTATION_BED=${PWD}/out/${REGION}/train/mergedannot.bed
-
-~~~
-export ANNOTATION_BED=${PWD}/out/${REGION}/train/mergedannot.bed
 export OUTDIR=$PWD/out/${REGION}/predict
 time snakemake -s ${TAGOOS}/snakefile/06predict/04pval.yml -j 64 --keep-going --rerun-incomplete -c "qsub -X -V -d ${OUTDIR} -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d ${OUTDIR} --latency-wait 60 -pn
 ~~~
+
 
