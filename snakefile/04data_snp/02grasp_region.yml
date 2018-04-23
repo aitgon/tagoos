@@ -6,7 +6,15 @@ THREADS = int(os.getenv('THREADS'))
 
 rule all:
     input:
+        rsid = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.int.rsid"),
+
+rule grasp108_int:
+    input:
         rsid = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.rsid"),
+    output:
+        rsid = os.path.join(GRASP_DATA_DIR, REGION, "grasp108.int.rsid"),
+    shell:
+        """cat {input.rsid} |tr -d "rs" >{output.rsid}"""
 
 rule grasp108:
     input:

@@ -1,38 +1,51 @@
+#ANNOTATION_ID_MAX = os.getenv('ANNOTATION_ID_MAX')
 CHROM=sorted(os.getenv('CHROM').split())
-PWD = os.getenv('PWD')
-REGION = os.getenv('REGION')
-OUTDIR = os.getenv('OUTDIR')
-HOME = os.getenv('HOME')
-LD_DIR = os.getenv('LD_DIR')
-INDEX_DIR = os.getenv('INDEX_DIR')
-FIN_ID2VARIABLE_TSV = os.getenv('FIN_ID2VARIABLE_TSV')
-ANNOTATION_ID_MAX = os.getenv('ANNOTATION_ID_MAX')
 GENOME1K_PEAK_BED_DIR = os.getenv('GENOME1K_PEAK_BED_DIR')
+HOME = os.getenv('HOME')
+INDEX_DIR = os.getenv('INDEX_DIR')
+LD_DIR = os.getenv('LD_DIR')
+OUTDIR = os.getenv('OUTDIR')
 POS_RSID = os.getenv('POS_RSID')
-TAGOOS = os.getenv('TAGOOS')
+PWD = os.getenv('PWD')
 PYTHONBIN = os.getenv('PYTHONBIN')
-VARIABLE_TXT = os.getenv('VARIABLE_TXT')
+REGION = os.getenv('REGION')
+TAGOOS = os.getenv('TAGOOS')
+THREADS = int(os.getenv('THREADS'))
+VARIABLEID2VARIABLE_TSV = os.getenv('VARIABLEID2VARIABLE_TSV')
 
 rule all:
     input:
+        chrom = os.path.join(OUTDIR, 'chrom.txt'),
+        instance = os.path.join(OUTDIR, 'instance.txt'),
+        libsvm = os.path.join(OUTDIR, 'annotation.libsvm'),
         feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
-        feature_importance_png = os.path.join(OUTDIR, "feature_importance.png"),
+        #feature_importance_png = os.path.join(OUTDIR, "feature_importance.png"),
 
-rule create_model:
+rule train:
     input:
-        libsvm = os.path.join(OUTDIR, 'annotation.libsvm')
-        variable_txt = VARIABLE_TXT,
-        script = os.path.join(TAGOOS, "script/create_model.py"),
+        libsvm = os.path.join(OUTDIR, 'annotation.libsvm'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+        script = os.path.join(TAGOOS, "script/05train/train.py"),
     output:
-        model_pkl = os.path.join(OUTDIR, "model.pkl"),
+        model_bst = os.path.join(OUTDIR, "model.bst"),
         feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
-        feature_importance_png = os.path.join(OUTDIR, "feature_importance.png"),
+    threads: THREADS
     shell:
-        """{PYTHONBIN} {input.script} {input.libsvm} {input.variable_txt} {output.model_pkl} {output.feature_importance_tsv}  {output.feature_importance_png}"""
+        """{PYTHONBIN} {input.script} --libsvm {input.libsvm} --feature {input.variableid2variable_tsv} --nthread {threads} --model_bst {output.model_bst} --feature_importance {output.feature_importance_tsv}"""
+
+rule merge_chrom:
+    input:
+        chrom = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'chrom.txt'), chr=CHROM),
+    output:
+        chrom = os.path.join(OUTDIR, 'chrom.txt')
+    shell:
+        """
+        cat {input.chrom} >{output.chrom}
+        """
 
 rule merge_instance:
     input:
-        instance = expand(os.path.join(OUTDIR, "{chr}", 'instance.txt'), chr=CHROM),
+        instance = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'instance.txt'), chr=CHROM),
     output:
         instance = os.path.join(OUTDIR, 'instance.txt')
     shell:
@@ -42,7 +55,7 @@ rule merge_instance:
 
 rule merge_libsvm:
     input:
-        libsvm = expand(os.path.join(OUTDIR, "{chr}", 'annotation.libsvm'), chr=CHROM),
+        libsvm = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'annotation.libsvm'), chr=CHROM),
     output:
         libsvm = os.path.join(OUTDIR, 'annotation.libsvm')
     shell:
@@ -50,13 +63,25 @@ rule merge_libsvm:
         cat {input.libsvm} >{output.libsvm}
         """
 
+rule group_chrom:
+    input: 
+        instance = os.path.join(OUTDIR, "chrom", "{chr}", 'instance.txt'),
+    output:
+        chrom = os.path.join(OUTDIR, "chrom", "{chr}", 'chrom.txt'),
+    params:
+        chr = "{chr}"
+    shell:
+        """
+        awk '{{print {params.chr}}}' {input.instance} >{output.chrom}
+        """
+
 rule to_libsvm:
     input: 
-        tsv = os.path.join(OUTDIR, "{chr}", 'index2label2annotationid2r2.tsv'),
-        script = os.path.join(TAGOOS, "script/tsv2libsvm.py"),
+        tsv = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2.tsv'),
+        script = os.path.join(TAGOOS, "script/05train/tsv2libsvm.py"),
     output:
-        instance = os.path.join(OUTDIR, "{chr}", 'instance.txt'),
-        libsvm = os.path.join(OUTDIR, "{chr}", 'annotation.libsvm'),
+        instance = os.path.join(OUTDIR, "chrom", "{chr}", 'instance.txt'),
+        libsvm = os.path.join(OUTDIR, "chrom", "{chr}", 'annotation.libsvm'),
     shell:
         """
         {PYTHONBIN} {input.script} --tsv {input.tsv} --instance {output.instance} --libsvm {output.libsvm}
@@ -66,9 +91,9 @@ rule to_tsv:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_3'),
     output:
-        tsv = os.path.join(OUTDIR, "{chr}", 'index2label2annotationid2r2.tsv'),
+        tsv = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2.tsv'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "index2label2annotationid2r2",
     shell:
         """
@@ -82,7 +107,7 @@ rule index2label2annotationid2r2_3:
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_3'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "index2label2annotationid2r2",
         input_table = "pos_tag2ld",
     shell:
@@ -98,7 +123,7 @@ rule pos_tag2ld:
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag2ld'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "pos_tag2ld"
     shell:
         """
@@ -115,7 +140,7 @@ rule pos_tag:
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "pos_tag"
     shell:
         """
@@ -132,7 +157,7 @@ rule index2label2annotationid2r2_2:
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_2'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "index2label2annotationid2r2"
     shell:
         """
@@ -147,7 +172,7 @@ rule index2ld:
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2ld'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "index2ld"
     shell:
         """
@@ -165,7 +190,7 @@ rule genome1k_rsid2annotationid:
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotationid'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "genome1k_rsid2annotationid"
     shell:
         """
@@ -181,7 +206,7 @@ rule genome1k_rsid2annotation:
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotation'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "genome1k_rsid2annotation"
     shell:
         """
@@ -193,38 +218,36 @@ rule genome1k_rsid2annotation:
 rule variableid:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2'),
-        fin_id2variable_tsv = FIN_ID2VARIABLE_TSV,
+        feature2featureid_tsv = VARIABLEID2VARIABLE_TSV,
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'variableid'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "variableid"
     shell:
         """
         sqlite3 -column -header {params.db} 'drop table if exists {params.table}';
         sqlite3 {params.db} 'create table IF NOT EXISTS {params.table} (id integer primary key, annotation text)';
-        echo -e '.separator "\t"\n.import {input.fin_id2variable_tsv} {params.table}' | sqlite3 {params.db};
+        echo -e '.separator "\t"\n.import {input.feature2featureid_tsv} {params.table}' | sqlite3 {params.db};
         touch {output.touched_table};"""
-
-#rule tmp:
-#    input:
-#        expand(os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2'), chr=CHROM)
 
 rule init_index2label2annotationid2r2:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index0'),
         index_rsid = os.path.join(INDEX_DIR, "{chr}", "chr{chr}_index3.int.rsid"),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         input_table = "index0",
         table = "index2label2annotationid2r2",
     shell:
         """
         sqlite3 -column -header {params.db} 'drop table if exists {params.table}';
         sqlite3 {params.db} 'create table IF NOT EXISTS {params.table} (index_rsid integer, label integer default 0, annotationid integer, r2 numeric, unique(index_rsid, annotationid) on conflict replace)';
-        sqlite3 {params.db} 'insert or replace into {params.table} select rsid,0,{ANNOTATION_ID_MAX},0 from {params.input_table}';
+        export ANNOTATION_ID_MAX=$(tail -n1 {input.variableid2variable_tsv} |cut -f 1);
+        sqlite3 {params.db} 'insert or replace into {params.table} select rsid,0,'$ANNOTATION_ID_MAX',0 from {params.input_table}';
         touch {output.touched_table}"""
 
 rule index:
@@ -234,7 +257,7 @@ rule index:
     output:
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index0'),
     params:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "index0"
     shell:
         """sqlite3 -column -header {params.db} 'drop table if exists {params.table}';
@@ -243,11 +266,11 @@ rule index:
         touch {output.touched_table}"""
 
 
-rule init_db_and_import_ld:
+rule a001_init_db_and_import_ld:
     input: 
         ld_tsv = os.path.join(LD_DIR, "{chr}", "chr{chr}_ld.tsv"),
     output:
-        db = os.path.join(OUTDIR, "{chr}", 'db.sqlite'),
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'ld'),
     params:
         table = "ld"

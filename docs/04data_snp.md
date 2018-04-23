@@ -111,36 +111,6 @@ export SCRIPTDIR=$HOME/data/2015_svmgwas/repositories/tagoos/script
 time snakemake -s ${TAGOOS}/snakefile/04data_snp/07annotate.yml -j 256 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $SNP_DIR_OUT/stderr.log -o $SNP_DIR_OUT/stdout.log" -d $SNP_DIR_OUT -pn
 ~~~
 
-# INDEX (Region-dependent) (PROBABLY TRASH)
-
-This snakefile takes the index SNPs and EUR LD relationships and will merge/join them to later aggregate annotations
-
-~~~
-#export INDEX_DIR=$PWD/out/${INDEX_LABEL}
-export INDEX_DIR=$PWD/out/data/snp/1000genomes/${REGION}/index3
-#time snakemake -s ${TAGOOS}/snakefile/04data_snp/08indexld_TRASH.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $INDEX_DIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $INDEX_DIR/stderr.log -o $INDEX_DIR/stdout.log" -d $INDEX_DIR --latency-wait 60 -pn
-~~~
-
-Then outputs to 
-
-~~~
-$ ls /cobelix/gonzalez/Data/2015_svmgwas/repositories/tagoos-appli/171028/out/data/snp/1000genomes/intronic/index3/chrom/1/chr1_index3.prune.in
-/cobelix/gonzalez/Data/2015_svmgwas/repositories/tagoos-appli/171028/out/data/snp/1000genomes/intronic/index3/chrom/1/chr1_index3.prune.in
-~~~
-
-# Process DBSNP (NECESSARY?, NOT RUNNING FOR NOW) (PROBABLY TRASH)
-
-Filter region dbsnp (region-dependent)
-
-~~~
-export CHROM="$(seq 1 22)"
-export DBSNP_IN_DIR=$DBSNP_DIR
-export DBSNP_OUT_DIR=$PWD/out/data/snp/dbsnp/${REGION}
-export VARIABLE_TXT=$PWD/out/data/annotation/${ANNOT_LABEL}/variable.txt
-export THREADS=16
-export QUEUE=batch # default batch#
-time snakemake -s ${TAGOOS}/snakefile/04data_snp/09dbsnp_region_TRASH.yml -j 48 --keep-going --rerun-incomplete -c "qsub -X -V -d $PWD -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e stderr.log -o stdout.log" -d $PWD -pn
-~~~
 
 
 

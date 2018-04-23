@@ -1,8 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
-
 def tsv2libsvm(args):
     variable_max = 0
     with open(args.tsv) as fin:
@@ -16,9 +14,7 @@ def tsv2libsvm(args):
     variable_level_list = []
     with open(args.tsv) as fin:
         for line in fin:
-            instance = int(line.strip().split()[0])
-            if not previous_instance is None and previous_instance > instance:
-                raise AssertionError("Error: Instances %d and %d are not sorted"%(previous_instance,instance))
+            instance = line.strip().split()[0]
             label = int(line.strip().split()[1])
             variable = int(line.strip().split()[2])
             variable_level = float(line.strip().split()[3])
@@ -34,7 +30,7 @@ def tsv2libsvm(args):
                 variable_level_list = []
             # Raise error if a variable is duplicated for one instance
             if variable in variable_list:
-                raise AssertionError("Error: Duplicated variable %d for instance %d"%(variable,instance))
+                raise AssertionError("Error: Duplicated variable %d for instance %s"%(variable,instance))
             variable_list.append(variable)
             variable_level_list.append(variable_level)
             previous_instance, previous_label = instance, label

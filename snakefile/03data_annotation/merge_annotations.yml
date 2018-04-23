@@ -4,9 +4,17 @@ HOME=os.getenv('HOME')
 
 rule all:
     input:
+        variableid2variable_tsv = os.path.join(MERGED_DATA_DIR, "variableid2variable.tsv"),
+
+rule create_variableid2variable_file:
+    input:
         variable_txt = os.path.join(MERGED_DATA_DIR, "variable.txt"),
-        mergedannot_bed_f1_idx=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f1.idx"),
-        mergedannot_bed_f4_idx=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f4.idx"),
+    output:
+        variableid2variable_tsv = os.path.join(MERGED_DATA_DIR, "variableid2variable.tsv"),
+    shell:
+        """
+        awk '{{print NR"\t"$1}}' {input.variable_txt} >{output.variableid2variable_tsv};
+        """
 
 rule variable_txt:
     input:
@@ -16,22 +24,6 @@ rule variable_txt:
     threads: THREADS
     shell:
         """cut -f4,4 {input.mergedannot} | sort --parallel {threads} -u -o {output.variable_txt}"""
-
-rule annotation_bed_f1_idx:
-    input:
-        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
-    output:
-        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f1.idx")
-    shell:
-        """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=1 {input.mergedannot}  > {output.mergedannot}"""
-
-rule annotation_bed_f4_idx:
-    input:
-        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
-    output:
-        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed_f4.idx")
-    shell:
-        """{HOME}/data/2015_svmgwas/data/hcomp/build_index -sr="" -r="" -fs="\t" -f=4 {input.mergedannot}  > {output.mergedannot}"""
 
 rule cat_sort:
     input:
@@ -45,5 +37,5 @@ rule cat_sort:
         mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
     threads: THREADS
     shell:
-        """sort -k1,1 -k2,2n --parallel {threads} {input} |grep -P "^chr[XY1-9][0-9]?\t" |tr -d '\r' |tr '/' '_' >{output.mergedannot}"""
+        """sort -k1,1 -k2,2n -k3,3n -k4,4  -u --parallel {threads} {input} |grep -P "^chr[XY1-9][0-9]?\t" |tr -d '\r' |tr '/' '_' >{output.mergedannot}"""
 

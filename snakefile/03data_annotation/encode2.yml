@@ -2,7 +2,7 @@ ANNOTATION_DATA=os.getenv('ANNOTATION_DATA')
 ENCODE2_EXPERIMENT_LIST=os.getenv('ENCODE2_EXPERIMENT_LIST')
 ENCODE2_DATA_DIR = os.getenv('ENCODE2_DATA_DIR')
 HOME = os.getenv('HOME')
-SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
+TAGOOS = os.getenv('TAGOOS')
 THREADS = int(os.getenv('THREADS'))
 
 rule proc1:
@@ -97,7 +97,7 @@ rule download_bed_gz:
 rule create_experiment2file:
     input:
         json_downloaded=os.path.join(ENCODE2_DATA_DIR, "json.downloaded"),
-        script = os.path.join(SCRIPTDIR, "annotation/process_encode2_experiment_json.py"),
+        script = os.path.join(TAGOOS, "script/03data_annotation/process_encode2_experiment_json.py"),
     output:
         experiment2file_tsv=os.path.join(ENCODE2_DATA_DIR, "experiment2file.tsv"),
     params:
