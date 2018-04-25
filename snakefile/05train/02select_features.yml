@@ -1,0 +1,50 @@
+HOME=os.getenv('HOME')
+MERGEDANNOT_SQLITE=os.getenv('MERGEDANNOT_SQLITE')
+OUTDIR=os.getenv('OUTDIR')
+PWD=os.getenv('PWD')
+REGION=os.getenv('REGION')
+GENOMIC_REGION_BED=os.getenv('GENOMIC_REGION_BED')
+THREADS=int(os.getenv('THREADS'))
+
+rule all:
+    input:
+        mergedannot_bed = os.path.join(OUTDIR, "mergedannot_selected.bed")
+
+rule m02_selected:
+    input:
+        feature_importance_table_txt = os.path.join(OUTDIR, "feature_importance_table.txt"),
+        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+        mergedannot_sqlite = os.path.join(OUTDIR, "mergedannot_selected.sqlite"),
+        genomic_region_bed = GENOMIC_REGION_BED,
+    output:
+        mergedannot_bed = os.path.join(OUTDIR, "mergedannot_selected.bed")
+    threads: THREADS
+    shell:
+        """
+        sqlite3 {input.mergedannot_sqlite} 'select mergedannot.* from mergedannot inner join feature_importance on mergedannot.annotation=feature_importance.annotation' |tr "|" "\t" |sort -k1,1 -k2,2n -k3,3n -k4,4 -u --parallel {threads} |bedtools intersect -sorted -a stdin -b {input.genomic_region_bed} |sort -k1,1 -k2,2n -k3,3n -k4,4 -u --parallel {threads} >{output.mergedannot_bed}
+        """
+
+rule m01_feature_importance_sqlite:
+    input:
+        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+        mergedannot_sqlite = os.path.join(OUTDIR, "mergedannot_selected.sqlite")
+    output:
+        feature_importance_table_txt = os.path.join(OUTDIR, "feature_importance_table.txt")
+    shell:
+        """
+        sqlite3 {input.mergedannot_sqlite} 'drop table if exists feature_importance';
+        sqlite3 {input.mergedannot_sqlite} 'create table if not exists feature_importance (annotation text primary key, annotation_weight real)';
+        echo -e '.separator "\t"\n.import {input.feature_importance_tsv} feature_importance' | sqlite3 {input.mergedannot_sqlite};
+        touch {output.feature_importance_table_txt}
+        """
+
+rule m01_copy_annotation_db:
+    input:
+        mergedannot_sqlite = MERGEDANNOT_SQLITE,
+    output:
+        mergedannot_sqlite = os.path.join(OUTDIR, "mergedannot_selected.sqlite")
+    shell:
+        """
+        cp {input.mergedannot_sqlite} {output.mergedannot_sqlite}
+        """
+

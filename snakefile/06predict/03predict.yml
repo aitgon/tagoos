@@ -1,0 +1,147 @@
+OUTDIR = os.getenv('OUTDIR')
+HOME = os.getenv('HOME')
+TAGOOS = os.getenv('TAGOOS')
+REGION = os.getenv('REGION')
+THREADS = int(os.getenv('THREADS'))
+MODEL_BST = os.getenv('MODEL_BST')
+GENOME_WINDOW_IDS=sorted(os.getenv('GENOME_WINDOW_IDS').split())
+ANNOTATION_BED = os.getenv('ANNOTATION_BED')
+MAX_ANNOTATION_ID = os.getenv('MAX_ANNOTATION_ID')
+PYTHONBIN = os.getenv('PYTHONBIN')
+
+rule all:
+    input:
+        bed = os.path.join(OUTDIR, 'prediction_annotation.bed')
+
+rule p09_merge_preds:
+    input:
+        bed = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"), gwindow=GENOME_WINDOW_IDS),
+    output:
+        bed = os.path.join(OUTDIR, 'prediction_annotation.bed')
+    threads: THREADS
+    shell:
+        """
+        sort -k1,1 -k2,2n -k3,3n -k4,4n -u --parallel {threads} {input.bed} -o {output.bed}
+        """
+
+rule p10_annotation:
+    input:
+        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
+        annotation=ANNOTATION_BED,
+    output:
+        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"),
+    shell:
+        """
+        bedtools intersect -sorted -a {input.bed} -b {input.annotation} -wb |cut -f1-4,8 |sort -u |bedtools groupby -g 1,2,3,4 -c 5 -o distinct >{output.bed}
+        """
+
+rule p08_preds:
+    input:
+        script=os.path.join(TAGOOS, "script", "06predict/predict.py"),
+        libsvm=os.path.join(OUTDIR, "gwindow/{gwindow}/annotation.libsvm"),
+        instance=os.path.join(OUTDIR, "gwindow/{gwindow}/instance.txt"),
+        model_bst=MODEL_BST,
+    output:
+        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} --libsvm {input.libsvm} --instance {input.instance} --model_bst {input.model_bst} -o {output.tsv};
+           sort -k1,1 -k2,2n -k3,3n {output.tsv} -o {output.tsv}"""
+
+rule p07_to_libsvm:
+    input: 
+        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotationid_long.tsv"),
+        script = os.path.join(TAGOOS, "script/05train/tsv2libsvm.py"),
+    output:
+        instance = os.path.join(OUTDIR, "gwindow/{gwindow}", 'instance.txt'),
+        libsvm = os.path.join(OUTDIR, "gwindow/{gwindow}", 'annotation.libsvm'),
+    shell:
+        """
+        sort -u --parallel {threads} {input.tsv} -o {input.tsv};
+        {PYTHONBIN} {input.script} --tsv {input.tsv} --instance {output.instance} --libsvm {output.libsvm}
+        """
+
+rule p06_annotationid:
+    input:
+        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_long.tsv"),
+        variableid2variable="/cobelix/gonzalez/Data/2015_svmgwas/repositories/tagoos-appli/180328/out/data/annotation/mergedannot/variableid2variable.tsv",
+    output:
+        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotationid_long.tsv"),
+    params:
+        max_annotation_id = MAX_ANNOTATION_ID
+    shell:
+        """
+        LC_ALL=C join -1 3 -2 2 <(sort -k3,3 {input.tsv}) <(sort -k2,2 {input.variableid2variable}) -o 1.1,1.2,2.1,1.4 |tr " " "\t" >{output.tsv};
+        grep -P "\t\.\t" {input.tsv}  |sed s'/\.\t1/'{params.max_annotation_id}'\t0/'g >>{output.tsv};
+        """
+
+rule p05_expand_annotations:
+    """Outputs to this format: instance, label, feature, value
+chr10:92828-92996       0       .       1
+chr10:94055-94554       0       .       1
+chr10:94666-94743       0       .       1
+chr10:94853-94901       0       .       1
+chr10:94902-95121       0       max.h2171.GSE36354ReMap 1
+chr10:180405-180405     0       ctcf.NS.ENCODEReMap     1
+chr10:180405-180405     0       e2f1.NS.ENCODEReMap     1
+chr10:180405-180405     0       ezh2.NS.ENCODEReMap     1
+chr10:180405-180405     0       gata3.NS.ENCODEReMap    1
+chr10:180405-180405     0       h2afz.acc112.encode2    1
+    """
+    input:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"),
+    output:
+        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_long.tsv"),
+    shell:
+        """bedtools expand -i {input.bed} -c 4 |awk '{{print $1":"$2+1"-"$3"\t0\t"$4"\t1"}}' >{output.tsv}"""
+
+rule p04_collapse_peaks:
+    input:
+        script=os.path.join(TAGOOS, "script/06predict/collapse_equally_annotated_consecutive_peaks.py"),
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} -i {input.bed} -o {output.bed}"""
+
+rule p03_collapse_annotations:
+    input:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed.bed"),
+    shell:
+        """bedtools groupby -sorted -i {input.bed} -g 1,2,3 -c 4 -o distinct |sort -u -k1,1 -k2,2n -k3,3n -k4,4 >{output.bed}"""
+
+rule p02_sort_annotated_1nt:
+    input:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation.bed"),
+    threads: THREADS
+    shell:
+        """sort --parallel {threads} -k1,1 -k2,2n -k3,3n -k4,4 -u {input.bed} -o {output.bed}"""
+
+rule p01_annotation_1nt:
+    """This rule crosses the annotation bed of the model with the genome windows in the region
+
+    Parameters
+    ----------
+    annotation : Bed file path
+        Bed file path to the model annotation
+    os.path.join(OUTDIR, "{gwindow}/gwindow.bed") : str
+        The specified region in the given genome window
+        $ head /cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intergenic/1kg1000000intergenic_mergedannot_index3_analysis/genome_score/chr1:1-30000000/gwindow_region.bed
+        chr1    0       11868
+        chr1    29370   30365
+        chr1    30503   34610
+        chr1    36081   69090
+    """
+    input:
+        annotation=ANNOTATION_BED,
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
+    shell:
+        """intersectBed -sorted -a {input.bed} -b  {input.annotation} -wb | awk '{{print $1"\t"$2"\t"$3"\t"$7}}' |uniq >{output.bed};
+            intersectBed -sorted -a {input.bed} -b  {input.annotation} -v | awk '{{print $1"\t"$2"\t"$3"\t."}}' |uniq >>{output.bed}"""
+
+

@@ -1,0 +1,22 @@
+CHROM=os.getenv('CHROM').split()
+ANNOTATION_DIR=os.getenv('ANNOTATION_DIR')
+THREADS=int(os.getenv('THREADS'))
+ANNOT_LABEL=os.getenv('ANNOT_LABEL')
+SNP_DIR_IN = os.getenv('SNP_DIR_IN')
+SNP_DIR_OUT = os.getenv('SNP_DIR_OUT')
+VARIABLE_TXT = os.getenv('VARIABLE_TXT')
+HOME = os.getenv('HOME')
+SCRIPTDIR = os.path.join(os.getenv('TAGOOS'), "script")
+
+rule all:
+    input:
+        annotated_tsv = expand(os.path.join(SNP_DIR_OUT, "{chr}/%s/intersect.tsv"%ANNOT_LABEL), chr=CHROM),
+
+rule intersect_chrom:
+    input:
+        snp_bed = os.path.join(SNP_DIR_IN, "{chr}/chr{chr}.bed"),
+        annot_1col_chrom_bed = os.path.join(ANNOTATION_DIR, "%s.bed"%ANNOT_LABEL)
+    output:
+        annotated_tsv = os.path.join(SNP_DIR_OUT, "{chr}/%s/intersect.tsv"%ANNOT_LABEL),
+    shell: """intersectBed -sorted -a {input.snp_bed} -b {input.annot_1col_chrom_bed} -wb |awk '{{print $4"\t"$8}}' |tr -d "rs" >{output.annotated_tsv}"""
+

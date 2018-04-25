@@ -1,0 +1,77 @@
+CHROM=os.getenv('CHROM').split()
+OUTDIR=os.getenv('OUTDIR')
+GENOME1K_PLINKBED_DIR=os.getenv('GENOME1K_PLINKBED_DIR')
+ANNOT_LABEL=os.getenv('ANNOT_LABEL')
+LD=os.getenv('LD')
+LD_DIR=os.getenv('LD_DIR')
+SNP_DIR = os.getenv('SNP_DIR')
+HOME = os.getenv('HOME')
+SCRIPTDIR = os.getenv('SCRIPTDIR')
+THREADS = int(os.getenv('THREADS'))
+
+#LD_SLUG=LD.replace(".", "")
+
+rule all:
+    input:
+        plink_ld_sqlite = expand(os.path.join(OUTDIR, "sqlite/chrom/{chr}/chr{chr}.sqlite"), chr=CHROM),
+
+rule index_and_ld2sqlite:
+    input:
+        plink_ld_tsv = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_ld.tsv"),
+        int_rsid = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.int.rsid"),
+    output:
+#        plink_ld_nonsorted = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_nonsorted.ld")
+        sqlite = os.path.join(OUTDIR, "sqlite/chrom/{chr}/chr{chr}.sqlite")
+    shell:
+        """
+    sqlite3 {output.sqlite} 'create table IF NOT EXISTS ld (rsid_a integer, rsid_b integer, r2 numeric, UNIQUE(rsid_a, rsid_b) ON CONFLICT IGNORE)';
+        echo -e '.separator "\t"\n.import {input.plink_ld_tsv} ld' | sqlite3 {output.sqlite};
+        sqlite3 {output.sqlite} 'create table IF NOT EXISTS index0 (rsid integer primary key)';
+        echo -e '.separator "\t"\n.import {input.int_rsid} index0' | sqlite3 {output.sqlite};
+        sqlite3 {output.sqlite} 'create table if not exists index2ld (rsid_a integer, rsid_b integer, unique(rsid_a,rsid_b) on conflict ignore)';
+        sqlite3 {output.sqlite} 'insert into index2ld select distinct rsid_a,rsid_b from ld inner join index0 on index0.rsid=ld.rsid_a';
+    """
+
+#
+rule ld_processed:
+    input:
+        plink_ld_raw = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_raw.ld"),
+    output:
+#        plink_ld_nonsorted = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_nonsorted.ld")
+        plink_ld_tsv = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_ld.tsv")
+    shell:
+        """LC_ALL=C awk '{{print $3"\t"$6"\t"$7}}' {input.plink_ld_raw} |tail -n +2 |tr -d "rs" |sort -u --parallel {threads}  |tr ' ' '\t' > {output.plink_ld_tsv}"""
+
+rule create_ld_relationships_for_eur_pop:
+    input:
+        plink_bed = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink.bed"),
+        chrom_rsid = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}.rsid"),
+    params:
+        plink_bed_prefix = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink"),
+        plink_ld_prefix = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_raw"),
+        ld = LD
+    output:
+        plink_ld_raw = os.path.join(LD_DIR, "chrom/{chr}/chr{chr}_raw.ld"),
+    threads: THREADS
+    shell:
+        """plink --threads {threads} --bfile {params.plink_bed_prefix} --ld-snp-list {input.chrom_rsid} --ld-window-kb 1000 --ld-window 1000000 --ld-window-r2 {params.ld} --r2 --out {params.plink_ld_prefix}"""
+
+rule index2integer_rsid:
+    input:
+        prune_in = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.prune.in"),
+    output:
+        int_rsid = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.int.rsid"),
+    shell:
+        """cat {input.prune_in} |tr -d 'rs' >{output.int_rsid}"""
+
+rule create_index_for_eur_pop:
+    input:
+        plink_bed = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink.bed"),
+    params:
+        plink_bed_prefix = os.path.join(GENOME1K_PLINKBED_DIR, "{chr}/chr{chr}_plink"),
+        plink_index_prune_prefix = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3"),
+    output:
+        prune_in = os.path.join(OUTDIR, "index3/chrom/{chr}/chr{chr}_index3.prune.in"),
+    shell:
+        """mkdir -p $(dirname {output.prune_in}); plink --bfile {params.plink_bed_prefix} --indep 5 1 100 --out {params.plink_index_prune_prefix}"""
+
