@@ -5,23 +5,27 @@ URL_DBSNP = os.getenv('URL_DBSNP')
 HOME = os.getenv('HOME')
 THREADS = int(os.getenv('THREADS'))
 
-rule cat_rsid2gene:
-    input:
-        rsid2gene_chr = expand(os.path.join(DBSNP_DIR, "raw_bed/{chr}/rsid2gene_chr{chr}.tsv"), chr=CHROM),
-    output:
-        rsid2gene = os.path.join(DBSNP_DIR, "rsid2gene.tsv"),
-    threads: THREADS
-    shell:
-        """sort -u --parallel {threads} {input.rsid2gene_chr} -o {output.rsid2gene}"""
+#rule cat_rsid2gene:
+#    input:
+#        rsid2gene_chr = expand(os.path.join(DBSNP_DIR, "raw_bed/{chr}/rsid2gene_chr{chr}.tsv"), chr=CHROM),
+#    output:
+#        rsid2gene = os.path.join(DBSNP_DIR, "rsid2gene.tsv"),
+#    threads: THREADS
+#    shell:
+#        """sort -u --parallel {threads} {input.rsid2gene_chr} -o {output.rsid2gene}"""
 
-rule rsid2gene:
+#rule rsid2gene:
+#    input:
+#        bed=os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.sorted.bed"),
+#        refgene = REFGENE,
+#    output:
+#        rsid2gene_tsv=os.path.join(DBSNP_DIR, "raw_bed/{chr}/rsid2gene_chr{chr}.tsv"),
+#    shell:
+#        """bedtools closest -a {input.bed} -b {input.refgene} -d |cut -f4,8,9 >{output.rsid2gene_tsv}"""
+
+rule input:
     input:
-        bed=os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.sorted.bed"),
-        refgene = REFGENE,
-    output:
-        rsid2gene_tsv=os.path.join(DBSNP_DIR, "raw_bed/{chr}/rsid2gene_chr{chr}.tsv"),
-    shell:
-        """bedtools closest -a {input.bed} -b {input.refgene} -d |cut -f4,8,9 >{output.rsid2gene_tsv}"""
+        rsid2gene_chr = expand(os.path.join(DBSNP_DIR, "raw_bed/{chr}/chr{chr}.sorted.bed"), chr=CHROM),
 
 rule sort_bed:
     input:

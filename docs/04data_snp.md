@@ -15,11 +15,9 @@ export GENOMIC_REGION_BED=$HOME/MEGA/2015_svmgwas/analysis/170412_genome_regions
 Data folders
 
 ~~~
-export ANNOT_LABEL=mergedannot
 export DBSNP_DIR=$PWD/out/data/snp/dbsnp
 export GENOME1K_DIR=$PWD/out/data/snp/1000genomes
 export GRASP_DATA_DIR=$PWD/out/data/snp/grasp
-export ANNOTATION_DIR=$PWD/out/data/annotation/${ANNOT_LABEL}
 export INDEX_DIR=${GENOME1K_DIR}/${REGION}/index3
 export INDEX_LD_DIR=${GENOME1K_DIR}/${REGION}/index3_ld
 export LD_DIR=${GENOME1K_DIR}/${REGION}/ld08
@@ -103,6 +101,8 @@ time snakemake -s ${TAGOOS}/snakefile/04data_snp/06genome1k_ld_index.yml -p -j 2
 This snakefile (data_snp/07annotate.yml) takes 1000 genomes SNPs (EUR and intronic/intergenic) and annotate them with _mergedannot_ to TSV and LIBSVM files
 
 ~~~
+export ANNOT_LABEL=mergedannot
+export ANNOTATION_BED=${PWD}/out/data/annotation/${ANNOT_LABEL}/${ANNOT_LABEL}.bed
 export VARIABLE_TXT=$PWD/out/data/annotation/${ANNOT_LABEL}/variable.txt
 export CHROM="$(seq 1 22)"
 export SNP_DIR_IN=$PWD/out/data/snp/1000genomes/$REGION/peak_bed

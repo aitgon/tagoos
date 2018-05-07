@@ -4,22 +4,42 @@ OUTDIR = os.getenv('OUTDIR')
 RANDOM_BED = os.getenv('RANDOM_BED')
 TAGOOS = os.getenv('TAGOOS')
 THREADS = int(os.getenv('THREADS'))
-VARIABLE_TXT = os.getenv('VARIABLE_TXT')
-MODEL_PKL = os.getenv('MODEL_PKL')
+GENOME_WINDOW_IDS=sorted(os.getenv('GENOME_WINDOW_IDS').split())
 PREDICTION_BED = os.getenv('PREDICTION_BED')
-REGION = os.getenv('REGION')
 
-rule p02_pval:
+rule pr4_99:
     input:
-        random=os.path.join(OUTDIR, "random/predicted.bed"),
-        prediction=os.path.join(OUTDIR, "prediction_annotation.bed"),
+        bed = os.path.join(OUTDIR, "prediction_pval_annotation.bed"),
+
+rule pr4_04:
+    input:
+        bed_annotation = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_pval_annotation.bed"), gwindow=GENOME_WINDOW_IDS),
+    output:
+        bed = os.path.join(OUTDIR, "prediction_pval_annotation.bed"),
+    threads: THREADS
+    shell:
+        """sort -k1,1 -k2,2n -k3,3n --parallel {threads} {input} -o {output.bed}"""
+
+rule pr4_03:
+    input:
+        bed = os.path.join(OUTDIR, "prediction_pval.bed"),
+        bed2 = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"),
+    output:
+        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_pval_annotation.bed"),
+    shell:
+        """bedtools intersect -a {input.bed2} -b {input.bed} -sorted -wb -loj |awk 'BEGIN{{OFS="\t"}}{{print $1,$2,$3,$4,$10,$5}}' |bedtools groupby -g 1,2,3,4,5 -c 6 -o distinct >{output.bed}"""
+
+rule pr4_02_pval:
+    input:
+        random=os.path.join(OUTDIR, "random/prediction.bed"),
+        prediction=PREDICTION_BED,
     output:
         ecdf_rda=os.path.join(OUTDIR, "random/ecdf.rda"),
         prediction_pval=os.path.join(OUTDIR, "prediction_pval.bed"),
     shell:
-        """Rscript -e 'library(data.table);dt=fread("{input.random}");F10=ecdf(dt$V4);save(F10,file="{output.ecdf_rda}");dt2=fread("{input.prediction}");dt2$V6=1-F10(dt2$V4); setcolorder(dt2, c("V1", "V2", "V3", "V4", "V6", "V5")); fwrite(dt2,file="{output.prediction_pval}",row.names=FALSE,quote=FALSE,col.names=F,sep="\\t");'"""
+        """Rscript -e 'library(data.table);dt=fread("{input.random}");F10=ecdf(dt$V4);save(F10,file="{output.ecdf_rda}");dt2=fread("{input.prediction}");dt2$V5=1-F10(dt2$V4);fwrite(dt2,file="{output.prediction_pval}",row.names=FALSE,quote=FALSE,col.names=F,sep="\\t");'"""
 
-rule p01_random:
+rule pr4_01_random:
     """This rule intersects the bed file of the random genomic positions with the region bed file
 
     Parameters
@@ -33,7 +53,7 @@ rule p01_random:
         random=RANDOM_BED,
         prediction=PREDICTION_BED,
     output:
-        bed=os.path.join(OUTDIR, "random/predicted.bed"),
+        bed=os.path.join(OUTDIR, "random/prediction.bed"),
     shell:
         """intersectBed -sorted -a {input.random} -b  {input.prediction} -wb |cut -f1-3,7 |sort -u -k1,1 -k2,2n -k3,3n -k4,4n >{output.bed}"""
 

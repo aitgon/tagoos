@@ -25,17 +25,17 @@ rule variable_txt:
     shell:
         """cut -f4,4 {input.mergedannot} | sort --parallel {threads} -u -o {output.variable_txt}"""
 
-rule cat_sort:
-    input:
-        eenhancer=os.path.join(MERGED_DATA_DIR, "../eenhancer/eenhancer.bed"),
-        gtex=os.path.join(MERGED_DATA_DIR, "../gtex/gtex.bed"),
-        encode2=os.path.join(MERGED_DATA_DIR, "../encode2/encode2.bed"),
-        remap=os.path.join(MERGED_DATA_DIR, "../remap/remap.bed"),
-        roadmap=os.path.join(MERGED_DATA_DIR, "../roadmap/roadmap.bed"),
-        youngh3k27ac=os.path.join(MERGED_DATA_DIR, "../youngh3k27ac/youngh3k27ac.bed"),
-    output:
-        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
-    threads: THREADS
-    shell:
-        """sort -k1,1 -k2,2n -k3,3n -k4,4  -u --parallel {threads} {input} |grep -P "^chr[XY1-9][0-9]?\t" |tr -d '\r' |tr '/' '_' >{output.mergedannot}"""
+#rule cat_sort:
+#    input:
+#        eenhancer=os.path.join(MERGED_DATA_DIR, "../eenhancer/eenhancer.bed"),
+#        gtex=os.path.join(MERGED_DATA_DIR, "../gtex/gtex.bed"),
+#        encode2=os.path.join(MERGED_DATA_DIR, "../encode2/encode2.bed"),
+#        remap=os.path.join(MERGED_DATA_DIR, "../remap/remap.bed"),
+#        roadmap=os.path.join(MERGED_DATA_DIR, "../roadmap/roadmap.bed"),
+#        youngh3k27ac=os.path.join(MERGED_DATA_DIR, "../youngh3k27ac/youngh3k27ac.bed"),
+#    output:
+#        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
+#    threads: THREADS
+#    shell:
+#        """sort -k1,1 -k2,2n -k3,3n -k4,4  -u --parallel {threads} {input} |grep -P "^chr[XY1-9][0-9]?\t" |tr -d '\r' |tr '/' '_' >{output.mergedannot}"""
 
