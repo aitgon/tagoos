@@ -13,94 +13,205 @@ TAGOOS = os.getenv('TAGOOS')
 THREADS = int(os.getenv('THREADS'))
 VARIABLEID2VARIABLE_TSV = os.getenv('VARIABLEID2VARIABLE_TSV')
 
-rule all:
-    input:
-        chrom = os.path.join(OUTDIR, 'chrom.txt'),
-        instance = os.path.join(OUTDIR, 'instance.txt'),
-        libsvm = os.path.join(OUTDIR, 'annotation.libsvm'),
-        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
-        #feature_importance_png = os.path.join(OUTDIR, "feature_importance.png"),
+import pandas
+from scipy.sparse import csc_matrix, vstack
+import scipy
+import xgboost
 
-rule train:
+params_bst = {}
+params_bst['intronic'] = {
+    'colsample_bytree': 1,
+    'eta': 0.3,
+    'max_delta_step': 1,
+    'max_depth': 6,
+    'min_child_weight': 1,
+    'num_boost_round': 10,
+    'objective': 'binary:logistic',
+    'seed': 1357,
+    'silent': 1,
+    'subsample': 1,
+    }
+params_bst['intergenic'] = {
+    'colsample_bytree': 1,
+    'eta': 0.3,
+    'max_delta_step': 1,
+    'max_depth': 6,
+    'min_child_weight': 1,
+    'num_boost_round': 10,
+    'objective': 'binary:logistic',
+    'seed': 1357,
+    'silent': 1,
+    'subsample': 1,
+}
+
+rule t1_99_all:
     input:
-        libsvm = os.path.join(OUTDIR, 'annotation.libsvm'),
+        tsv0=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.tsv'),
+        tsv1=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.tsv'),
+        npz0=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.csc.npz'),
+        npz1=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.csc.npz'),
+        dtrain=os.path.join(OUTDIR, 'dtrain.dmat'),
+        bst=os.path.join(OUTDIR, 'model.bst'),
+        tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+        test0_chrom_tsv = expand(os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label0.tsv'), chr=CHROM),
+        test1_chrom_tsv = expand(os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label1.tsv'), chr=CHROM),
+        train0_chrom_tsv = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label0.tsv'), chr=CHROM),
+        train1_chrom_tsv = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label1.tsv'), chr=CHROM),
+
+rule t1_19_train_model_feature_importance:
+    input:
         variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
-        script = os.path.join(TAGOOS, "script/05train/train.py"),
+        dtrain=os.path.join(OUTDIR, 'dtrain.dmat'),
     output:
-        model_bst = os.path.join(OUTDIR, "model.bst"),
-        feature_importance_tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
-    threads: THREADS
-    shell:
-        """{PYTHONBIN} {input.script} --libsvm {input.libsvm} --feature {input.variableid2variable_tsv} --nthread {threads} --model_bst {output.model_bst} --feature_importance {output.feature_importance_tsv}"""
-
-rule merge_chrom:
-    input:
-        chrom = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'chrom.txt'), chr=CHROM),
-    output:
-        chrom = os.path.join(OUTDIR, 'chrom.txt')
-    shell:
-        """
-        cat {input.chrom} >{output.chrom}
-        """
-
-rule merge_instance:
-    input:
-        instance = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'instance.txt'), chr=CHROM),
-    output:
-        instance = os.path.join(OUTDIR, 'instance.txt')
-    shell:
-        """
-        cat {input.instance} >{output.instance}
-        """
-
-rule merge_libsvm:
-    input:
-        libsvm = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'annotation.libsvm'), chr=CHROM),
-    output:
-        libsvm = os.path.join(OUTDIR, 'annotation.libsvm')
-    shell:
-        """
-        cat {input.libsvm} >{output.libsvm}
-        """
-
-rule group_chrom:
-    input: 
-        instance = os.path.join(OUTDIR, "chrom", "{chr}", 'instance.txt'),
-    output:
-        chrom = os.path.join(OUTDIR, "chrom", "{chr}", 'chrom.txt'),
+        bst=os.path.join(OUTDIR, 'model.bst'),
+        tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
     params:
-        chr = "{chr}"
-    shell:
-        """
-        awk '{{print {params.chr}}}' {input.instance} >{output.chrom}
-        """
+        region = REGION
+    threads: THREADS
+    run:
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        #
+        feature_names = variableid2variable_df.variable.tolist()
+        #
+        dtrain = xgboost.DMatrix(data=input.dtrain, feature_names=['label'] + feature_names)
+        #
+        scale_pos_weight = (dtrain.get_label() == 0).sum() / (dtrain.get_label() == 1).sum()
+        params_bst_region = params_bst[params.region]
+        params_bst_region['scale_pos_weight'] = scale_pos_weight
+        params_bst_region['nthread'] = threads
+        bst = xgboost.train(params=params_bst_region, dtrain=dtrain)
+        #
+        bst.save_model(fname=output.bst)
+        #
+        # Feature importance
+        feature_importance = pandas.DataFrame.from_records(list(bst.get_score(importance_type="gain").items()))
+        feature_importance.columns = ['feature', 'weight']
+        feature_importance = feature_importance.loc[:, ['feature', 'weight']]
+        feature_importance.sort_values(by='weight', ascending=False, inplace=True)
+        feature_importance.to_csv(output.tsv, sep="\t", index=False, header=True)
 
-rule to_libsvm:
-    input: 
-        tsv = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2.tsv'),
-        script = os.path.join(TAGOOS, "script/05train/tsv2libsvm.py"),
+rule t1_18_save_dtrain:
+    input:
+        npz0=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.csc.npz'),
+        npz1=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.csc.npz'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
     output:
-        instance = os.path.join(OUTDIR, "chrom", "{chr}", 'instance.txt'),
-        libsvm = os.path.join(OUTDIR, "chrom", "{chr}", 'annotation.libsvm'),
+        dtrain=os.path.join(OUTDIR, 'dtrain.dmat'),
+    run:
+        train_0_csc = scipy.sparse.load_npz(input.npz0)
+        train_1_csc = scipy.sparse.load_npz(input.npz1)
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        #
+        train_0_label = [0] * train_0_csc.shape[0]
+        train_1_label = [1] * train_1_csc.shape[0]
+        train_csc = vstack([train_1_csc, train_0_csc])
+        train_label = train_1_label + train_0_label
+        #
+        feature_names = variableid2variable_df.variable.tolist()
+        #
+        dtrain = xgboost.DMatrix(data=train_csc, label=train_label, feature_names=['label'] + feature_names)
+        dtrain.save_binary(fname=output.dtrain)
+
+rule t1_17_csc_label0:
+    input:
+        tsv = os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.tsv'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+    output:
+        npz = os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.csc.npz'),
+    run:
+        df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"])
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        variableid_max = max(variableid2variable_df.variableid)
+        csc = csc_matrix((df.value, (df.instance.astype("category").cat.codes, df.feature)), shape=(len(df.instance.unique()), variableid_max+1))
+        scipy.sparse.save_npz(output.npz, csc)
+
+rule t1_16_csc_label1:
+    input:
+        tsv = os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.tsv'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+    output:
+        npz=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.csc.npz'),
+    run:
+        df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"])
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        variableid_max = max(variableid2variable_df.variableid)
+        csc = csc_matrix((df.value, (df.instance.astype("category").cat.codes, df.feature)), shape=(len(df.instance.unique()), variableid_max+1))
+        scipy.sparse.save_npz(output.npz, csc)
+
+
+rule t1_15_merge_index2label2annotationid2r2_label1:
+    input:
+        tsv=expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label1.tsv'), chr=CHROM),
+    output:
+        tsv=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.tsv')
+    shell:
+        """cat {input.tsv} >{output.tsv}"""
+
+
+rule t1_14_merge_index2label2annotationid2r2_label0:
+    input:
+        tsv=expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label0.tsv'), chr=CHROM),
+    output:
+        tsv=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.tsv')
+    shell:
+        """cat {input.tsv} >{output.tsv}"""
+
+rule t1_13_test_to_tsv_label0:
+    input: 
+        touched_genome1k_rsid2annotationid = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotationid'),
+        touched_pos_tag = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag'),
+    output:
+        tsv = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label0.tsv'),
+    params:
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
     shell:
         """
-        {PYTHONBIN} {input.script} --tsv {input.tsv} --instance {output.instance} --libsvm {output.libsvm}
+        sqlite3 -separator "\t" {params.db} 'select genome1k_rsid2annotationid.rsid, genome1k_rsid2annotationid.annotationid, 1 from genome1k_rsid2annotationid  where genome1k_rsid2annotationid.rsid not in (select rsid from pos_tag)' >{output.tsv};
         """
 
-rule to_tsv:
+rule t1_12_test_to_tsv_label1:
+    input:
+        touched_genome1k_rsid2annotationid = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotationid'),
+        touched_pos_tag = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag'),
+    output:
+        tsv = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label1.tsv'),
+    params:
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
+    shell:
+        """
+        sqlite3 -separator "\t" {params.db} 'select genome1k_rsid2annotationid.rsid, genome1k_rsid2annotationid.annotationid, 1 from genome1k_rsid2annotationid  inner join pos_tag on pos_tag.rsid=genome1k_rsid2annotationid.rsid' >{output.tsv};
+        """
+
+rule t1_11_train_to_tsv_label0:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_3'),
     output:
-        tsv = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2.tsv'),
+        tsv = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label0.tsv'),
     params:
         db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
         table = "index2label2annotationid2r2",
+        label=0,
     shell:
         """
-        sqlite3 -column {params.db} 'select * from {params.table} order by index_rsid,annotationid' >{output.tsv};
+        sqlite3 -separator "\t" {params.db} 'select index_rsid,annotationid,r2 from {params.table} where label={params.label}' >{output.tsv};
         """
 
-rule index2label2annotationid2r2_3:
+rule t1_12_train_to_tsv_label1:
+    input: 
+        touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_3'),
+    output:
+        tsv = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label1.tsv'),
+    params:
+        db = os.path.join(OUTDIR, "chrom", "{chr}", 'db.sqlite'),
+        table = "index2label2annotationid2r2",
+        label=1,
+    shell:
+        """
+        sqlite3 -separator "\t" {params.db} 'select index_rsid,annotationid,r2 from {params.table} where label={params.label}' >{output.tsv};
+        """
+
+rule t1_11_index2label2annotationid2r2_3:
+    """Update index2label2annotationid2r2, with label=1 for given pos_tags"""
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag2ld'),
         genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
@@ -117,7 +228,7 @@ rule index2label2annotationid2r2_3:
         """
 
 
-rule pos_tag2ld:
+rule t1_10_pos_tag2ld:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag'),
     output:
@@ -133,7 +244,7 @@ rule pos_tag2ld:
         touch {output.touched_table};
         """
 
-rule pos_tag:
+rule t1_09_pos_tag:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_2'),
         pos_rsid = POS_RSID,
@@ -150,7 +261,8 @@ rule pos_tag:
         touch {output.touched_table};
         """
 
-rule index2label2annotationid2r2_2:
+rule t1_08_index2label2annotationid2r2_2:
+    """Update index2label2annotationid2r2, with label=0, and a given annotationid and r2"""
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2ld'),
         genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
@@ -165,7 +277,7 @@ rule index2label2annotationid2r2_2:
         touch {output.touched_table};
         """
 
-rule index2ld:
+rule t1_07_index2ld:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotationid'),
         genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
@@ -183,7 +295,7 @@ rule index2ld:
         """
 
 
-rule genome1k_rsid2annotationid:
+rule t1_06_genome1k_rsid2annotationid:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotation'),
         genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
@@ -199,7 +311,7 @@ rule genome1k_rsid2annotationid:
     sqlite3 {params.db} 'insert into {params.table} select genome1k_rsid2annotation.rsid, variableid.id from genome1k_rsid2annotation, variableid where genome1k_rsid2annotation.annotation = variableid.annotation';
         touch {output.touched_table};"""
 
-rule genome1k_rsid2annotation:
+rule t1_05_genome1k_rsid2annotation:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'variableid'),
         genome1k_rsid2annotation = os.path.join(GENOME1K_PEAK_BED_DIR, "{chr}/mergedannot/intersect.tsv"),
@@ -215,7 +327,7 @@ rule genome1k_rsid2annotation:
         echo -e '.separator "\t"\n.import {input.genome1k_rsid2annotation} {params.table}' | sqlite3 {params.db};
         touch {output.touched_table}"""
 
-rule variableid:
+rule t1_04_variableid:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2'),
         feature2featureid_tsv = VARIABLEID2VARIABLE_TSV,
@@ -231,7 +343,8 @@ rule variableid:
         echo -e '.separator "\t"\n.import {input.feature2featureid_tsv} {params.table}' | sqlite3 {params.db};
         touch {output.touched_table};"""
 
-rule init_index2label2annotationid2r2:
+rule t1_03_init_index2label2annotationid2r2:
+    """Initiate index2label2annotationid2r2, with label=0, annotationid=ANNOTATION_ID_MAX, r2=0"""
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index0'),
         index_rsid = os.path.join(INDEX_DIR, "{chr}", "chr{chr}_index3.int.rsid"),
@@ -250,7 +363,7 @@ rule init_index2label2annotationid2r2:
         sqlite3 {params.db} 'insert or replace into {params.table} select rsid,0,'$ANNOTATION_ID_MAX',0 from {params.input_table}';
         touch {output.touched_table}"""
 
-rule index:
+rule t1_02_index:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'ld'),
         index_rsid = os.path.join(INDEX_DIR, "{chr}", "chr{chr}_index3.int.rsid"),
@@ -266,7 +379,7 @@ rule index:
         touch {output.touched_table}"""
 
 
-rule a001_init_db_and_import_ld:
+rule t1_01_init_db_and_import_ld:
     input: 
         ld_tsv = os.path.join(LD_DIR, "{chr}", "chr{chr}_ld.tsv"),
     output:

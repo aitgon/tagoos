@@ -8,93 +8,104 @@ GENOME_WINDOW_IDS=sorted(os.getenv('GENOME_WINDOW_IDS').split())
 ANNOTATION_BED = os.getenv('ANNOTATION_BED')
 MAX_ANNOTATION_ID = os.getenv('MAX_ANNOTATION_ID')
 PYTHONBIN = os.getenv('PYTHONBIN')
+VARIABLEID2VARIABLE_TSV = os.getenv('VARIABLEID2VARIABLE_TSV')
 
-rule all:
-    input:
-        bed = os.path.join(OUTDIR, 'prediction_annotation.bed')
+import pandas
+from scipy.sparse import csc_matrix, vstack
+import scipy
+import xgboost
 
-rule p09_merge_preds:
+rule pr3_99:
     input:
-        bed = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"), gwindow=GENOME_WINDOW_IDS),
+        bed = os.path.join(OUTDIR, 'prediction.bed'),
+        bed_annotation = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"), gwindow=GENOME_WINDOW_IDS),
+
+rule pr3_09_merge_preds:
+    input:
+        bed = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"), gwindow=GENOME_WINDOW_IDS),
     output:
-        bed = os.path.join(OUTDIR, 'prediction_annotation.bed')
+        bed = os.path.join(OUTDIR, 'prediction.bed')
     threads: THREADS
     shell:
         """
         sort -k1,1 -k2,2n -k3,3n -k4,4n -u --parallel {threads} {input.bed} -o {output.bed}
         """
 
-rule p10_annotation:
+rule pr3_08_annotation:
     input:
-        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
+        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_sorted.bed"),
         annotation=ANNOTATION_BED,
     output:
         bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"),
     shell:
         """
-        bedtools intersect -sorted -a {input.bed} -b {input.annotation} -wb |cut -f1-4,8 |sort -u |bedtools groupby -g 1,2,3,4 -c 5 -o distinct >{output.bed}
+        bedtools intersect -sorted -a {input.bed} -b {input.annotation} -wb -loj |cut -f1-4,8 |sort -u -k1,1 -k2,2n -k3,3n -k4,4 -k5,5 |bedtools groupby -g 1,2,3,4 -c 5 -o distinct >{output.bed}
         """
 
-rule p08_preds:
+rule pr3_07_sort:
     input:
-        script=os.path.join(TAGOOS, "script", "06predict/predict.py"),
-        libsvm=os.path.join(OUTDIR, "gwindow/{gwindow}/annotation.libsvm"),
-        instance=os.path.join(OUTDIR, "gwindow/{gwindow}/instance.txt"),
-        model_bst=MODEL_BST,
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
     output:
-        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_sorted.bed"),
+    threads: THREADS
     shell:
-        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} --libsvm {input.libsvm} --instance {input.instance} --model_bst {input.model_bst} -o {output.tsv};
-           sort -k1,1 -k2,2n -k3,3n {output.tsv} -o {output.tsv}"""
+        """sort -k1,1 -k2,2n -k3,3n -k4,4 -u --parallel {threads} {input.bed} -o {output.bed}"""
 
-rule p07_to_libsvm:
-    input: 
-        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotationid_long.tsv"),
-        script = os.path.join(TAGOOS, "script/05train/tsv2libsvm.py"),
-    output:
-        instance = os.path.join(OUTDIR, "gwindow/{gwindow}", 'instance.txt'),
-        libsvm = os.path.join(OUTDIR, "gwindow/{gwindow}", 'annotation.libsvm'),
-    shell:
-        """
-        sort -u --parallel {threads} {input.tsv} -o {input.tsv};
-        {PYTHONBIN} {input.script} --tsv {input.tsv} --instance {output.instance} --libsvm {output.libsvm}
-        """
-
-rule p06_annotationid:
+rule pr3_06_preds:
     input:
         tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_long.tsv"),
-        variableid2variable="/cobelix/gonzalez/Data/2015_svmgwas/repositories/tagoos-appli/180328/out/data/annotation/mergedannot/variableid2variable.tsv",
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+        model_bst = MODEL_BST,
     output:
-        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotationid_long.tsv"),
-    params:
-        max_annotation_id = MAX_ANNOTATION_ID
-    shell:
-        """
-        LC_ALL=C join -1 3 -2 2 <(sort -k3,3 {input.tsv}) <(sort -k2,2 {input.variableid2variable}) -o 1.1,1.2,2.1,1.4 |tr " " "\t" >{output.tsv};
-        grep -P "\t\.\t" {input.tsv}  |sed s'/\.\t1/'{params.max_annotation_id}'\t0/'g >>{output.tsv};
-        """
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
+    run:
+        df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"], index_col=0)
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"], index_col=1)
+        df = df.merge(variableid2variable_df, left_on='feature', right_index=True, how='left')
+        variableid_max = max(variableid2variable_df.variableid)
+        df.ix[pandas.isnull(df.variableid), [1,2]] = [0, variableid_max]
+        csc = csc_matrix((df.value, (df.index.to_series().astype("category").cat.codes, df.variableid)), shape=(len(df.index.unique()), variableid_max+1))
+        dtest = xgboost.DMatrix(data=csc, label=csc.shape[0]*[0], feature_names = ['label'] + list(variableid2variable_df.index))
+        bst = xgboost.Booster()
+        bst.load_model(input.model_bst)
+        preds = bst.predict(data = dtest)
+        pred_df = pandas.DataFrame({'instance': list(df.index.to_series().astype("category").cat.codes.drop_duplicates().sort_values(ascending=True).index), 'probability': list(preds)})
+        pred_df['chrom'], pred_df['start_end'] = pred_df['instance'].str.split(':', 1).str
+        pred_df['start'], pred_df['end'] = pred_df['start_end'].str.split('-', 1).str
+        pred_df['start'] = pandas.to_numeric(pred_df['start']) - 1
+        pred_df['end'] = pandas.to_numeric(pred_df['end'])
+        pred_df['probability'] = pandas.to_numeric(pred_df['probability'])
+        pred_df = pred_df[['chrom', 'start', 'end', 'probability']]
+        pred_df.to_csv(output.bed, sep = "\t", header = False, index = False, float_format='%.8f')
 
-rule p05_expand_annotations:
-    """Outputs to this format: instance, label, feature, value
-chr10:92828-92996       0       .       1
-chr10:94055-94554       0       .       1
-chr10:94666-94743       0       .       1
-chr10:94853-94901       0       .       1
-chr10:94902-95121       0       max.h2171.GSE36354ReMap 1
-chr10:180405-180405     0       ctcf.NS.ENCODEReMap     1
-chr10:180405-180405     0       e2f1.NS.ENCODEReMap     1
-chr10:180405-180405     0       ezh2.NS.ENCODEReMap     1
-chr10:180405-180405     0       gata3.NS.ENCODEReMap    1
-chr10:180405-180405     0       h2afz.acc112.encode2    1
+rule pr3_05_expand_annotations:
+    """Outputs to this format: instance, feature, value
+chr1:1-9768	.	1
+chr1:9769-9875	polr2a.bodyofpancreasmaleadult_37years_.encode2	1
+chr1:9876-9909	polr2a.bodyofpancreasfemaleadult_51year_.encode2	1
+chr1:9876-9909	polr2a.bodyofpancreasmaleadult_37years_.encode2	1
+chr1:9910-9971	egfpznf146.hek293originatedfromhek293stablyexpressingfusionprotein.encode2	1
+chr1:9910-9971	polr2a.bodyofpancreasfemaleadult_51year_.encode2	1
+chr1:9910-9971	polr2a.bodyofpancreasmaleadult_37years_.encode2	1
+chr1:9972-10011	egfpznf146.hek293originatedfromhek293stablyexpressingfusionprotein.encode2	1
+chr1:9972-10011	mbd4.mm1s_jq1_500nm.GSE42355ReMap	1
+chr1:9972-10011	polr2a.bodyofpancreasfemaleadult_51year_.encode2	1
     """
     input:
         bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"),
     output:
         tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_long.tsv"),
     shell:
-        """bedtools expand -i {input.bed} -c 4 |awk '{{print $1":"$2+1"-"$3"\t0\t"$4"\t1"}}' >{output.tsv}"""
+        """bedtools expand -i {input.bed} -c 4 |awk '{{print $1":"$2+1"-"$3"\t"$4"\t1"}}' >{output.tsv}"""
 
-rule p04_collapse_peaks:
+rule pr3_04_collapse_peaks:
+    """Outputs to this format: instance, label, feature, value
+chr1	0	9768	.
+chr1	9768	9875	polr2a.bodyofpancreasmaleadult_37years_.encode2
+chr1	9875	9909	polr2a.bodyofpancreasfemaleadult_51year_.encode2,polr2a.bodyofpancreasmaleadult_37years_.encode2
+chr1	9909	9971	egfpznf146.hek293originatedfromhek293stablyexpressingfusionprotein.encode2,polr2a.bodyofpancreasfemaleadult_51year_.encode2,polr2a.bodyofpancreasmaleadult_37years_.encode2
+chr1	9971	10011	egfpznf146.hek293originatedfromhek293stablyexpressingfusionprotein.encode2,mbd4.mm1s_jq1_500nm.GSE42355ReMap,polr2a.bodyofpancreasfemaleadult_51year_.encode2,polr2a.bodyofpancreasmaleadult_37years_.encode2,tcf12.tall_rpmi8402.GSE39179ReMap
+    """
     input:
         script=os.path.join(TAGOOS, "script/06predict/collapse_equally_annotated_consecutive_peaks.py"),
         bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed.bed"),
@@ -103,7 +114,7 @@ rule p04_collapse_peaks:
     shell:
         """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} -i {input.bed} -o {output.bed}"""
 
-rule p03_collapse_annotations:
+rule pr3_03_collapse_annotations:
     input:
         bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation.bed"),
     output:
@@ -111,7 +122,7 @@ rule p03_collapse_annotations:
     shell:
         """bedtools groupby -sorted -i {input.bed} -g 1,2,3 -c 4 -o distinct |sort -u -k1,1 -k2,2n -k3,3n -k4,4 >{output.bed}"""
 
-rule p02_sort_annotated_1nt:
+rule pr3_02_sort_annotated_1nt:
     input:
         bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
     output:
@@ -120,7 +131,7 @@ rule p02_sort_annotated_1nt:
     shell:
         """sort --parallel {threads} -k1,1 -k2,2n -k3,3n -k4,4 -u {input.bed} -o {output.bed}"""
 
-rule p01_annotation_1nt:
+rule pr3_01_annotation_1nt:
     """This rule crosses the annotation bed of the model with the genome windows in the region
 
     Parameters

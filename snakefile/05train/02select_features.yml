@@ -18,10 +18,9 @@ rule m02_selected:
         genomic_region_bed = GENOMIC_REGION_BED,
     output:
         mergedannot_bed = os.path.join(OUTDIR, "mergedannot_selected.bed")
-    threads: THREADS
     shell:
         """
-        sqlite3 {input.mergedannot_sqlite} 'select mergedannot.* from mergedannot inner join feature_importance on mergedannot.annotation=feature_importance.annotation' |tr "|" "\t" |sort -k1,1 -k2,2n -k3,3n -k4,4 -u --parallel {threads} |bedtools intersect -sorted -a stdin -b {input.genomic_region_bed} |sort -k1,1 -k2,2n -k3,3n -k4,4 -u --parallel {threads} >{output.mergedannot_bed}
+        sqlite3 {input.mergedannot_sqlite} 'select mergedannot.* from mergedannot inner join feature_importance on mergedannot.annotation=feature_importance.annotation' |tr "|" "\t" |sort -k1,1 -k2,2n -k3,3n -k4,4 -u |bedtools intersect -sorted -a stdin -b {input.genomic_region_bed} |sort -k1,1 -k2,2n -k3,3n -k4,4 -u --parallel {threads} >{output.mergedannot_bed}
         """
 
 rule m01_feature_importance_sqlite:

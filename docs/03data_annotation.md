@@ -105,7 +105,15 @@ At the end of this code, we have these important files:
 - out/data/annotation/mergedannot/mergedannot.bed_f4.idx
 - out/data/annotation/mergedannot/variable.txt
 
-# Split annotations by chromosoms
+# mergedannot.bed to sqlite
+
+~~~
+sqlite3 $PWD/out/data/annotation/mergedannot/mergedannot.sqlite 'drop table if exists mergedannot'
+sqlite3 $PWD/out/data/annotation/mergedannot/mergedannot.sqlite 'create table mergedannot (chrom text, start int, end int, annotation text, unique(chrom, start, end, annotation))'
+echo -e '.separator "\t"\n.import '$PWD'/out/data/annotation/mergedannot/mergedannot.bed mergedannot' | sqlite3 $PWD/out/data/annotation/mergedannot/mergedannot.sqlite
+~~~
+
+# Split annotations by chromosoms (TRASH)
 
 ~~~
 export ANNOT_LABEL=mergedannot
@@ -129,14 +137,6 @@ with
 ~~~
 $ ls out/data/annotation/mergedannot/chrom/1
 mergedannot.bed  mergedannot_nonsorted.bed
-~~~
-
-# mergedannot.bed to sqlite
-
-~~~
-sqlite3 $PWD/out/data/annotation/mergedannot/mergedannot.sqlite 'drop table if exists mergedannot'
-sqlite3 $PWD/out/data/annotation/mergedannot/mergedannot.sqlite 'create table mergedannot (chrom text, start int, end int, annotation text, unique(chrom, start, end, annotation))'
-echo -e '.separator "\t"\n.import '$PWD'/out/data/annotation/mergedannot/mergedannot.bed mergedannot' | sqlite3 $PWD/out/data/annotation/mergedannot/mergedannot.sqlite
 ~~~
 
 
