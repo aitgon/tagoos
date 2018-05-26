@@ -20,7 +20,7 @@ rule pu4_05_tabix_hg38:
 
 rule pu4_04_bgzip_hg38:
     input:
-        bed=os.path.join(PREDICT_DIR, "prediction_pval_hg38.bed"),
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation_hg38.bed"),
     output:
         bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg38.bed.gz".format(RELEASE, REGION)),
     threads: THREADS
@@ -29,11 +29,11 @@ rule pu4_04_bgzip_hg38:
 
 rule pu4_03_liftover:
     input:
-        bed=os.path.join(PREDICT_DIR, "prediction_pval.bed"),
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation.bed"),
         liftover=os.path.join(TAGOOS, "script/downloaded/liftOver"),
         chain_file=os.path.join(TAGOOS, "script/downloaded/hg19ToHg38.over.chain.gz"),
     output:
-        bed=os.path.join(PREDICT_DIR, "prediction_pval_hg38.bed"),
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation_hg38.bed"),
     shell:
         """{input.liftover} {input.bed} {input.chain_file} {output.bed} unMapped -bedPlus=3"""
 
@@ -47,7 +47,7 @@ rule pu4_02_tabix_hg19:
 
 rule pu4_01_bgzip_hg19:
     input:
-        bed=os.path.join(PREDICT_DIR, "prediction_pval.bed"),
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation.bed"),
     output:
         bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg19.bed.gz".format(RELEASE, REGION)),
     threads: THREADS

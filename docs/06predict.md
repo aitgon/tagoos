@@ -90,7 +90,7 @@ _Algo_
 
 ~~~
 export RANDOM_BED=$PWD/out/data/snp/random.bed
-if [ ! -f $RANDOM_BED ]; 
+if [ ! -s $RANDOM_BED ]; 
 then mkdir -p ${OUTDIR} && bedtools random -seed 123 -n 10010000 -l 1 -g $CHROM_SIZES |cut -f1-3 |sort -k1,1 -k2,2n -k3,3n -u |shuf -n 10000000 |sort -k1,1 -k2,2n >$RANDOM_BED
 fi 
 ~~~

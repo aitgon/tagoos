@@ -9,35 +9,35 @@ PREDICTION_BED = os.getenv('PREDICTION_BED')
 
 rule pr4_99:
     input:
-        bed = os.path.join(OUTDIR, "prediction_pval_annotation.bed"),
+        bed = os.path.join(OUTDIR, "prediction_pval_neglog10pval_annotation.bed"),
 
 rule pr4_04:
     input:
-        bed_annotation = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_pval_annotation.bed"), gwindow=GENOME_WINDOW_IDS),
+        bed_annotation = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_pval_neglog10pval_annotation.bed"), gwindow=GENOME_WINDOW_IDS),
     output:
-        bed = os.path.join(OUTDIR, "prediction_pval_annotation.bed"),
+        bed = os.path.join(OUTDIR, "prediction_pval_neglog10pval_annotation.bed"),
     threads: THREADS
     shell:
         """sort -k1,1 -k2,2n -k3,3n --parallel {threads} {input} -o {output.bed}"""
 
 rule pr4_03:
     input:
-        bed = os.path.join(OUTDIR, "prediction_pval.bed"),
+        bed = os.path.join(OUTDIR, "prediction_pval_neglog10pval.bed"),
         bed2 = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"),
     output:
-        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_pval_annotation.bed"),
+        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_pval_neglog10pval_annotation.bed"),
     shell:
-        """bedtools intersect -a {input.bed2} -b {input.bed} -sorted -wb -loj |awk 'BEGIN{{OFS="\t"}}{{print $1,$2,$3,$4,$10,$5}}' |bedtools groupby -g 1,2,3,4,5 -c 6 -o distinct >{output.bed}"""
+        """bedtools intersect -a {input.bed2} -b {input.bed} -sorted -wb -loj |awk 'BEGIN{{OFS="\t"}}{{print $1,$2,$3,$4,$10,$11,$5}}' |bedtools groupby -g 1,2,3,4,5,6 -c 7 -o distinct >{output.bed}"""
 
-rule pr4_02_pval:
+rule pr4_02_pval_neglog10pval:
     input:
         random=os.path.join(OUTDIR, "random/prediction.bed"),
         prediction=PREDICTION_BED,
     output:
         ecdf_rda=os.path.join(OUTDIR, "random/ecdf.rda"),
-        prediction_pval=os.path.join(OUTDIR, "prediction_pval.bed"),
+        prediction_pval_neglog10pval=os.path.join(OUTDIR, "prediction_pval_neglog10pval.bed"),
     shell:
-        """Rscript -e 'library(data.table);dt=fread("{input.random}");F10=ecdf(dt$V4);save(F10,file="{output.ecdf_rda}");dt2=fread("{input.prediction}");dt2$V5=1-F10(dt2$V4);fwrite(dt2,file="{output.prediction_pval}",row.names=FALSE,quote=FALSE,col.names=F,sep="\\t");'"""
+        """Rscript -e 'library(data.table);dt=fread("{input.random}");F10=ecdf(dt$V4);save(F10,file="{output.ecdf_rda}");dt2=fread("{input.prediction}");colnames(dt2)=c("chrom","start","end", "score");dt2$pval=1-F10(dt2$score);dt2[dt2$pval==0,"pval"]=sort(unique(dt2$pval))[2];dt2$neglog10pval=-log10(dt2$pval);fwrite(dt2,file="{output.prediction_pval_neglog10pval}",row.names=FALSE,quote=FALSE,col.names=F,sep="\\t");'"""
 
 rule pr4_01_random:
     """This rule intersects the bed file of the random genomic positions with the region bed file
