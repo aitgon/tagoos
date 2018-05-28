@@ -3,13 +3,15 @@ Region variables
 $REGION \in {'intronic', 'intergenic'}$
 
 ~~~
-export REGION=intergenic # intronic or intergenic
+export REGION=intronic # intronic or intergenic
 ~~~
 
 ~~~
 export QUEUE=tagc
 export THREADS=16
 ~~~
+
+# Tabix output
 
 ~~~
 export RELEASE=180328
@@ -18,7 +20,15 @@ export OUTDIR=$PWD/out/${REGION}/public
 time snakemake -s ${TAGOOS}/snakefile/07public/01public.yml -j 64 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -p  -k --latency-wait 60 -n
 ~~~
 
-Send to pedagogix
+# neg log10 pval BigWig and annotation BigBed for UCSC
+
+~~~
+export PREDICT_DIR=$PWD/out/${REGION}/predict
+export UCSC_DIR=$PWD/out/${REGION}/ucsc
+time snakemake -s ${TAGOOS}/snakefile/07public/02ucsc.yml -j 64 -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=12:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -p  -k --latency-wait 60 -n
+~~~
+
+# Send to pedagogix
 
 ~~~
 ssh gonzalez@pedagogix mkdir -p /home/gonzalez/public_html/tagoos/release/${RELEASE}
