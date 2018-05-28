@@ -3,7 +3,7 @@ Region variables
 $REGION \in {'intronic', 'intergenic'}$
 
 ~~~
-export REGION=intronic # intronic or intergenic
+export REGION=intergenic # intronic or intergenic
 ~~~
 
 ~~~
@@ -21,6 +21,26 @@ time snakemake -s ${TAGOOS}/snakefile/07public/01public.yml -j 64 -c "qsub -X -V
 ~~~
 
 # neg log10 pval BigWig and annotation BigBed for UCSC
+
+~~~
+export ASSEMBLY=hg19
+export CHROM_SIZES_URL=hgdownload.cse.ucsc.edu/goldenPath/${ASSEMBLY}/bigZips/${ASSEMBLY}.chrom.sizes
+export CHROM_SIZES_URL_DIR=$(dirname $CHROM_SIZES_URL)
+export CHROM_SIZES_DIR=${HOME}/Data/public/${CHROM_SIZES_URL_DIR}
+mkdir -p ${CHROM_SIZES_DIR}
+wget -N http://${CHROM_SIZES_URL} -P ${CHROM_SIZES_DIR}
+export CHROM_SIZES_HG19=${HOME}/MEGA/2015_svmgwas/analysis/170412_genome_regions/raw_hg19.chrom.sizes
+~~~
+
+~~~
+export ASSEMBLY=hg38
+export CHROM_SIZES_URL=hgdownload.cse.ucsc.edu/goldenPath/${ASSEMBLY}/bigZips/${ASSEMBLY}.chrom.sizes
+export CHROM_SIZES_URL_DIR=$(dirname $CHROM_SIZES_URL)
+export CHROM_SIZES_DIR=${HOME}/Data/public/${CHROM_SIZES_URL_DIR}
+mkdir -p ${CHROM_SIZES_DIR}
+wget -N http://${CHROM_SIZES_URL} -P ${CHROM_SIZES_DIR}
+export CHROM_SIZES_HG38=${HOME}/MEGA/2015_svmgwas/analysis/170412_genome_regions/raw_hg19.chrom.sizes
+~~~
 
 ~~~
 export PREDICT_DIR=$PWD/out/${REGION}/predict
