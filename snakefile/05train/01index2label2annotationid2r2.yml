@@ -46,78 +46,15 @@ params_bst['intergenic'] = {
 
 rule t1_99_all:
     input:
-        tsv0=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.tsv'),
-        tsv1=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.tsv'),
-        npz0=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.csc.npz'),
-        npz1=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.csc.npz'),
-        dtrain=os.path.join(OUTDIR, 'dtrain.dmat'),
-        bst=os.path.join(OUTDIR, 'model.bst'),
-        tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
-        test0_chrom_tsv = expand(os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label0.tsv'), chr=CHROM),
-        test1_chrom_tsv = expand(os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label1.tsv'), chr=CHROM),
-        train0_chrom_tsv = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label0.tsv'), chr=CHROM),
-        train1_chrom_tsv = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label1.tsv'), chr=CHROM),
+        expand(os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label0.csc.npz'), chr=CHROM),
+        expand(os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label1.csc.npz'), chr=CHROM),
 
-rule t1_19_train_model_feature_importance:
+rule t1_19_test_to_csc_npz_label0:
     input:
-        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
-        dtrain=os.path.join(OUTDIR, 'dtrain.dmat'),
-    output:
-        bst=os.path.join(OUTDIR, 'model.bst'),
-        tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
-    params:
-        region = REGION
-    threads: THREADS
-    run:
-        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
-        #
-        feature_names = variableid2variable_df.variable.tolist()
-        #
-        dtrain = xgboost.DMatrix(data=input.dtrain, feature_names=['label'] + feature_names)
-        #
-        scale_pos_weight = (dtrain.get_label() == 0).sum() / (dtrain.get_label() == 1).sum()
-        params_bst_region = params_bst[params.region]
-        params_bst_region['scale_pos_weight'] = scale_pos_weight
-        params_bst_region['nthread'] = threads
-        bst = xgboost.train(params=params_bst_region, dtrain=dtrain)
-        #
-        bst.save_model(fname=output.bst)
-        #
-        # Feature importance
-        feature_importance = pandas.DataFrame.from_records(list(bst.get_score(importance_type="gain").items()))
-        feature_importance.columns = ['feature', 'weight']
-        feature_importance = feature_importance.loc[:, ['feature', 'weight']]
-        feature_importance.sort_values(by='weight', ascending=False, inplace=True)
-        feature_importance.to_csv(output.tsv, sep="\t", index=False, header=True)
-
-rule t1_18_save_dtrain:
-    input:
-        npz0=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.csc.npz'),
-        npz1=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.csc.npz'),
+        tsv = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label0.tsv'),
         variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
     output:
-        dtrain=os.path.join(OUTDIR, 'dtrain.dmat'),
-    run:
-        train_0_csc = scipy.sparse.load_npz(input.npz0)
-        train_1_csc = scipy.sparse.load_npz(input.npz1)
-        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
-        #
-        train_0_label = [0] * train_0_csc.shape[0]
-        train_1_label = [1] * train_1_csc.shape[0]
-        train_csc = vstack([train_1_csc, train_0_csc])
-        train_label = train_1_label + train_0_label
-        #
-        feature_names = variableid2variable_df.variable.tolist()
-        #
-        dtrain = xgboost.DMatrix(data=train_csc, label=train_label, feature_names=['label'] + feature_names)
-        dtrain.save_binary(fname=output.dtrain)
-
-rule t1_17_csc_label0:
-    input:
-        tsv = os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.tsv'),
-        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
-    output:
-        npz = os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.csc.npz'),
+        npz = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label0.csc.npz'),
     run:
         df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"])
         variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
@@ -125,12 +62,12 @@ rule t1_17_csc_label0:
         csc = csc_matrix((df.value, (df.instance.astype("category").cat.codes, df.feature)), shape=(len(df.instance.unique()), variableid_max+1))
         scipy.sparse.save_npz(output.npz, csc)
 
-rule t1_16_csc_label1:
+rule t1_18_test_to_csc_npz_label1:
     input:
-        tsv = os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.tsv'),
+        tsv = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label1.tsv'),
         variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
     output:
-        npz=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.csc.npz'),
+        npz = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label1.csc.npz'),
     run:
         df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"])
         variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
@@ -139,24 +76,7 @@ rule t1_16_csc_label1:
         scipy.sparse.save_npz(output.npz, csc)
 
 
-rule t1_15_merge_index2label2annotationid2r2_label1:
-    input:
-        tsv=expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label1.tsv'), chr=CHROM),
-    output:
-        tsv=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.tsv')
-    shell:
-        """cat {input.tsv} >{output.tsv}"""
-
-
-rule t1_14_merge_index2label2annotationid2r2_label0:
-    input:
-        tsv=expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label0.tsv'), chr=CHROM),
-    output:
-        tsv=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.tsv')
-    shell:
-        """cat {input.tsv} >{output.tsv}"""
-
-rule t1_13_test_to_tsv_label0:
+rule t1_17_test_to_tsv_label0:
     input: 
         touched_genome1k_rsid2annotationid = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotationid'),
         touched_pos_tag = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag'),
@@ -169,7 +89,7 @@ rule t1_13_test_to_tsv_label0:
         sqlite3 -separator "\t" {params.db} 'select genome1k_rsid2annotationid.rsid, genome1k_rsid2annotationid.annotationid, 1 from genome1k_rsid2annotationid  where genome1k_rsid2annotationid.rsid not in (select rsid from pos_tag)' >{output.tsv};
         """
 
-rule t1_12_test_to_tsv_label1:
+rule t1_16_test_to_tsv_label1:
     input:
         touched_genome1k_rsid2annotationid = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'genome1k_rsid2annotationid'),
         touched_pos_tag = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'pos_tag'),
@@ -182,7 +102,20 @@ rule t1_12_test_to_tsv_label1:
         sqlite3 -separator "\t" {params.db} 'select genome1k_rsid2annotationid.rsid, genome1k_rsid2annotationid.annotationid, 1 from genome1k_rsid2annotationid  inner join pos_tag on pos_tag.rsid=genome1k_rsid2annotationid.rsid' >{output.tsv};
         """
 
-rule t1_11_train_to_tsv_label0:
+rule t1_15_train_to_csc_npz_label0:
+    input:
+        tsv = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label0.tsv'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+    output:
+        npz = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label0.csc.npz'),
+    run:
+        df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"])
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        variableid_max = max(variableid2variable_df.variableid)
+        csc = csc_matrix((df.value, (df.instance.astype("category").cat.codes, df.feature)), shape=(len(df.instance.unique()), variableid_max+1))
+        scipy.sparse.save_npz(output.npz, csc)
+
+rule t1_14_train_to_tsv_label0:
     input: 
         touched_table = os.path.join(OUTDIR, "chrom", "{chr}", 'touched_tables', 'index2label2annotationid2r2_3'),
     output:
@@ -195,6 +128,19 @@ rule t1_11_train_to_tsv_label0:
         """
         sqlite3 -separator "\t" {params.db} 'select index_rsid,annotationid,r2 from {params.table} where label={params.label}' >{output.tsv};
         """
+
+rule t1_13_train_to_csc_npz_label1:
+    input:
+        tsv = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label1.tsv'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+    output:
+        npz = os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label1.csc.npz'),
+    run:
+        df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"])
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        variableid_max = max(variableid2variable_df.variableid)
+        csc = csc_matrix((df.value, (df.instance.astype("category").cat.codes, df.feature)), shape=(len(df.instance.unique()), variableid_max+1))
+        scipy.sparse.save_npz(output.npz, csc)
 
 rule t1_12_train_to_tsv_label1:
     input: 

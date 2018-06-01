@@ -29,6 +29,8 @@ export QUEUE=batch # default batch
 export PYTHONBIN=$(which python)
 ~~~
 
+Create annotation files
+
 ~~~
 export LD_R2=08
 export LD_DIR=${PWD}/out/data/snp/1000genomes/${REGION}/ld${LD_R2}/chrom
@@ -40,15 +42,26 @@ export VARIABLEID2VARIABLE_TSV=${PWD}/out/data/annotation/mergedannot/variableid
 #
 export OUTDIR=${PWD}/out/${REGION}/train
 mkdir -p ${OUTDIR}
-time snakemake -s ${TAGOOS}/snakefile/05train/01train_model.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d ${OUTDIR} --latency-wait 60 -pn
+time snakemake -s ${TAGOOS}/snakefile/05train/01index2label2annotationid2r2.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d ${OUTDIR} --latency-wait 60 -pn
 ~~~
 
+Check performance of model and parameters using cross validation
+
+~~~
+time snakemake -s ${TAGOOS}/snakefile/05train/02cross_validation.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d ${OUTDIR} --latency-wait 60 -pn
+~~~
+
+If cross validation is ok with these parameters, then train a model
+
+~~~
+time snakemake -s ${TAGOOS}/snakefile/05train/03train_model.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e ${OUTDIR}/stderr.log -o ${OUTDIR}/stdout.log" -d ${OUTDIR} --latency-wait 60 -pn
+~~~
 
 ~~~
 export OUTDIR=${PWD}/out/${REGION}/train
 export  MERGEDANNOT_SQLITE=${PWD}/out/data/annotation/mergedannot/mergedannot.sqlite
 #
-time snakemake -s ${TAGOOS}/snakefile/05train/02select_features.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
+time snakemake -s ${TAGOOS}/snakefile/05train/04select_features.yml -p -j 32 --keep-going --rerun-incomplete -c "qsub -X -V -d $OUTDIR -q ${QUEUE} -l nodes=1:ppn={threads},walltime=48:00:00 -e $OUTDIR/stderr.log -o $OUTDIR/stdout.log" -d $OUTDIR -pn
 ~~~
 
 

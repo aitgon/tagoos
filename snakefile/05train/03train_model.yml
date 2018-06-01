@@ -1,0 +1,151 @@
+#ANNOTATION_ID_MAX = os.getenv('ANNOTATION_ID_MAX')
+CHROM=sorted(os.getenv('CHROM').split())
+GENOME1K_PEAK_BED_DIR = os.getenv('GENOME1K_PEAK_BED_DIR')
+HOME = os.getenv('HOME')
+INDEX_DIR = os.getenv('INDEX_DIR')
+LD_DIR = os.getenv('LD_DIR')
+OUTDIR = os.getenv('OUTDIR')
+POS_RSID = os.getenv('POS_RSID')
+PWD = os.getenv('PWD')
+PYTHONBIN = os.getenv('PYTHONBIN')
+REGION = os.getenv('REGION')
+TAGOOS = os.getenv('TAGOOS')
+THREADS = int(os.getenv('THREADS'))
+VARIABLEID2VARIABLE_TSV = os.getenv('VARIABLEID2VARIABLE_TSV')
+
+import pandas
+from scipy.sparse import csc_matrix, vstack
+import scipy
+import xgboost
+
+params_bst = {}
+params_bst['intronic'] = {
+    'colsample_bytree': 1,
+    'eta': 0.3,
+    'max_delta_step': 1,
+    'max_depth': 6,
+    'min_child_weight': 1,
+    'num_boost_round': 10,
+    'objective': 'binary:logistic',
+    'seed': 1357,
+    'silent': 1,
+    'subsample': 1,
+    }
+params_bst['intergenic'] = {
+    'colsample_bytree': 1,
+    'eta': 0.3,
+    'max_delta_step': 1,
+    'max_depth': 6,
+    'min_child_weight': 1,
+    'num_boost_round': 10,
+    'objective': 'binary:logistic',
+    'seed': 1357,
+    'silent': 1,
+    'subsample': 1,
+}
+
+rule t1_99_all:
+    input:
+        bst=os.path.join(OUTDIR, 'model.bst'),
+        tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+
+rule t1_19_train_model_feature_importance:
+    input:
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+        dtrain=os.path.join(OUTDIR, 'dtrain.dmat'),
+    output:
+        bst=os.path.join(OUTDIR, 'model.bst'),
+        tsv = os.path.join(OUTDIR, "feature_importance.tsv"),
+    params:
+        region = REGION
+    threads: THREADS
+    run:
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        #
+        feature_names = variableid2variable_df.variable.tolist()
+        #
+        dtrain = xgboost.DMatrix(data=input.dtrain, feature_names=['label'] + feature_names)
+        #
+        scale_pos_weight = (dtrain.get_label() == 0).sum() / (dtrain.get_label() == 1).sum()
+        params_bst_region = params_bst[params.region]
+        params_bst_region['scale_pos_weight'] = scale_pos_weight
+        params_bst_region['nthread'] = threads
+        bst = xgboost.train(params=params_bst_region, dtrain=dtrain)
+        #
+        bst.save_model(fname=output.bst)
+        #
+        # Feature importance
+        feature_importance = pandas.DataFrame.from_records(list(bst.get_score(importance_type="gain").items()))
+        feature_importance.columns = ['feature', 'weight']
+        feature_importance = feature_importance.loc[:, ['feature', 'weight']]
+        feature_importance.sort_values(by='weight', ascending=False, inplace=True)
+        feature_importance.to_csv(output.tsv, sep="\t", index=False, header=True)
+
+rule t1_18_save_dtrain:
+    input:
+        npz0=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.csc.npz'),
+        npz1=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.csc.npz'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+    output:
+        dtrain=os.path.join(OUTDIR, 'dtrain.dmat'),
+    run:
+        train_0_csc = scipy.sparse.load_npz(input.npz0)
+        train_1_csc = scipy.sparse.load_npz(input.npz1)
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        #
+        train_0_label = [0] * train_0_csc.shape[0]
+        train_1_label = [1] * train_1_csc.shape[0]
+        train_csc = vstack([train_1_csc, train_0_csc])
+        train_label = train_1_label + train_0_label
+        #
+        feature_names = variableid2variable_df.variable.tolist()
+        #
+        dtrain = xgboost.DMatrix(data=train_csc, label=train_label, feature_names=['label'] + feature_names)
+        dtrain.save_binary(fname=output.dtrain)
+
+rule t1_17_csc_label0:
+    input:
+        tsv = os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.tsv'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+    output:
+        npz = os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.csc.npz'),
+    run:
+        df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"])
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        variableid_max = max(variableid2variable_df.variableid)
+        csc = csc_matrix((df.value, (df.instance.astype("category").cat.codes, df.feature)), shape=(len(df.instance.unique()), variableid_max+1))
+        scipy.sparse.save_npz(output.npz, csc)
+
+rule t1_16_csc_label1:
+    input:
+        tsv = os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.tsv'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+    output:
+        npz=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.csc.npz'),
+    run:
+        df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"])
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"])
+        variableid_max = max(variableid2variable_df.variableid)
+        csc = csc_matrix((df.value, (df.instance.astype("category").cat.codes, df.feature)), shape=(len(df.instance.unique()), variableid_max+1))
+        scipy.sparse.save_npz(output.npz, csc)
+
+
+rule t1_15_merge_index2label2annotationid2r2_label1:
+    input:
+        tsv=expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label1.tsv'), chr=CHROM),
+    output:
+        tsv=os.path.join(OUTDIR, 'index2label2annotationid2r2_label1.tsv')
+    shell:
+        """cat {input.tsv} >{output.tsv}"""
+
+
+rule t1_14_merge_index2label2annotationid2r2_label0:
+    input:
+        tsv=expand(os.path.join(OUTDIR, "chrom", "{chr}", 'index2label2annotationid2r2_label0.tsv'), chr=CHROM),
+    output:
+        tsv=os.path.join(OUTDIR, 'index2label2annotationid2r2_label0.tsv')
+    shell:
+        """cat {input.tsv} >{output.tsv}"""
+
+
+
