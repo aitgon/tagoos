@@ -24,7 +24,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'TAGOOS'
-copyright = '2018, Aitor GONZALEZ'
+copyright = 'since 2018, Aitor GONZALEZ'
 author = 'Aitor GONZALEZ'
 
 # The short X.Y version
