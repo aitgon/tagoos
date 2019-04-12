@@ -1,0 +1,158 @@
+OUTDIR = os.getenv('OUTDIR')
+HOME = os.getenv('HOME')
+TAGOOS = os.getenv('TAGOOS')
+REGION = os.getenv('REGION')
+THREADS = int(os.getenv('THREADS'))
+MODEL_BST = os.getenv('MODEL_BST')
+GENOME_WINDOW_IDS=sorted(os.getenv('GENOME_WINDOW_IDS').split())
+ANNOTATION_BED = os.getenv('ANNOTATION_BED')
+MAX_ANNOTATION_ID = os.getenv('MAX_ANNOTATION_ID')
+PYTHONBIN = os.getenv('PYTHONBIN')
+VARIABLEID2VARIABLE_TSV = os.getenv('VARIABLEID2VARIABLE_TSV')
+
+import pandas
+from scipy.sparse import csc_matrix, vstack
+import scipy
+import xgboost
+
+rule pr3_99:
+    input:
+        bed = os.path.join(OUTDIR, 'prediction.bed'),
+        bed_annotation = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"), gwindow=GENOME_WINDOW_IDS),
+
+rule pr3_09_merge_preds:
+    input:
+        bed = expand(os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"), gwindow=GENOME_WINDOW_IDS),
+    output:
+        bed = os.path.join(OUTDIR, 'prediction.bed')
+    threads: THREADS
+    shell:
+        """
+        sort -k1,1 -k2,2n -k3,3n -k4,4n -u --parallel {threads} {input.bed} -o {output.bed}
+        """
+
+rule pr3_08_annotation:
+    input:
+        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_sorted.bed"),
+        annotation=ANNOTATION_BED,
+    output:
+        bed = os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_annotation.bed"),
+    shell:
+        """
+        bedtools intersect -sorted -a {input.bed} -b {input.annotation} -wb -loj |cut -f1-4,8 |sort -u -k1,1 -k2,2n -k3,3n -k4,4 -k5,5 |bedtools groupby -g 1,2,3,4 -c 5 -o distinct >{output.bed}
+        """
+
+rule pr3_07_sort:
+    input:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/prediction_sorted.bed"),
+    threads: THREADS
+    shell:
+        """sort -k1,1 -k2,2n -k3,3n -k4,4 -u --parallel {threads} {input.bed} -o {output.bed}"""
+
+rule pr3_06_preds:
+    input:
+        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_long.tsv"),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+        model_bst = MODEL_BST,
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/prediction.bed"),
+    run:
+        df = pandas.read_csv(input.tsv, sep="\t", names=["instance", "feature", "value"], index_col=0)
+        variableid2variable_df = pandas.read_csv(input.variableid2variable_tsv, sep="\t", header=None, names=["variableid", "variable"], index_col=1)
+        df = df.merge(variableid2variable_df, left_on='feature', right_index=True, how='left')
+        variableid_max = max(variableid2variable_df.variableid)
+        df.ix[pandas.isnull(df.variableid), [1,2]] = [0, variableid_max]
+        csc = csc_matrix((df.value, (df.index.to_series().astype("category").cat.codes, df.variableid)), shape=(len(df.index.unique()), variableid_max+1))
+        dtest = xgboost.DMatrix(data=csc, label=csc.shape[0]*[0], feature_names = ['label'] + list(variableid2variable_df.index))
+        bst = xgboost.Booster()
+        bst.load_model(input.model_bst)
+        preds = bst.predict(data = dtest)
+        pred_df = pandas.DataFrame({'instance': list(df.index.to_series().astype("category").cat.codes.drop_duplicates().sort_values(ascending=True).index), 'probability': list(preds)})
+        pred_df['chrom'], pred_df['start_end'] = pred_df['instance'].str.split(':', 1).str
+        pred_df['start'], pred_df['end'] = pred_df['start_end'].str.split('-', 1).str
+        pred_df['start'] = pandas.to_numeric(pred_df['start']) - 1
+        pred_df['end'] = pandas.to_numeric(pred_df['end'])
+        pred_df['probability'] = pandas.to_numeric(pred_df['probability'])
+        pred_df = pred_df[['chrom', 'start', 'end', 'probability']]
+        pred_df.to_csv(output.bed, sep = "\t", header = False, index = False, float_format='%.8f')
+
+rule pr3_05_expand_annotations:
+    """Outputs to this format: instance, feature, value
+chr1:1-9768	.	1
+chr1:9769-9875	polr2a.bodyofpancreasmaleadult_37years_.encode2	1
+chr1:9876-9909	polr2a.bodyofpancreasfemaleadult_51year_.encode2	1
+chr1:9876-9909	polr2a.bodyofpancreasmaleadult_37years_.encode2	1
+chr1:9910-9971	egfpznf146.hek293originatedfromhek293stablyexpressingfusionprotein.encode2	1
+chr1:9910-9971	polr2a.bodyofpancreasfemaleadult_51year_.encode2	1
+chr1:9910-9971	polr2a.bodyofpancreasmaleadult_37years_.encode2	1
+chr1:9972-10011	egfpznf146.hek293originatedfromhek293stablyexpressingfusionprotein.encode2	1
+chr1:9972-10011	mbd4.mm1s_jq1_500nm.GSE42355ReMap	1
+chr1:9972-10011	polr2a.bodyofpancreasfemaleadult_51year_.encode2	1
+    """
+    input:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"),
+    output:
+        tsv=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_long.tsv"),
+    shell:
+        """bedtools expand -i {input.bed} -c 4 |awk '{{print $1":"$2+1"-"$3"\t"$4"\t1"}}' >{output.tsv}"""
+
+rule pr3_04_collapse_peaks:
+    """Outputs to this format: instance, label, feature, value
+chr1	0	9768	.
+chr1	9768	9875	polr2a.bodyofpancreasmaleadult_37years_.encode2
+chr1	9875	9909	polr2a.bodyofpancreasfemaleadult_51year_.encode2,polr2a.bodyofpancreasmaleadult_37years_.encode2
+chr1	9909	9971	egfpznf146.hek293originatedfromhek293stablyexpressingfusionprotein.encode2,polr2a.bodyofpancreasfemaleadult_51year_.encode2,polr2a.bodyofpancreasmaleadult_37years_.encode2
+chr1	9971	10011	egfpznf146.hek293originatedfromhek293stablyexpressingfusionprotein.encode2,mbd4.mm1s_jq1_500nm.GSE42355ReMap,polr2a.bodyofpancreasfemaleadult_51year_.encode2,polr2a.bodyofpancreasmaleadult_37years_.encode2,tcf12.tall_rpmi8402.GSE39179ReMap
+    """
+    input:
+        script=os.path.join(TAGOOS, "script/06predict/collapse_equally_annotated_consecutive_peaks.py"),
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed2.bed"),
+    shell:
+        """{HOME}/Software/miniconda3/envs/tagoos/bin/python {input.script} -i {input.bed} -o {output.bed}"""
+
+rule pr3_03_collapse_annotations:
+    input:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_annotation_collapsed.bed"),
+    shell:
+        """bedtools groupby -sorted -i {input.bed} -g 1,2,3 -c 4 -o distinct |sort -u -k1,1 -k2,2n -k3,3n -k4,4 >{output.bed}"""
+
+rule pr3_02_sort_annotated_1nt:
+    input:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation.bed"),
+    threads: THREADS
+    shell:
+        """sort --parallel {threads} -k1,1 -k2,2n -k3,3n -k4,4 -u {input.bed} -o {output.bed}"""
+
+rule pr3_01_annotation_1nt:
+    """This rule crosses the annotation bed of the model with the genome windows in the region
+
+    Parameters
+    ----------
+    annotation : Bed file path
+        Bed file path to the model annotation
+    os.path.join(OUTDIR, "{gwindow}/gwindow.bed") : str
+        The specified region in the given genome window
+        $ head /cobelix/gonzalez/data/2015_svmgwas/repositories/tagoos-appli/170712/out/GRASP108intergenic/1kg1000000intergenic_mergedannot_index3_analysis/genome_score/chr1:1-30000000/gwindow_region.bed
+        chr1    0       11868
+        chr1    29370   30365
+        chr1    30503   34610
+        chr1    36081   69090
+    """
+    input:
+        annotation=ANNOTATION_BED,
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region.bed"),
+    output:
+        bed=os.path.join(OUTDIR, "gwindow/{gwindow}/gwindow_1nt_region_annotation_nonsorted.bed"),
+    shell:
+        """intersectBed -sorted -a {input.bed} -b  {input.annotation} -wb | awk '{{print $1"\t"$2"\t"$3"\t"$7}}' |uniq >{output.bed};
+            intersectBed -sorted -a {input.bed} -b  {input.annotation} -v | awk '{{print $1"\t"$2"\t"$3"\t."}}' |uniq >>{output.bed}"""
+
+

@@ -1,0 +1,56 @@
+REGION = os.getenv('REGION')
+RELEASE = os.getenv('RELEASE')
+OUTDIR = os.getenv('OUTDIR')
+PREDICT_DIR=os.getenv('PREDICT_DIR')
+TAGOOS=os.getenv('TAGOOS')
+THREADS = int(os.getenv('THREADS'))
+
+rule pu4_99_all:
+    input:
+        hg38_bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg38.bed.gz.tbi".format(RELEASE, REGION)),
+        hg19_bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg19.bed.gz.tbi".format(RELEASE, REGION)),
+
+rule pu4_05_tabix_hg38:
+    input:
+        bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg38.bed.gz".format(RELEASE, REGION)),
+    output:
+        bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg38.bed.gz.tbi".format(RELEASE, REGION)),
+    shell:
+        """ tabix -p bed {input.bed_gz}; """
+
+rule pu4_04_bgzip_hg38:
+    input:
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation_hg38.bed"),
+    output:
+        bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg38.bed.gz".format(RELEASE, REGION)),
+    threads: THREADS
+    shell:
+        """sort -k1,1 -k2,2n --parallel {threads} {input.bed}  |bgzip -c > {output.bed_gz}"""
+
+rule pu4_03_liftover:
+    input:
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation.bed"),
+        liftover=os.path.join(TAGOOS, "script/downloaded/liftOver"),
+        chain_file=os.path.join(TAGOOS, "script/downloaded/hg19ToHg38.over.chain.gz"),
+    output:
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation_hg38.bed"),
+    shell:
+        """{input.liftover} {input.bed} {input.chain_file} {output.bed} unMapped -bedPlus=3"""
+
+rule pu4_02_tabix_hg19:
+    input:
+        bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg19.bed.gz".format(RELEASE, REGION)),
+    output:
+        bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg19.bed.gz.tbi".format(RELEASE, REGION)),
+    shell:
+        """ tabix -p bed {input.bed_gz}; """
+
+rule pu4_01_bgzip_hg19:
+    input:
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation.bed"),
+    output:
+        bed_gz=os.path.join(OUTDIR, "release/{}/tagoos_{}_hg19.bed.gz".format(RELEASE, REGION)),
+    threads: THREADS
+    shell:
+        """sort -k1,1 -k2,2n --parallel {threads} {input.bed}  |bgzip -c > {output.bed_gz}"""
+

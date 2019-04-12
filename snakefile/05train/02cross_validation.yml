@@ -1,0 +1,84 @@
+#ANNOTATION_ID_MAX = os.getenv('ANNOTATION_ID_MAX')
+CHROM=sorted(os.getenv('CHROM').split())
+GENOME1K_PEAK_BED_DIR = os.getenv('GENOME1K_PEAK_BED_DIR')
+HOME = os.getenv('HOME')
+INDEX_DIR = os.getenv('INDEX_DIR')
+LD_DIR = os.getenv('LD_DIR')
+OUTDIR = os.getenv('OUTDIR')
+POS_RSID = os.getenv('POS_RSID')
+PWD = os.getenv('PWD')
+PYTHONBIN = os.getenv('PYTHONBIN')
+REGION = os.getenv('REGION')
+TAGOOS = os.getenv('TAGOOS')
+THREADS = int(os.getenv('THREADS'))
+VARIABLEID2VARIABLE_TSV = os.getenv('VARIABLEID2VARIABLE_TSV')
+
+import pandas
+from scipy.sparse import csc_matrix, vstack
+import scipy
+import xgboost
+
+params_bst = {}
+params_bst['intronic'] = {
+    'colsample_bytree': 1,
+    'eta': 0.3,
+    'max_delta_step': 1,
+    'max_depth': 6,
+    'min_child_weight': 1,
+    'num_boost_round': 10,
+    'objective': 'binary:logistic',
+    'seed': 1357,
+    'silent': 1,
+    'subsample': 1,
+    }
+params_bst['intergenic'] = {
+    'colsample_bytree': 1,
+    'eta': 0.3,
+    'max_delta_step': 1,
+    'max_depth': 6,
+    'min_child_weight': 1,
+    'num_boost_round': 10,
+    'objective': 'binary:logistic',
+    'seed': 1357,
+    'silent': 1,
+    'subsample': 1,
+}
+
+rule t2_99:
+    input:
+        tsv = expand(os.path.join(OUTDIR, "chrom", "{chr}", 'auc.tsv'), chr=CHROM),
+    output:
+        tsv = os.path.join(OUTDIR, 'auc.tsv'),
+    shell:
+        """sort -k1,1n {input} |grep -v auc_test > {output.tsv}"""
+
+rule t2_02:
+    input:
+        script = os.path.join(TAGOOS, "script/05train/cv.py"),
+        dtrain =os.path.join(OUTDIR, "chrom", "{chr}", 'dtrain.bin'),
+        dtest = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'dtest.bin'),
+        VARIABLEID2VARIABLE_TSV = VARIABLEID2VARIABLE_TSV
+    output:
+        tsv = os.path.join(OUTDIR, "chrom", "{chr}", 'auc.tsv'),
+    params: chr="{chr}"
+    shell:
+        """/cobelix/gonzalez/Software/miniconda3/envs/tagoos/bin/python {input.script} {params.chr} {input.dtrain} {input.dtest} {input.VARIABLEID2VARIABLE_TSV} {output.tsv}"""
+
+rule t2_01_csc_npz_to_dmat:
+    input:
+        script = os.path.join(TAGOOS, "script/05train/csc_npz2dmat_bin.py"),
+        npz = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label0.csc.npz'),
+        variableid2variable_tsv = VARIABLEID2VARIABLE_TSV,
+        test_npz_1 = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label1.csc.npz'),
+        test_npz_0 = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'index2label2annotationid_label0.csc.npz'),
+    output:
+        dtrain = os.path.join(OUTDIR, "chrom", "{chr}", 'dtrain.bin'),
+        dtest = os.path.join(OUTDIR, "test", "chrom", "{chr}", 'dtest.bin'),
+    params:
+        test_chrom = "{chr}",
+        region = REGION,
+        tagoos_appli_dir = "/cobelix/gonzalez/Data/2015_svmgwas/repositories/tagoos-appli/180328",
+    shell:
+        """/cobelix/gonzalez/Software/miniconda3/envs/tagoos/bin/python {input.script} {params.test_chrom} {params.region} {params.tagoos_appli_dir} {input.variableid2variable_tsv} {input.test_npz_1} {input.test_npz_0} {output.dtrain} {output.dtest}"""
+
+

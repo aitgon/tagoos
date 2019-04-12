@@ -1,0 +1,67 @@
+REGION = os.getenv('REGION')
+RELEASE = os.getenv('RELEASE')
+OUTDIR = os.getenv('OUTDIR')
+PREDICT_DIR = os.getenv('PREDICT_DIR')
+UCSC_DIR = os.getenv('UCSC_DIR')
+CHROM_SIZES_HG19 = os.getenv('CHROM_SIZES_HG19')
+CHROM_SIZES_HG38 = os.getenv('CHROM_SIZES_HG38')
+THREADS = int(os.getenv('THREADS'))
+
+rule pu4_99:
+    input:
+        os.path.join(OUTDIR, "release/{}/tagoos_neglog10pval_{}_hg19.bw".format(RELEASE,REGION)),
+        os.path.join(OUTDIR, "release/{}/tagoos_neglog10pval_{}_hg38.bw".format(RELEASE,REGION)),
+
+
+rule pu4_03_bigwig_hg38:
+    input:
+        bedgraph=os.path.join(UCSC_DIR, "prediction_neglog10pval_hg38_fixed.bedgraph"),
+        CHROM_SIZES_HG38=CHROM_SIZES_HG38
+    output:
+        bw=os.path.join(OUTDIR, "release/{}/tagoos_neglog10pval_{}_hg38.bw".format(RELEASE,REGION)),
+    shell:
+        """bedGraphToBigWig {input.bedgraph} http://hgdownload-test.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes {output.bw}"""
+
+rule pu4_02_bigwig_hg38:
+    input:
+        bedgraph=os.path.join(UCSC_DIR, "prediction_neglog10pval_hg38.bedgraph"),
+    output:
+        bedgraph=os.path.join(UCSC_DIR, "prediction_neglog10pval_hg38_fixed.bedgraph"),
+    shell:
+        """bedtools merge -i {input.bedgraph} -c 4 -o mean -d -1 > {output.bedgraph}"""
+
+rule pu4_01_neglog10pval_hg38:
+    input:
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation_hg38.bed"),
+    output:
+        bedgraph=os.path.join(UCSC_DIR, "prediction_neglog10pval_hg38.bedgraph"),
+    threads: THREADS
+    shell:
+        """sort --parallel {threads} -k1,1 -k2,2n {input.bed} |cut -f 1-3,6 > {output.bedgraph};"""
+
+rule pu4_03_bigwig_hg19:
+    input:
+        bedgraph=os.path.join(UCSC_DIR, "prediction_neglog10pval_hg19_fixed.bedgraph"),
+        CHROM_SIZES_HG19=CHROM_SIZES_HG19
+    output:
+        bw=os.path.join(OUTDIR, "release/{}/tagoos_neglog10pval_{}_hg19.bw".format(RELEASE,REGION)),
+    shell:
+        """bedGraphToBigWig {input.bedgraph} http://hgdownload-test.cse.ucsc.edu/goldenPath/hg38/bigZips/hg38.chrom.sizes {output.bw}"""
+
+rule pu4_02_bigwig_hg19:
+    input:
+        bedgraph=os.path.join(UCSC_DIR, "prediction_neglog10pval_hg19.bedgraph"),
+    output:
+        bedgraph=os.path.join(UCSC_DIR, "prediction_neglog10pval_hg19_fixed.bedgraph"),
+    shell:
+        """bedtools merge -i {input.bedgraph} -c 4 -o mean -d -1 > {output.bedgraph}"""
+
+rule pu4_01_neglog10pval_hg19:
+    input:
+        bed=os.path.join(PREDICT_DIR, "prediction_pval_neglog10pval_annotation.bed"),
+    output:
+        bedgraph=os.path.join(UCSC_DIR, "prediction_neglog10pval_hg19.bedgraph"),
+    threads: THREADS
+    shell:
+        """sort --parallel {threads} -k1,1 -k2,2n {input.bed} |cut -f 1-3,6 > {output.bedgraph};"""
+

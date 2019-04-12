@@ -1,0 +1,41 @@
+MERGED_DATA_DIR=os.getenv('MERGED_DATA_DIR')
+THREADS = int(os.getenv('THREADS'))
+HOME=os.getenv('HOME')
+
+rule all:
+    input:
+        variableid2variable_tsv = os.path.join(MERGED_DATA_DIR, "variableid2variable.tsv"),
+
+rule create_variableid2variable_file:
+    input:
+        variable_txt = os.path.join(MERGED_DATA_DIR, "variable.txt"),
+    output:
+        variableid2variable_tsv = os.path.join(MERGED_DATA_DIR, "variableid2variable.tsv"),
+    shell:
+        """
+        awk '{{print NR"\t"$1}}' {input.variable_txt} >{output.variableid2variable_tsv};
+        """
+
+rule variable_txt:
+    input:
+        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
+    output:
+        variable_txt = os.path.join(MERGED_DATA_DIR, "variable.txt")
+    threads: THREADS
+    shell:
+        """cut -f4,4 {input.mergedannot} | sort --parallel {threads} -u -o {output.variable_txt}"""
+
+#rule cat_sort:
+#    input:
+#        eenhancer=os.path.join(MERGED_DATA_DIR, "../eenhancer/eenhancer.bed"),
+#        gtex=os.path.join(MERGED_DATA_DIR, "../gtex/gtex.bed"),
+#        encode2=os.path.join(MERGED_DATA_DIR, "../encode2/encode2.bed"),
+#        remap=os.path.join(MERGED_DATA_DIR, "../remap/remap.bed"),
+#        roadmap=os.path.join(MERGED_DATA_DIR, "../roadmap/roadmap.bed"),
+#        youngh3k27ac=os.path.join(MERGED_DATA_DIR, "../youngh3k27ac/youngh3k27ac.bed"),
+#    output:
+#        mergedannot=os.path.join(MERGED_DATA_DIR, "mergedannot.bed")
+#    threads: THREADS
+#    shell:
+#        """sort -k1,1 -k2,2n -k3,3n -k4,4  -u --parallel {threads} {input} |grep -P "^chr[XY1-9][0-9]?\t" |tr -d '\r' |tr '/' '_' >{output.mergedannot}"""
+
