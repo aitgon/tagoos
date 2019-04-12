@@ -13,6 +13,7 @@ TAGOOS : associated tag SNP boosting
    content/ucsc
    content/scores
    content/download
+   content/whatsnew
 
 TAGOOS is a nucleotide scoring tool for non-coding (Intronic and intergenic) regions. There are two underlying models trained with the `XGBOOST <https://xgboost.readthedocs.io/en/latest/>`_ algorithm using intronic and intergenic associated SNPs (GWAS P-value < :math:`5\cdot10^{-8}`) from the `GRASP <https://grasp.nhlbi.nih.gov/Overview.aspx>`_ database. The predictive variables have been selected by the learning algorithm among 4684 gene regulation related annotations such as histone modifications, eQTLs or transcription factors in different tissues from these databases:
 
