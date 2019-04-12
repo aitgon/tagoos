@@ -26,7 +26,7 @@ Install/update packages in conda environment
 
 ~~~
 cd /path/to/the/tagoos/source
-conda install --yes --name $NAME --file spec-file.txt
-pip install -r requirements.txt
+conda install --yes --name $NAME --file tagoos_spec-file.txt
+pip install -r tagoos_requirements.txt
 ~~~
 
